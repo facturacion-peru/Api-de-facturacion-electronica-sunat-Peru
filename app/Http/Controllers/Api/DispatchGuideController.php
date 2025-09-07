@@ -120,7 +120,16 @@ class DispatchGuideController extends Controller
     public function sendToSunat($id): JsonResponse
     {
         try {
+            \Illuminate\Support\Facades\Log::info("=== CONTROLADOR sendToSunat ===", ['dispatch_guide_id' => $id]);
+            
             $dispatchGuide = DispatchGuide::with(['company', 'branch', 'destinatario'])->findOrFail($id);
+            
+            \Illuminate\Support\Facades\Log::info("Guía cargada:", [
+                'id' => $dispatchGuide->id,
+                'client_id' => $dispatchGuide->client_id,
+                'destinatario_loaded' => $dispatchGuide->relationLoaded('destinatario'),
+                'destinatario_exists' => $dispatchGuide->destinatario ? 'SI' : 'NO'
+            ]);
 
             if ($dispatchGuide->estado_sunat === 'ACEPTADO') {
                 return response()->json([
@@ -129,6 +138,7 @@ class DispatchGuideController extends Controller
                 ], 400);
             }
 
+            \Illuminate\Support\Facades\Log::info("Llamando a sendDispatchGuideToSunat...");
             $result = $this->documentService->sendDispatchGuideToSunat($dispatchGuide);
 
             if ($result['success']) {
@@ -148,6 +158,13 @@ class DispatchGuideController extends Controller
             }
 
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("=== ERROR EN CONTROLADOR ===", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'stack_trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error al procesar el envío a SUNAT',

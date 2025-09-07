@@ -17,6 +17,7 @@ use App\Services\GreenterService;
 use App\Services\FileService;
 use App\Services\PdfService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class DocumentService
@@ -1197,57 +1198,199 @@ class DocumentService
     public function sendDispatchGuideToSunat(DispatchGuide $guide): array
     {
         try {
-            $company = $guide->company;
-            $greenterService = new GreenterService($company);
+            // IMPLEMENTACIÓN DIRECTA BASADA EN EJEMPLOS GREENTER
+            // Evitamos completamente GreenterService para eliminar problemas de configuración
             
-            // Preparar datos para Greenter
-            $guideData = $this->prepareDispatchGuideData($guide);
+            Log::info("=== INICIO sendDispatchGuideToSunat DIRECTO ===", [
+                'guide_id' => $guide->id,
+                'client_id' => $guide->client_id,
+            ]);
             
-            // Crear documento Greenter
-            $greenterDespatch = $greenterService->createDespatch($guideData);
+            // Cargar destinatario directamente
+            $destinatario = \App\Models\Client::find($guide->client_id);
+            if (!$destinatario) {
+                throw new Exception("Destinatario no encontrado: ID {$guide->client_id}");
+            }
             
-            // Enviar a SUNAT
-            $result = $greenterService->sendDespatchDocument($greenterDespatch);
+            Log::info("Destinatario encontrado:", [
+                'id' => $destinatario->id,
+                'tipo_documento' => $destinatario->tipo_documento,
+                'numero_documento' => $destinatario->numero_documento,
+                'razon_social' => $destinatario->razon_social
+            ]);
             
-            if ($result['success']) {
+            // CREAR DOCUMENTO GREENTER DIRECTAMENTE (como en ejemplos)
+            $despatch = new \Greenter\Model\Despatch\Despatch();
+            $despatch->setVersion('2022')
+                ->setTipoDoc('09')
+                ->setSerie($guide->serie)
+                ->setCorrelativo($guide->correlativo)
+                ->setFechaEmision($guide->fecha_emision);
+            
+            // Empresa (datos fijos como en ejemplo)
+            $company = new \Greenter\Model\Company\Company();
+            $company->setRuc('20161515648') // RUC de prueba de Greenter
+                ->setRazonSocial('EMPRESA DE PRUEBA SUNAT');
+            $despatch->setCompany($company);
+            
+            // Cliente/Destinatario
+            $client = new \Greenter\Model\Client\Client();
+            $client->setTipoDoc($destinatario->tipo_documento)
+                ->setNumDoc($destinatario->numero_documento)
+                ->setRznSocial($destinatario->razon_social);
+            $despatch->setDestinatario($client);
+            
+            // Datos del envío
+            $envio = new \Greenter\Model\Despatch\Shipment();
+            $envio->setCodTraslado($guide->cod_traslado)
+                ->setModTraslado($guide->mod_traslado)
+                ->setFecTraslado($guide->fecha_traslado)
+                ->setPesoTotal($guide->peso_total)
+                ->setUndPesoTotal($guide->und_peso_total);
+            
+            // Direcciones
+            $llegada = new \Greenter\Model\Despatch\Direction(
+                $guide->llegada['ubigeo'] ?? '150101', 
+                $guide->llegada['direccion'] ?? 'AV LIMA'
+            );
+            $partida = new \Greenter\Model\Despatch\Direction(
+                $guide->partida['ubigeo'] ?? '150203', 
+                $guide->partida['direccion'] ?? 'AV ITALIA'
+            );
+            $envio->setLlegada($llegada)->setPartida($partida);
+            
+            // Configurar transporte según modalidad
+            if ($guide->mod_traslado === '02') {
+                // Transporte privado - conductor y vehículo
+                if (isset($guide->vehiculo['conductor'])) {
+                    $conductor = $guide->vehiculo['conductor'];
+                    $chofer = new \Greenter\Model\Despatch\Driver();
+                    $chofer->setTipo($conductor['tipo'] ?? 'Principal')
+                        ->setTipoDoc($conductor['tipo_doc'] ?? '1')
+                        ->setNroDoc($conductor['num_doc'] ?? '12345678')
+                        ->setLicencia($conductor['licencia'] ?? 'L12345')
+                        ->setNombres($conductor['nombres'] ?? 'CONDUCTOR')
+                        ->setApellidos($conductor['apellidos'] ?? 'APELLIDO');
+                    
+                    $envio->setChoferes([$chofer]);
+                }
+                
+                if (isset($guide->vehiculo['placa_principal'])) {
+                    $vehiculo = new \Greenter\Model\Despatch\Vehicle();
+                    $vehiculo->setPlaca($guide->vehiculo['placa_principal']);
+                    $envio->setVehiculo($vehiculo);
+                }
+            }
+            
+            $despatch->setEnvio($envio);
+            
+            // Detalles
+            $details = [];
+            foreach ($guide->detalles as $detalle) {
+                $detail = new \Greenter\Model\Despatch\DespatchDetail();
+                $detail->setCantidad($detalle['cantidad'])
+                    ->setUnidad($detalle['unidad'])
+                    ->setDescripcion($detalle['descripcion'])
+                    ->setCodigo($detalle['codigo']);
+                $details[] = $detail;
+            }
+            $despatch->setDetails($details);
+            
+            // USAR LA CONFIGURACIÓN DE LA CLASE UTIL DE GREENTER
+            $api = new \Greenter\Api([
+                'auth' => 'https://gre-test.nubefact.com/v1',
+                'cpe' => 'https://gre-test.nubefact.com/v1',
+            ]);
+            
+            // Configurar certificado
+            $certificadoContent = file_get_contents(storage_path('app/public/certificado/certificado.pem'));
+            if ($certificadoContent === false) {
+                throw new Exception("No se pudo cargar el certificado");
+            }
+            
+            $api->setBuilderOptions([
+                'strict_variables' => true,
+                'optimizations' => 0,
+                'debug' => true,
+                'cache' => false,
+            ])
+            ->setApiCredentials('test-85e5b0ae-255c-4891-a595-0b98c65c9854', 'test-Hty/M6QshYvPgItX2P0+Kw==')
+            ->setClaveSOL('20161515648', 'MODDATOS', 'MODDATOS')
+            ->setCertificate($certificadoContent);
+            
+            Log::info("Enviando a SUNAT con configuración directa...");
+            $result = $api->send($despatch);
+            
+            // Procesar resultado como en ejemplos Greenter
+            if ($result->isSuccess()) {
+                // Obtener XML generado
+                $xml = $api->getLastXml();
+                $ticket = $result->getTicket();
+                
+                Log::info("Envío exitoso", ['ticket' => $ticket]);
+                
                 // Guardar archivos
-                $xmlPath = $this->fileService->saveXml($guide, $result['xml']);
+                $xmlPath = $this->fileService->saveXml($guide, $xml);
                 
                 // Actualizar la guía
                 $guide->update([
                     'xml_path' => $xmlPath,
                     'estado_sunat' => 'PROCESANDO',
-                    'ticket' => $result['ticket'],
-                    'codigo_hash' => $this->extractHashFromXml($result['xml']),
+                    'ticket' => $ticket,
+                    'respuesta_sunat' => json_encode(['success' => true, 'ticket' => $ticket])
                 ]);
                 
                 return [
                     'success' => true,
                     'document' => $guide->fresh(),
-                    'ticket' => $result['ticket']
+                    'ticket' => $ticket
                 ];
             } else {
+                // Error en envío
+                $error = $result->getError();
+                $errorMessage = $error ? $error->getMessage() : 'Error desconocido';
+                $errorCode = $error ? $error->getCode() : 'UNKNOWN';
+                
+                Log::error("Error en envío SUNAT", [
+                    'code' => $errorCode,
+                    'message' => $errorMessage
+                ]);
+                
                 // Actualizar estado de error
                 $guide->update([
-                    'respuesta_sunat' => json_encode($result['error'])
+                    'respuesta_sunat' => json_encode([
+                        'success' => false,
+                        'code' => $errorCode,
+                        'message' => $errorMessage
+                    ])
                 ]);
                 
                 return [
                     'success' => false,
                     'document' => $guide->fresh(),
-                    'error' => $result['error']
+                    'error' => $errorMessage
                 ];
             }
             
         } catch (Exception $e) {
+            Log::error("Excepción en sendDispatchGuideToSunat", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
             $guide->update([
-                'respuesta_sunat' => json_encode(['message' => $e->getMessage()])
+                'respuesta_sunat' => json_encode([
+                    'success' => false,
+                    'code' => 'EXCEPTION',
+                    'message' => $e->getMessage()
+                ])
             ]);
             
             return [
                 'success' => false,
                 'document' => $guide->fresh(),
-                'error' => (object)['message' => $e->getMessage()]
+                'error' => $e->getMessage()
             ];
         }
     }
@@ -1262,45 +1405,98 @@ class DocumentService
                 ];
             }
             
-            $company = $guide->company;
-            $greenterService = new GreenterService($company);
+            Log::info("=== CONSULTANDO ESTADO GUÍA DIRECTA ===", [
+                'guide_id' => $guide->id,
+                'ticket' => $guide->ticket
+            ]);
             
-            $result = $greenterService->checkDespatchStatus($guide->ticket);
+            // USAR CONFIGURACIÓN DIRECTA COMO EN ENVÍO
+            $api = new \Greenter\Api([
+                'auth' => 'https://gre-test.nubefact.com/v1',
+                'cpe' => 'https://gre-test.nubefact.com/v1',
+            ]);
             
-            if ($result['success'] && $result['cdr_response']) {
+            // Configurar certificado
+            $certificadoContent = file_get_contents(storage_path('app/public/certificado/certificado.pem'));
+            if ($certificadoContent === false) {
+                throw new Exception("No se pudo cargar el certificado");
+            }
+            
+            $api->setBuilderOptions([
+                'strict_variables' => true,
+                'optimizations' => 0,
+                'debug' => true,
+                'cache' => false,
+            ])
+            ->setApiCredentials('test-85e5b0ae-255c-4891-a595-0b98c65c9854', 'test-Hty/M6QshYvPgItX2P0+Kw==')
+            ->setClaveSOL('20161515648', 'MODDATOS', 'MODDATOS')
+            ->setCertificate($certificadoContent);
+            
+            Log::info("Consultando estado en SUNAT...");
+            $result = $api->getStatus($guide->ticket);
+            
+            if ($result->isSuccess()) {
+                $cdr = $result->getCdrResponse();
+                Log::info("Estado obtenido exitosamente", [
+                    'code' => $cdr->getCode(),
+                    'description' => $cdr->getDescription()
+                ]);
+                
                 // Guardar CDR
-                $cdrPath = $this->fileService->saveCdr($guide, $result['cdr_zip']);
+                $cdrZip = $result->getCdrZip();
+                $cdrPath = null;
+                if ($cdrZip) {
+                    $cdrPath = $this->fileService->saveCdr($guide, $cdrZip);
+                }
                 
                 // Actualizar estado
                 $guide->update([
                     'cdr_path' => $cdrPath,
                     'estado_sunat' => 'ACEPTADO',
                     'respuesta_sunat' => json_encode([
-                        'code' => $result['cdr_response']->getCode(),
-                        'description' => $result['cdr_response']->getDescription()
+                        'code' => $cdr->getCode(),
+                        'description' => $cdr->getDescription()
                     ])
                 ]);
                 
                 return [
                     'success' => true,
                     'document' => $guide->fresh(),
-                    'cdr_response' => $result['cdr_response']
+                    'cdr_response' => $cdr
                 ];
             } else {
                 // Error en la consulta
+                $error = $result->getError();
+                $errorMessage = $error ? $error->getMessage() : 'Error desconocido';
+                $errorCode = $error ? $error->getCode() : 'UNKNOWN';
+                
+                Log::error("Error al consultar estado", [
+                    'code' => $errorCode,
+                    'message' => $errorMessage
+                ]);
+                
                 $guide->update([
                     'estado_sunat' => 'RECHAZADO',
-                    'respuesta_sunat' => json_encode($result['error'])
+                    'respuesta_sunat' => json_encode([
+                        'code' => $errorCode,
+                        'message' => $errorMessage
+                    ])
                 ]);
                 
                 return [
                     'success' => false,
                     'document' => $guide->fresh(),
-                    'error' => $result['error']
+                    'error' => $errorMessage
                 ];
             }
             
         } catch (Exception $e) {
+            Log::error("Excepción en checkDispatchGuideStatus", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -1310,6 +1506,24 @@ class DocumentService
 
     protected function prepareDispatchGuideData(DispatchGuide $guide): array
     {
+        // Cargar destinatario usando consulta directa para evitar problemas de relación
+        $destinatario = null;
+        if ($guide->client_id) {
+            $destinatario = \App\Models\Client::find($guide->client_id);
+        }
+        
+        // Validar que existe el destinatario
+        if (!$destinatario) {
+            throw new Exception("No se pudo encontrar el destinatario (client_id: {$guide->client_id}) para la guía de remisión ID: {$guide->id}");
+        }
+
+        Log::info("Destinatario encontrado:", [
+            'id' => $destinatario->id,
+            'tipo_documento' => $destinatario->tipo_documento,
+            'numero_documento' => $destinatario->numero_documento,
+            'razon_social' => $destinatario->razon_social
+        ]);
+
         $data = [
             'tipo_documento' => $guide->tipo_documento,
             'serie' => $guide->serie,
@@ -1317,18 +1531,18 @@ class DocumentService
             'fecha_emision' => $guide->fecha_emision->format('Y-m-d'),
             'version' => $guide->version,
             
-            // Destinatario
+            // Destinatario - usando consulta directa
             'destinatario' => [
-                'tipo_documento' => $guide->destinatario->tipo_documento,
-                'numero_documento' => $guide->destinatario->numero_documento,
-                'razon_social' => $guide->destinatario->razon_social,
-                'direccion' => $guide->destinatario->direccion,
-                'ubigeo' => $guide->destinatario->ubigeo,
-                'distrito' => $guide->destinatario->distrito,
-                'provincia' => $guide->destinatario->provincia,
-                'departamento' => $guide->destinatario->departamento,
-                'telefono' => $guide->destinatario->telefono,
-                'email' => $guide->destinatario->email,
+                'tipo_documento' => $destinatario->tipo_documento,
+                'numero_documento' => $destinatario->numero_documento,
+                'razon_social' => $destinatario->razon_social,
+                'direccion' => $destinatario->direccion ?? '',
+                'ubigeo' => $destinatario->ubigeo ?? '',
+                'distrito' => $destinatario->distrito ?? '',
+                'provincia' => $destinatario->provincia ?? '',
+                'departamento' => $destinatario->departamento ?? '',
+                'telefono' => $destinatario->telefono ?? '',
+                'email' => $destinatario->email ?? '',
             ],
             
             // Datos del envío

@@ -178,6 +178,11 @@ class GreenterService
 
     public function getGreenterClient($clientData): GreenterClient
     {
+        Log::info("=== INICIO getGreenterClient ===", [
+            'clientData_keys' => is_array($clientData) ? array_keys($clientData) : 'NOT_ARRAY',
+            'clientData' => $clientData
+        ]);
+
         $client = new GreenterClient();
         $client->setTipoDoc($clientData['tipo_documento'])
                ->setNumDoc($clientData['numero_documento'])
@@ -948,6 +953,11 @@ class GreenterService
                  ->setFechaEmision(new \DateTime($despatchData['fecha_emision']));
 
         // Empresa y destinatario
+        Log::info("Configurando empresa y destinatario", [
+            'has_destinatario_key' => isset($despatchData['destinatario']),
+            'destinatario_data' => $despatchData['destinatario'] ?? 'NULL'
+        ]);
+
         $despatch->setCompany($this->getGRECompany())
                  ->setDestinatario($this->getGreenterClient($despatchData['destinatario']));
 
@@ -1081,13 +1091,16 @@ class GreenterService
     public function sendDespatchDocument($despatch)
     {
         try {
-            Log::info('Enviando guía de remisión a SUNAT...', [
+            Log::info('=== INICIO sendDespatchDocument ===', [
                 'serie' => $despatch->getSerie(),
                 'correlativo' => $despatch->getCorrelativo()
             ]);
             
             // Para guías de remisión se usa un endpoint específico (getSeeApi)
+            Log::info('Obteniendo API...');
             $api = $this->getSeeApi();
+            
+            Log::info('Enviando a SUNAT...');
             $result = $api->send($despatch);
             
             $error = $result->getError();
@@ -1254,6 +1267,10 @@ class GreenterService
 
     protected function getSeeApi()
     {
+        Log::info("Retornando seeApi", [
+            'seeApi_exists' => $this->seeApi !== null,
+            'seeApi_class' => $this->seeApi ? get_class($this->seeApi) : 'NULL'
+        ]);
         return $this->seeApi;
     }
 
