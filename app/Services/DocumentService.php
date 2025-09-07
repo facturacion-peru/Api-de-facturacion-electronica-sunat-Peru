@@ -1754,7 +1754,7 @@ class DocumentService
             }
         }
         
-        // TODO: Agregar más tipos de documentos si es necesario (08, 09, etc.)
+        // Se pueden agregar más tipos de documentos según requerimientos SUNAT
         
         return $documents;
     }

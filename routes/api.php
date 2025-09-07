@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\RetentionController;
 use App\Http\Controllers\Api\VoidedDocumentController;
 use App\Http\Controllers\Api\DispatchGuideController;
 use App\Http\Controllers\Api\PdfController;
+use App\Http\Controllers\Api\CompanyConfigController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -144,6 +145,37 @@ Route::prefix('v1')->group(function () {
         // Catálogos
         Route::get('/catalogs/transfer-reasons', [DispatchGuideController::class, 'getTransferReasons']);
         Route::get('/catalogs/transport-modes', [DispatchGuideController::class, 'getTransportModes']);
+    });
+
+    // Configuraciones de Empresas
+    Route::prefix('companies/{company_id}/config')->group(function () {
+        // Obtener configuración completa o por secciones
+        Route::get('/', [CompanyConfigController::class, 'show']);
+        Route::get('/{section}', [CompanyConfigController::class, 'getSection']);
+        
+        // Actualizar configuración por secciones
+        Route::put('/{section}', [CompanyConfigController::class, 'updateSection']);
+        
+        // Validar configuraciones de servicios SUNAT
+        Route::get('/validate/services', [CompanyConfigController::class, 'validateServices']);
+        
+        // Resetear a valores por defecto
+        Route::post('/reset', [CompanyConfigController::class, 'resetToDefaults']);
+        
+        // Migrar empresa al nuevo sistema
+        Route::post('/migrate', [CompanyConfigController::class, 'migrateCompany']);
+        
+        // Limpiar cache
+        Route::delete('/cache', [CompanyConfigController::class, 'clearCache']);
+    });
+
+    // Configuraciones generales
+    Route::prefix('config')->group(function () {
+        // Obtener configuraciones por defecto
+        Route::get('/defaults', [CompanyConfigController::class, 'getDefaults']);
+        
+        // Resumen de configuraciones de múltiples empresas
+        Route::get('/summary', [CompanyConfigController::class, 'getSummary']);
     });
     
 });

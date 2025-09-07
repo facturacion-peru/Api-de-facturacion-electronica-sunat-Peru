@@ -47,7 +47,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_EXPIRATION', 1440), // 24 horas por defecto
 
     /*
     |--------------------------------------------------------------------------
@@ -62,7 +62,7 @@ return [
     |
     */
 
-    'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
+    'token_prefix' => env('SANCTUM_TOKEN_PREFIX', 'sunat_'),
 
     /*
     |--------------------------------------------------------------------------
@@ -79,6 +79,76 @@ return [
         'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
         'encrypt_cookies' => Illuminate\Cookie\Middleware\EncryptCookies::class,
         'validate_csrf_token' => Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token Security Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuraciones adicionales de seguridad para tokens API
+    |
+    */
+
+    'security' => [
+        // Habilitar verificación de IP por token
+        'verify_ip' => env('SANCTUM_VERIFY_IP', false),
+        
+        // Habilitar logging de uso de tokens
+        'log_token_usage' => env('SANCTUM_LOG_USAGE', true),
+        
+        // Tiempo máximo de inactividad antes de requerir reautenticación (minutos)
+        'max_inactivity' => env('SANCTUM_MAX_INACTIVITY', 120), // 2 horas
+        
+        // Límite de tokens concurrentes por usuario
+        'max_tokens_per_user' => env('SANCTUM_MAX_TOKENS', 10),
+        
+        // Habilitar rotación de tokens
+        'rotate_tokens' => env('SANCTUM_ROTATE_TOKENS', false),
+        
+        // Tiempo antes de expirar tokens inactivos (días)
+        'purge_inactive_tokens_days' => env('SANCTUM_PURGE_DAYS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token Types Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuración de diferentes tipos de tokens con diferentes duraciones
+    |
+    */
+
+    'token_types' => [
+        'api' => [
+            'expiration' => 1440, // 24 horas
+            'abilities' => ['*'],
+        ],
+        'web' => [
+            'expiration' => 480, // 8 horas
+            'abilities' => ['*'],
+        ],
+        'mobile' => [
+            'expiration' => 10080, // 7 días
+            'abilities' => ['*'],
+        ],
+        'integration' => [
+            'expiration' => 43200, // 30 días
+            'abilities' => [
+                'invoices.create',
+                'invoices.view',
+                'boletas.create',
+                'boletas.view',
+            ],
+        ],
+        'read_only' => [
+            'expiration' => 1440, // 24 horas
+            'abilities' => [
+                'invoices.view',
+                'boletas.view',
+                'reports.view',
+            ],
+        ],
     ],
 
 ];

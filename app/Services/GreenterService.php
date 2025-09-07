@@ -37,22 +37,22 @@ use Exception;
 class GreenterService
 {
     protected $see;
+    protected $seeApi;
     protected $company;
 
     public function __construct(Company $company)
     {
         $this->company = $company;
         $this->see = $this->initializeSee();
+        $this->seeApi = $this->initializeSeeApi();
     }
 
     protected function initializeSee(): See
     {
         $see = new See();
         
-        // Configurar endpoint según modo (producción o beta)
-        $endpoint = $this->company->modo_produccion 
-            ? $this->company->endpoint_produccion 
-            : $this->company->endpoint_beta;
+        // Usar configuraciones de la base de datos
+        $endpoint = $this->company->getInvoiceEndpoint();
         
         $see->setService($endpoint);
         
@@ -92,6 +92,57 @@ class GreenterService
         $see->setCachePath($cachePath);
 
         return $see;
+    }
+
+    /**
+     * Inicializar API específica para guías de remisión
+     */
+    protected function initializeSeeApi()
+    {
+        // Usar configuraciones de la base de datos para GRE
+        $guideConfig = $this->company->getSunatServiceConfig('guias_remision');
+        $endpoint = $guideConfig['api_endpoint'] ?? $this->company->getGuideApiEndpoint();
+        
+        $api = new \Greenter\Api([
+            'auth' => $endpoint,
+            'cpe' => $endpoint,
+        ]);
+        
+        // Configurar certificado
+        try {
+            $certificadoPath = storage_path('app/public/certificado/certificado.pem');
+            
+            if (!file_exists($certificadoPath)) {
+                throw new Exception("Archivo de certificado no encontrado para GRE: " . $certificadoPath);
+            }
+            
+            $certificadoContent = file_get_contents($certificadoPath);
+            
+            if ($certificadoContent === false) {
+                throw new Exception("No se pudo leer el archivo de certificado para GRE");
+            }
+            
+            $api->setCertificate($certificadoContent);
+            Log::info("Certificado GRE cargado desde archivo: " . $certificadoPath);
+        } catch (Exception $e) {
+            Log::error("Error al configurar certificado para GRE: " . $e->getMessage());
+            throw new Exception("Error al configurar certificado para GRE: " . $e->getMessage());
+        }
+        
+        // Configurar credenciales SOL
+        $api->setCredentials(
+            $this->company->ruc,
+            $this->company->usuario_sol,
+            $this->company->clave_sol
+        );
+        
+        Log::info("API de GRE configurada", [
+            'endpoint' => $endpoint,
+            'modo' => $this->company->modo_produccion ? 'PRODUCCIÓN' : 'BETA',
+            'ruc' => $this->company->ruc
+        ]);
+        
+        return $api;
     }
 
     public function getGreenterCompany(): GreenterCompany
@@ -749,7 +800,6 @@ class GreenterService
         
         // Configuración básica
         
-        // DEBUG: Intentar intercambiando los parámetros
         $summary->setFecGeneracion(new \DateTime($summaryData['fecha_resumen']))
                 ->setFecResumen(new \DateTime($summaryData['fecha_generacion']))
                 ->setCorrelativo($summaryData['correlativo'])
@@ -1194,42 +1244,65 @@ class GreenterService
 
     protected function getSeeApi()
     {
-        // Para GRE se usa una configuración específica
-        $endpoint = $this->company->modo_produccion 
-            ? 'https://api-cpe.sunat.gob.pe/v1/' // Producción
-            : 'https://gre-test.nubefact.com/v1'; // Beta/Test
-            
-        $api = new \Greenter\Api([
-            'auth' => $endpoint,
-            'cpe' => $endpoint,
-        ]);
+        return $this->seeApi;
+    }
+
+    /**
+     * Obtener configuración de servicio específico para logging
+     */
+    public function getServiceConfiguration(string $serviceType = 'facturacion'): array
+    {
+        $config = $this->company->getSunatServiceConfig($serviceType);
         
+        return [
+            'service' => $serviceType,
+            'mode' => $this->company->modo_produccion ? 'PRODUCCIÓN' : 'BETA',
+            'endpoint' => $config['endpoint'] ?? 'N/A',
+            'timeout' => $config['timeout'] ?? 30,
+            'company_ruc' => $this->company->ruc,
+            'company_name' => $this->company->razon_social,
+        ];
+    }
+
+    /**
+     * Obtener timeout configurado para servicio específico
+     */
+    public function getServiceTimeout(string $serviceType = 'facturacion'): int
+    {
+        return $this->company->getServiceTimeout($serviceType);
+    }
+
+    /**
+     * Verificar si la empresa tiene configuraciones válidas para un servicio
+     */
+    public function hasValidConfigurationFor(string $serviceType): bool
+    {
         try {
-            $certificadoPath = storage_path('app/public/certificado/certificado.pem');
+            $config = $this->company->getSunatServiceConfig($serviceType);
             
-            if (!file_exists($certificadoPath)) {
-                throw new Exception("Archivo de certificado no encontrado: " . $certificadoPath);
+            $requiredFields = ['endpoint'];
+            if ($serviceType === 'guias_remision') {
+                $requiredFields[] = 'api_endpoint';
             }
             
-            $certificadoContent = file_get_contents($certificadoPath);
-            
-            if ($certificadoContent === false) {
-                throw new Exception("No se pudo leer el archivo de certificado");
+            foreach ($requiredFields as $field) {
+                if (empty($config[$field])) {
+                    return false;
+                }
             }
             
-            return $api->setBuilderOptions([
-                    'strict_variables' => true,
-                    'optimizations' => 0,
-                    'debug' => true,
-                    'cache' => false,
-                ])
-                ->setApiCredentials('test-85e5b0ae-255c-4891-a595-0b98c65c9854', 'test-Hty/M6QshYvPgItX2P0+Kw==')
-                ->setClaveSOL('20161515648', 'MODDATOS', 'MODDATOS')
-                ->setCertificate($certificadoContent);
-                
+            // Verificar credenciales básicas
+            if (empty($this->company->ruc) || 
+                empty($this->company->usuario_sol) || 
+                empty($this->company->clave_sol)) {
+                return false;
+            }
+            
+            return true;
+            
         } catch (Exception $e) {
-            Log::error("Error al configurar API GRE: " . $e->getMessage());
-            throw new Exception("Error al configurar API GRE: " . $e->getMessage());
+            Log::warning("Error al verificar configuración para {$serviceType}: " . $e->getMessage());
+            return false;
         }
     }
 }
