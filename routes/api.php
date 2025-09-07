@@ -12,14 +12,49 @@ use App\Http\Controllers\Api\VoidedDocumentController;
 use App\Http\Controllers\Api\DispatchGuideController;
 use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\CompanyConfigController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SetupController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// ========================
+// RUTAS DE AUTENTICACIÓN Y SETUP (SIN MIDDLEWARE)
+// ========================
 
+// Información del sistema (público)
+Route::get('/system/info', [AuthController::class, 'systemInfo']);
+
+// Inicialización del sistema (solo si no hay usuarios)
+Route::post('/auth/initialize', [AuthController::class, 'initialize']);
+
+// Login
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+// ========================
+// RUTAS PROTEGIDAS
+// ========================
+Route::middleware('auth:sanctum')->group(function () {
+    
+    // Autenticación
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/create-user', [AuthController::class, 'createUser']);
+    
+    // Setup del sistema
+    Route::prefix('setup')->group(function () {
+        Route::post('/migrate', [SetupController::class, 'migrate']);
+        Route::post('/seed', [SetupController::class, 'seed']);
+        Route::get('/status', [SetupController::class, 'status']);
+        Route::post('/complete', [SetupController::class, 'setup']);
+        Route::post('/configure-sunat', [SetupController::class, 'configureSunat']);
+    });
+    
+    // Usuario autenticado
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+});
 
 // Rutas de la API SUNAT
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     
     // PDF Formatos
     Route::prefix('pdf')->group(function () {

@@ -25,7 +25,7 @@ return new class extends Migration
             // Configuración SUNAT
             $table->string('usuario_sol');
             $table->string('clave_sol');
-            $table->text('certificado_pem');
+            $table->text('certificado_pem')->nullable();
             $table->string('certificado_password')->nullable();
             
             // Endpoints

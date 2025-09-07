@@ -129,12 +129,22 @@ class GreenterService
             throw new Exception("Error al configurar certificado para GRE: " . $e->getMessage());
         }
         
-        // Configurar credenciales SOL
-        $api->setCredentials(
-            $this->company->ruc,
-            $this->company->usuario_sol,
-            $this->company->clave_sol
-        );
+        // Configurar credenciales SOL para API GRE
+        try {
+            $solUser = $this->company->ruc . $this->company->usuario_sol;
+            
+            // Verificar si el método setCredentials existe
+            if (method_exists($api, 'setCredentials')) {
+                $api->setCredentials($solUser, $this->company->clave_sol);
+            } else {
+                // Método alternativo para configurar credenciales
+                $api->setClaveSOL($this->company->ruc, $this->company->usuario_sol, $this->company->clave_sol);
+            }
+            
+        } catch (Exception $e) {
+            Log::warning("No se pudieron configurar credenciales para GRE API: " . $e->getMessage());
+            // Continúa sin error fatal para permitir facturas normales
+        }
         
         Log::info("API de GRE configurada", [
             'endpoint' => $endpoint,
