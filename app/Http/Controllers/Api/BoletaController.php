@@ -68,9 +68,10 @@ class BoletaController extends Controller
 
     public function store(StoreBoletaRequest $request): JsonResponse
     {
+        
         try {
             $validated = $request->validated();
-
+            /* return response()->json(['datos' => $validated], 200); */
             $boleta = $this->documentService->createBoleta($validated);
 
             return response()->json([

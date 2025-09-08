@@ -152,6 +152,7 @@ class DocumentService
                 'ubl_version' => $data['ubl_version'] ?? '2.1',
                 'tipo_operacion' => $data['tipo_operacion'] ?? '0101',
                 'moneda' => $data['moneda'] ?? 'PEN',
+                'metodo_envio' => $data['metodo_envio'] ?? 'individual',
                 'valor_venta' => $totals['valor_venta'],
                 'mto_oper_gravadas' => $totals['mto_oper_gravadas'],
                 'mto_oper_exoneradas' => $totals['mto_oper_exoneradas'],
