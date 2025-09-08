@@ -1129,7 +1129,7 @@ class DocumentService
                 $destinatario = $this->getOrCreateClient($data['destinatario']);
             }
             
-            // Obtener siguiente correlativo
+            // Obtener siguiente correlativo automático (ignorar correlativo enviado)
             $serie = $data['serie'];
             $correlativo = $branch->getNextCorrelative('09', $serie);
             
@@ -1153,14 +1153,28 @@ class DocumentService
                 'und_peso_total' => $data['und_peso_total'],
                 'num_bultos' => $data['num_bultos'] ?? null,
                 
-                // Direcciones 
-                'partida' => [
+                // Direcciones - Soporte para ambos formatos: plano y nested
+                'partida' => isset($data['partida']) && is_array($data['partida']) ? [
+                    'ubigeo' => $data['partida']['ubigeo'],
+                    'direccion' => $data['partida']['direccion'],
+                    'ruc' => $data['partida']['ruc'] ?? null,
+                    'cod_local' => $data['partida']['cod_local'] ?? null,
+                ] : [
                     'ubigeo' => $data['partida_ubigeo'],
-                    'direccion' => $data['partida_direccion']
+                    'direccion' => $data['partida_direccion'],
+                    'ruc' => $data['partida_ruc'] ?? null,
+                    'cod_local' => $data['partida_cod_local'] ?? null,
                 ],
-                'llegada' => [
+                'llegada' => isset($data['llegada']) && is_array($data['llegada']) ? [
+                    'ubigeo' => $data['llegada']['ubigeo'],
+                    'direccion' => $data['llegada']['direccion'],
+                    'ruc' => $data['llegada']['ruc'] ?? null,
+                    'cod_local' => $data['llegada']['cod_local'] ?? null,
+                ] : [
                     'ubigeo' => $data['llegada_ubigeo'],
-                    'direccion' => $data['llegada_direccion']
+                    'direccion' => $data['llegada_direccion'],
+                    'ruc' => $data['llegada_ruc'] ?? null,
+                    'cod_local' => $data['llegada_cod_local'] ?? null,
                 ],
                 
                 // Datos de transporte (JSON según modalidad)
@@ -1171,17 +1185,21 @@ class DocumentService
                     'nro_mtc' => $data['transportista_nro_mtc'] ?? null,
                 ] : null,
                 
-                'vehiculo' => $data['mod_traslado'] === '02' ? [
+                // Indicadores especiales (M1L, etc.)
+                'indicadores' => $data['indicadores'] ?? null,
+                
+                'vehiculo' => isset($data['vehiculo_placa']) || isset($data['conductor_tipo_doc']) ? [
+                    'placa' => $data['vehiculo_placa'] ?? null,
                     'placa_principal' => $data['vehiculo_placa'] ?? null,
-                    'placa_secundaria' => null,
-                    'conductor' => [
+                    'placa_secundaria' => $data['vehiculo_placa_secundaria'] ?? null,
+                    'conductor' => $data['mod_traslado'] === '02' && !isset($data['indicadores']) ? [
                         'tipo' => $data['conductor_tipo'] ?? null,
                         'tipo_doc' => $data['conductor_tipo_doc'] ?? null,
                         'num_doc' => $data['conductor_num_doc'] ?? null,
                         'licencia' => $data['conductor_licencia'] ?? null,
                         'nombres' => $data['conductor_nombres'] ?? null,
                         'apellidos' => $data['conductor_apellidos'] ?? null,
-                    ]
+                    ] : null,
                 ] : null,
                 
                 // Detalles y observaciones
@@ -1228,10 +1246,10 @@ class DocumentService
                 ->setCorrelativo($guide->correlativo)
                 ->setFechaEmision($guide->fecha_emision);
             
-            // Empresa (datos fijos como en ejemplo)
+            // Empresa (usar datos reales de la guía)
             $company = new \Greenter\Model\Company\Company();
-            $company->setRuc('20161515648') // RUC de prueba de Greenter
-                ->setRazonSocial('EMPRESA DE PRUEBA SUNAT');
+            $company->setRuc($guide->company->ruc)
+                ->setRazonSocial($guide->company->razon_social);
             $despatch->setCompany($company);
             
             // Cliente/Destinatario
@@ -1249,43 +1267,128 @@ class DocumentService
                 ->setPesoTotal($guide->peso_total)
                 ->setUndPesoTotal($guide->und_peso_total);
             
-            // Direcciones
+            // Direcciones con soporte para traslados misma empresa (ejemplo: guia-misma-empresa.php)
             $llegada = new \Greenter\Model\Despatch\Direction(
                 $guide->llegada['ubigeo'] ?? '150101', 
                 $guide->llegada['direccion'] ?? 'AV LIMA'
             );
+            
+            // Para traslados entre establecimientos de la misma empresa
+            if (isset($guide->llegada['ruc']) && isset($guide->llegada['cod_local'])) {
+                $llegada->setRuc($guide->llegada['ruc'])
+                    ->setCodLocal($guide->llegada['cod_local']);
+            }
+            
             $partida = new \Greenter\Model\Despatch\Direction(
                 $guide->partida['ubigeo'] ?? '150203', 
                 $guide->partida['direccion'] ?? 'AV ITALIA'
             );
+            
+            // Para traslados entre establecimientos de la misma empresa
+            if (isset($guide->partida['ruc']) && isset($guide->partida['cod_local'])) {
+                $partida->setRuc($guide->partida['ruc'])
+                    ->setCodLocal($guide->partida['cod_local']);
+            }
+            
             $envio->setLlegada($llegada)->setPartida($partida);
             
             // Configurar transporte según modalidad
-            if ($guide->mod_traslado === '02') {
-                // Transporte privado - conductor y vehículo
-                if (isset($guide->vehiculo['conductor'])) {
-                    $conductor = $guide->vehiculo['conductor'];
-                    $chofer = new \Greenter\Model\Despatch\Driver();
-                    $chofer->setTipo($conductor['tipo'] ?? 'Principal')
-                        ->setTipoDoc($conductor['tipo_doc'] ?? '1')
-                        ->setNroDoc($conductor['num_doc'] ?? '12345678')
-                        ->setLicencia($conductor['licencia'] ?? 'L12345')
-                        ->setNombres($conductor['nombres'] ?? 'CONDUCTOR')
-                        ->setApellidos($conductor['apellidos'] ?? 'APELLIDO');
+            if ($guide->mod_traslado === '01') {
+                // Transporte público - transportista (siguiendo ejemplo oficial Greenter)
+                if (isset($guide->transportista) && is_array($guide->transportista)) {
+                    $transportista = new \Greenter\Model\Despatch\Transportist();
+                    $transportista->setTipoDoc($guide->transportista['tipo_doc'])
+                        ->setNumDoc($guide->transportista['num_doc'])
+                        ->setRznSocial($guide->transportista['razon_social'])
+                        ->setNroMtc($guide->transportista['nro_mtc']);
                     
-                    $envio->setChoferes([$chofer]);
+                    $envio->setTransportista($transportista);
+                    
+                    Log::info("Configurado transportista para modalidad 01", [
+                        'tipo_doc' => $guide->transportista['tipo_doc'],
+                        'num_doc' => $guide->transportista['num_doc'],
+                        'razon_social' => $guide->transportista['razon_social'],
+                        'nro_mtc' => $guide->transportista['nro_mtc']
+                    ]);
+                } else {
+                    Log::error("Datos de transportista no encontrados para modalidad 01", [
+                        'transportista' => $guide->transportista ?? 'null'
+                    ]);
+                    throw new Exception("Para modalidad de transporte '01' (público) se requieren los datos del transportista");
                 }
                 
-                if (isset($guide->vehiculo['placa_principal'])) {
-                    $vehiculo = new \Greenter\Model\Despatch\Vehicle();
-                    $vehiculo->setPlaca($guide->vehiculo['placa_principal']);
-                    $envio->setVehiculo($vehiculo);
+                // ❌ ELIMINAR - Para transporte público (01) NO se configura vehículo según ejemplos Greenter
+                // Los ejemplos oficiales de Greenter NO configuran vehículo para modalidad '01'
+                Log::info("Modalidad 01 (Transporte Público) - No se configura vehículo según ejemplos oficiales");
+                
+            } elseif ($guide->mod_traslado === '02') {
+                // Transporte privado - verificar si es M1L o con conductor/vehículo
+                
+                Log::info("=== DEBUG MODALIDAD 02 ===", [
+                    'indicadores' => $guide->indicadores ?? 'null',
+                    'indicadores_type' => gettype($guide->indicadores ?? null),
+                    'indicadores_is_array' => is_array($guide->indicadores ?? null),
+                    'vehiculo' => $guide->vehiculo ?? 'null'
+                ]);
+                
+                // Verificar si tiene indicador M1L (vehículos menores)
+                if (isset($guide->indicadores) && is_array($guide->indicadores) && in_array('SUNAT_Envio_IndicadorTrasladoVehiculoM1L', $guide->indicadores)) {
+                    // Modalidad M1L - Sin conductor ni vehículo (ejemplo: guia-transporteM1L.php)
+                    $envio->setIndicadores(['SUNAT_Envio_IndicadorTrasladoVehiculoM1L']);
+                    
+                    Log::info("Configurado transporte privado M1L - Sin conductor ni vehículo", [
+                        'indicadores_configurados' => ['SUNAT_Envio_IndicadorTrasladoVehiculoM1L']
+                    ]);
+                    
+                } else {
+                    // Transporte privado normal - con conductor y vehículo (ejemplo: guia-transportePrivado.php)
+                    Log::info("Entrando a configuración transporte privado NORMAL (sin M1L)");
+                    
+                    // Configurar conductor
+                    if (isset($guide->vehiculo['conductor'])) {
+                        $conductor = $guide->vehiculo['conductor'];
+                        $chofer = new \Greenter\Model\Despatch\Driver();
+                        $chofer->setTipo($conductor['tipo'] ?? 'Principal')
+                            ->setTipoDoc($conductor['tipo_doc'] ?? '1')
+                            ->setNroDoc($conductor['num_doc'] ?? '12345678')
+                            ->setLicencia($conductor['licencia'] ?? 'L12345')
+                            ->setNombres($conductor['nombres'] ?? 'CONDUCTOR')
+                            ->setApellidos($conductor['apellidos'] ?? 'APELLIDO');
+                        
+                        $envio->setChoferes([$chofer]);
+                        
+                        Log::info("Configurado conductor", [
+                            'tipo_doc' => $conductor['tipo_doc'] ?? '1',
+                            'num_doc' => $conductor['num_doc'] ?? '12345678'
+                        ]);
+                    }
+                    
+                    // Configurar vehículo principal
+                    if (isset($guide->vehiculo['placa_principal']) || isset($guide->vehiculo['placa'])) {
+                        $placaPrincipal = $guide->vehiculo['placa_principal'] ?? $guide->vehiculo['placa'];
+                        $vehiculo = new \Greenter\Model\Despatch\Vehicle();
+                        $vehiculo->setPlaca($placaPrincipal);
+                        
+                        // Vehículo secundario (opcional)
+                        if (isset($guide->vehiculo['placa_secundaria'])) {
+                            $vehiculoSecundario = new \Greenter\Model\Despatch\Vehicle();
+                            $vehiculoSecundario->setPlaca($guide->vehiculo['placa_secundaria']);
+                            $vehiculo->setSecundarios([$vehiculoSecundario]);
+                        }
+                        
+                        $envio->setVehiculo($vehiculo);
+                        
+                        Log::info("Configurado vehículo", [
+                            'placa_principal' => $placaPrincipal,
+                            'placa_secundaria' => $guide->vehiculo['placa_secundaria'] ?? null
+                        ]);
+                    }
                 }
             }
             
             $despatch->setEnvio($envio);
             
-            // Detalles
+            // Detalles con soporte completo (ejemplo: guia-extra-atributos.php)
             $details = [];
             foreach ($guide->detalles as $detalle) {
                 $detail = new \Greenter\Model\Despatch\DespatchDetail();
@@ -1293,9 +1396,41 @@ class DocumentService
                     ->setUnidad($detalle['unidad'])
                     ->setDescripcion($detalle['descripcion'])
                     ->setCodigo($detalle['codigo']);
+                
+                // Código SUNAT del producto (opcional)
+                if (isset($detalle['cod_prod_sunat'])) {
+                    $detail->setCodProdSunat($detalle['cod_prod_sunat']);
+                }
+                
+                // Atributos adicionales (ejemplo: partida arancelaria)
+                if (isset($detalle['atributos']) && is_array($detalle['atributos'])) {
+                    $attributes = [];
+                    foreach ($detalle['atributos'] as $attr) {
+                        $attribute = new \Greenter\Model\Sale\DetailAttribute();
+                        $attribute->setCode($attr['code'])
+                            ->setName($attr['name'])
+                            ->setValue($attr['value']);
+                        $attributes[] = $attribute;
+                    }
+                    $detail->setAtributos($attributes);
+                }
+                
                 $details[] = $detail;
             }
             $despatch->setDetails($details);
+            
+            // Documentos relacionados (ejemplo: guia-extra-atributos.php)
+            if (isset($guide->documentos_relacionados) && is_array($guide->documentos_relacionados)) {
+                $relDocs = [];
+                foreach ($guide->documentos_relacionados as $doc) {
+                    $relDoc = new \Greenter\Model\Despatch\AdditionalDoc();
+                    $relDoc->setTipo($doc['tipo'])
+                        ->setTipoDesc($doc['tipo_desc'])
+                        ->setNro($doc['numero']);
+                    $relDocs[] = $relDoc;
+                }
+                $despatch->setAddDocs($relDocs);
+            }
             
             // USAR LA CONFIGURACIÓN DE LA CLASE UTIL DE GREENTER
             $api = new \Greenter\Api([
@@ -1569,11 +1704,27 @@ class DocumentService
         if ($guide->mod_traslado === '01') {
             // Transporte público
             $data['transportista'] = $guide->transportista;
-        } else {
-            // Transporte privado
-            $data['conductor'] = $guide->vehiculo['conductor'] ?? [];
-            $data['vehiculo_placa'] = $guide->vehiculo['placa_principal'] ?? '';
-            $data['vehiculos_secundarios'] = [];
+        } elseif ($guide->mod_traslado === '02') {
+            // Transporte privado - verificar si es M1L
+            $esM1L = isset($guide->indicadores) && is_array($guide->indicadores) && 
+                     in_array('SUNAT_Envio_IndicadorTrasladoVehiculoM1L', $guide->indicadores);
+                     
+            if ($esM1L) {
+                // M1L - Sin datos de vehículo ni conductor (ejemplo: guia-misma-empresa.php)
+                $data['indicadores'] = $guide->indicadores;
+                Log::info("prepareDispatchGuideData: Configurando M1L sin vehículo", [
+                    'indicadores' => $guide->indicadores
+                ]);
+            } else {
+                // Transporte privado normal - con conductor y vehículo
+                $data['conductor'] = $guide->vehiculo['conductor'] ?? [];
+                $data['vehiculo_placa'] = $guide->vehiculo['placa_principal'] ?? $guide->vehiculo['placa'] ?? '';
+                $data['vehiculos_secundarios'] = [];
+                Log::info("prepareDispatchGuideData: Configurando transporte privado normal", [
+                    'vehiculo_placa' => $data['vehiculo_placa'],
+                    'tiene_conductor' => !empty($data['conductor'])
+                ]);
+            }
         }
         
         return $data;

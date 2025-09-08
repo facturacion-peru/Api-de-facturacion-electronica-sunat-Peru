@@ -31,11 +31,29 @@ class StoreDispatchGuideRequest extends FormRequest
             'und_peso_total' => 'required|string|max:3',
             'num_bultos' => 'required|integer|min:1',
             
-            // Direcciones
-            'partida_ubigeo' => 'required|string|size:6',
-            'partida_direccion' => 'required|string|max:255',
-            'llegada_ubigeo' => 'required|string|size:6',
-            'llegada_direccion' => 'required|string|max:255',
+            // Direcciones - Soporte para formato nested y plano
+            'partida' => 'nullable|array',
+            'partida.ubigeo' => 'required_with:partida|string|size:6',
+            'partida.direccion' => 'required_with:partida|string|max:255',
+            'partida.ruc' => 'nullable|string|max:11',
+            'partida.cod_local' => 'nullable|string|max:10',
+            
+            'llegada' => 'nullable|array', 
+            'llegada.ubigeo' => 'required_with:llegada|string|size:6',
+            'llegada.direccion' => 'required_with:llegada|string|max:255',
+            'llegada.ruc' => 'nullable|string|max:11',
+            'llegada.cod_local' => 'nullable|string|max:10',
+            
+            // Formato plano (legacy)
+            'partida_ubigeo' => 'required_without:partida|string|size:6',
+            'partida_direccion' => 'required_without:partida|string|max:255',
+            'partida_ruc' => 'nullable|string|max:11',
+            'partida_cod_local' => 'nullable|string|max:10',
+            
+            'llegada_ubigeo' => 'required_without:llegada|string|size:6',
+            'llegada_direccion' => 'required_without:llegada|string|max:255',
+            'llegada_ruc' => 'nullable|string|max:11',
+            'llegada_cod_local' => 'nullable|string|max:10',
             
             // Transportista (si es transporte público)
             'transportista_tipo_doc' => 'nullable|string|max:1',
@@ -57,6 +75,10 @@ class StoreDispatchGuideRequest extends FormRequest
             // Vehículos secundarios
             'vehiculos_secundarios' => 'nullable|array',
             'vehiculos_secundarios.*.placa' => 'required_with:vehiculos_secundarios|string|max:10',
+            
+            // Indicadores especiales (M1L, etc.)
+            'indicadores' => 'nullable|array',
+            'indicadores.*' => 'string|max:50',
             
             // Detalles de productos
             'detalles' => 'required|array|min:1',
@@ -96,8 +118,12 @@ class StoreDispatchGuideRequest extends FormRequest
                     $validator->errors()->add('transportista_razon_social', 'La razón social del transportista es requerida para transporte público.');
                 }
             } elseif ($this->input('mod_traslado') === '02') { // Transporte privado
-                // Para traslado entre establecimientos (código 04), el conductor es opcional
-                if ($this->input('cod_traslado') !== '04') {
+                // Verificar si tiene indicador M1L
+                $indicadores = $this->input('indicadores', []);
+                $esM1L = is_array($indicadores) && in_array('SUNAT_Envio_IndicadorTrasladoVehiculoM1L', $indicadores);
+                
+                // Para M1L o traslado entre establecimientos (código 04), el conductor/vehículo es opcional
+                if ($this->input('cod_traslado') !== '04' && !$esM1L) {
                     if (!$this->input('conductor_tipo_doc')) {
                         $validator->errors()->add('conductor_tipo_doc', 'El tipo de documento del conductor es requerido para transporte privado.');
                     }

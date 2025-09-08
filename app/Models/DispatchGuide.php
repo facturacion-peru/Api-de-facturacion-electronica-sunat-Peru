@@ -37,6 +37,7 @@ class DispatchGuide extends Model
         // Transportista y vehículo (JSON en migración)
         'transportista',
         'vehiculo',
+        'indicadores', // Para M1L y otros indicadores especiales
         
         // Detalles de productos
         'detalles',
@@ -66,6 +67,7 @@ class DispatchGuide extends Model
         'llegada' => 'array',
         'transportista' => 'array',
         'vehiculo' => 'array',
+        'indicadores' => 'array',
         'detalles' => 'array',
         'documentos_relacionados' => 'array',
         'datos_adicionales' => 'array',
