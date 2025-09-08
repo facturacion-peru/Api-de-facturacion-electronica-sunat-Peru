@@ -1731,19 +1731,19 @@ class DocumentService
     }
 
     // Métodos para generación de PDFs
-    public function generateDocumentPdf($document, string $documentType): void
+    public function generateDocumentPdf($document, string $documentType, string $format = 'A4'): void
     {
         try {
-            logger()->info("Generando PDF para documento: {$document->id}, tipo: {$documentType}");
+            logger()->info("Generando PDF para documento: {$document->id}, tipo: {$documentType}, formato: {$format}");
             
             $document = $document->load(['company', 'branch', 'destinatario']);
             
             $pdfContent = match($documentType) {
-                'invoice' => $this->pdfService->generateInvoicePdf($document),
-                'boleta' => $this->pdfService->generateBoletaPdf($document),
-                'credit-note' => $this->pdfService->generateCreditNotePdf($document),
-                'debit-note' => $this->pdfService->generateDebitNotePdf($document),
-                'dispatch-guide' => $this->pdfService->generateDispatchGuidePdf($document),
+                'invoice' => $this->pdfService->generateInvoicePdf($document, $format),
+                'boleta' => $this->pdfService->generateBoletaPdf($document, $format),
+                'credit-note' => $this->pdfService->generateCreditNotePdf($document, $format),
+                'debit-note' => $this->pdfService->generateDebitNotePdf($document, $format),
+                'dispatch-guide' => $this->pdfService->generateDispatchGuidePdf($document, $format),
                 default => throw new Exception("Tipo de documento no soportado: $documentType")
             };
 
@@ -1784,9 +1784,9 @@ class DocumentService
         $this->generateDocumentPdf($debitNote, 'debit-note');
     }
 
-    public function generateDispatchGuidePdf(DispatchGuide $dispatchGuide): void
+    public function generateDispatchGuidePdf(DispatchGuide $dispatchGuide, string $format = 'A4'): void
     {
-        $this->generateDocumentPdf($dispatchGuide, 'dispatch-guide');
+        $this->generateDocumentPdf($dispatchGuide, 'dispatch-guide', $format);
     }
 
     public function createRetention(array $data): Retention

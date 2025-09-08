@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\HandlesPdfGeneration;
 use App\Services\DocumentService;
 use App\Services\FileService;
 use App\Models\DispatchGuide;
@@ -13,6 +14,8 @@ use Illuminate\Http\JsonResponse;
 
 class DispatchGuideController extends Controller
 {
+    use HandlesPdfGeneration;
+    
     protected $documentService;
     protected $fileService;
 
@@ -269,73 +272,16 @@ class DispatchGuideController extends Controller
         }
     }
 
-    public function downloadPdf($id)
+    public function downloadPdf($id, Request $request)
     {
-        try {
-            $dispatchGuide = DispatchGuide::findOrFail($id);
-            
-            $download = $this->fileService->downloadPdf($dispatchGuide);
-            
-            if (!$download) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PDF no encontrado'
-                ], 404);
-            }
-            
-            return $download;
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al descargar PDF',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $dispatchGuide = DispatchGuide::findOrFail($id);
+        return $this->downloadDocumentPdf($dispatchGuide, $request);
     }
 
-    public function generatePdf($id): JsonResponse
+    public function generatePdf($id, Request $request)
     {
-        try {
-            $dispatchGuide = DispatchGuide::with(['company', 'branch', 'destinatario'])->findOrFail($id);
-            
-            // Generar PDF usando DocumentService
-            $this->documentService->generateDispatchGuidePdf($dispatchGuide);
-            
-            // Recargar el modelo para obtener el pdf_path actualizado
-            $dispatchGuide->refresh();
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'id' => $dispatchGuide->id,
-                    'serie' => $dispatchGuide->serie,
-                    'correlativo' => $dispatchGuide->correlativo,
-                    'numero_documento' => $dispatchGuide->numero_completo,
-                    'fecha_emision' => $dispatchGuide->fecha_emision,
-                    'fecha_traslado' => $dispatchGuide->fec_traslado,
-                    'pdf_path' => $dispatchGuide->pdf_path,
-                    'pdf_url' => $dispatchGuide->pdf_path ? url('storage/' . $dispatchGuide->pdf_path) : null,
-                    'download_url' => url("/api/v1/dispatch-guides/{$dispatchGuide->id}/download-pdf"),
-                    'estado_sunat' => $dispatchGuide->estado_sunat,
-                    'peso_total' => $dispatchGuide->peso_total,
-                    'modalidad_traslado' => $dispatchGuide->modalidad_traslado_name,
-                    'motivo_traslado' => $dispatchGuide->motivo_traslado_name,
-                    'destinatario' => [
-                        'numero_documento' => $dispatchGuide->destinatario->numero_documento ?? null,
-                        'razon_social' => $dispatchGuide->destinatario->razon_social ?? null,
-                    ]
-                ],
-                'message' => 'PDF de guía de remisión generado correctamente'
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al generar PDF',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $dispatchGuide = DispatchGuide::with(['company', 'branch', 'destinatario'])->findOrFail($id);
+        return $this->generateDocumentPdf($dispatchGuide, 'dispatch-guide', $request);
     }
 
     public function getTransferReasons(): JsonResponse
