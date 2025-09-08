@@ -112,75 +112,80 @@
     }
 
     /* ================= TABLA PRINCIPAL ================= */
-    .items-table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
-        font-size: 9px;
-        border: 1px solid #000;
-        border-radius: 6px;
-        margin-bottom: 4px;
-    }
+    /* ================= TABLA PRINCIPAL ================= */
+        .items-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 11px;
+            border: 1px solid #000;
+            /* marco exterior */
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
 
-    .items-table thead {
-        background-color: #f0f0f0;
-    }
+        .items-table thead {
+            background-color: #f0f0f0;
+        }
 
-    .items-table th,
-    .items-table td {
-        border-right: 1px solid #000;
-        border-bottom: 1px solid #000;
-        padding: 4px;
-        text-align: left;
-    }
+        .items-table th,
+        .items-table td {
+            border-right: 1px solid #000;
+            padding: 5px;
+            text-align: left;
+        }
 
-    /* Primera columna sin borde izquierdo */
-    .items-table th:first-child,
-    .items-table td:first-child {
-        border-left: none;
-    }
+        .items-table thead th {
+            border-bottom: 1px solid #000;
+        }
 
-    /* Última columna sin borde derecho */
-    .items-table th:last-child,
-    .items-table td:last-child {
-        border-right: none;
-    }
+     /* Última fila sin borde inferior */
+        .items-table tbody tr:first-child th {
+            border-right: none
+        }
 
-    /* Última fila sin borde inferior */
-    .items-table tbody tr:last-child td {
-        border-bottom: none;
-    }
+        /* Última columna sin borde derecho */
+        .items-table th:last-child,
+        .items-table td:last-child {
+            border-right: none;
+        }
 
-    /* Header sin borde superior */
-    .items-table thead th {
-        border-top: none;
-    }
+        /* Última fila sin borde inferior */
+        .items-table tbody tr:last-child td {
+            border-bottom: none;
+        }
 
-    /* Esquinas redondeadas para el header */
-    .items-table thead th:first-child {
-        border-top-left-radius: 5px;
-    }
+        /* Header sin borde superior */
+        .items-table thead th {
+            border-top: none;
+        }
 
-    .items-table thead th:last-child {
-        border-top-right-radius: 5px;
-    }
+        /* Esquinas redondeadas para el header */
+        .items-table thead th:first-child {
+            border-top-left-radius: 6px;
+        }
 
-    /* Esquinas redondeadas para la última fila */
-    .items-table tbody tr:last-child td:first-child {
-        border-bottom-left-radius: 5px;
-    }
+        .items-table thead th:last-child {
+            border-top-right-radius: 6px;
+        }
 
-    .items-table tbody tr:last-child td:last-child {
-        border-bottom-right-radius: 5px;
-    }
+        /* Esquinas redondeadas para la última fila */
+        .items-table tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 6px;
+        }
 
-    /* Columnas numéricas alineadas a la derecha */
-    .items-table th:nth-child(5),
-    .items-table th:nth-child(6),
-    .items-table td:nth-child(5),
-    .items-table td:nth-child(6) {
-        text-align: right;
-    }
+        .items-table tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 6px;
+        }
+
+        /* Columnas numéricas alineadas a la derecha */
+        .items-table th:nth-child(5),
+        .items-table th:nth-child(6),
+        .items-table td:nth-child(5),
+        .items-table td:nth-child(6), 
+        .items-table td:nth-child(7), {
+            text-align: right;
+        }
 
     /* ================= SON EN LETRAS ================= */
     .en-letras {

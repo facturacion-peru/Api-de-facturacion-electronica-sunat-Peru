@@ -1,5 +1,9 @@
 {{-- PDF Items Table Component --}}
 {{-- Props: $detalles, $format --}}
+@php
+     $maxFilas = in_array($format, ['a5', 'A5']) ? 10 : 20;
+    $contador = count($detalles);
+@endphp
 
 @if(in_array($format, ['a4', 'A4', 'a5', 'A5']))
     {{-- A4/A5 Items Table --}}
@@ -16,7 +20,8 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($detalles as $index => $detalle)
+            {{-- Items reales --}}
+            @foreach($detalles as $index => $detalle)
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $detalle['codigo'] ?? '' }}</td>
@@ -26,11 +31,20 @@
                     <td>{{ number_format($detalle['mto_valor_unitario'] ?? 0, 2) }}</td>
                     <td>{{ number_format($detalle['mto_valor_venta'] ?? 0, 2) }}</td>
                 </tr>
-            @empty
+            @endforeach
+
+            {{-- Filas vacías --}}
+            @for($i = $contador; $i < $maxFilas; $i++)
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 20px;">No hay items en este comprobante</td>
+                    <td>&nbsp;</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
-            @endforelse
+            @endfor
         </tbody>
     </table>
 @else
