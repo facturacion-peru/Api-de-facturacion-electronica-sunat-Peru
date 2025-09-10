@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\CorrelativeController;
 use App\Http\Controllers\Api\GreCredentialsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SetupController;
+use App\Http\Controllers\Api\UbigeoController;
 
 // ========================
 // RUTAS DE AUTENTICACIÓN Y SETUP (SIN MIDDLEWARE)
@@ -87,6 +88,17 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Catálogos de correlativos
     Route::get('/correlatives/document-types', [CorrelativeController::class, 'getDocumentTypes']);
+    
+    // ========================
+    // GESTIÓN DE UBIGEOS
+    // ========================
+    Route::prefix('ubigeos')->group(function () {
+        Route::get('/regiones', [UbigeoController::class, 'getRegiones']);
+        Route::get('/provincias', [UbigeoController::class, 'getProvincias']);
+        Route::get('/distritos', [UbigeoController::class, 'getDistritos']);
+        Route::get('/search', [UbigeoController::class, 'searchUbigeo']);
+        Route::get('/{id}', [UbigeoController::class, 'getUbigeoById']);
+    });
 });
 
 // Rutas de la API SUNAT
