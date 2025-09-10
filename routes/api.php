@@ -12,6 +12,11 @@ use App\Http\Controllers\Api\VoidedDocumentController;
 use App\Http\Controllers\Api\DispatchGuideController;
 use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\CompanyConfigController;
+use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\CorrelativeController;
+use App\Http\Controllers\Api\GreCredentialsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SetupController;
 
@@ -51,6 +56,37 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // ========================
+    // GESTIÓN DE EMPRESAS, SUCURSALES Y CLIENTES (CRUD básico)
+    // ========================
+    
+    // Empresas
+    Route::apiResource('companies', CompanyController::class);
+    Route::post('/companies/{company}/activate', [CompanyController::class, 'activate']);
+    Route::post('/companies/{company}/toggle-production', [CompanyController::class, 'toggleProductionMode']);
+    
+    // Sucursales
+    Route::apiResource('branches', BranchController::class);
+    Route::post('/branches/{branch}/activate', [BranchController::class, 'activate']);
+    Route::get('/companies/{company}/branches', [BranchController::class, 'getByCompany']);
+    
+    // Clientes
+    Route::apiResource('clients', ClientController::class);
+    Route::post('/clients/{client}/activate', [ClientController::class, 'activate']);
+    Route::get('/companies/{company}/clients', [ClientController::class, 'getByCompany']);
+    Route::post('/clients/search-by-document', [ClientController::class, 'searchByDocument']);
+    
+    // Correlativos por sucursal
+    Route::get('/branches/{branch}/correlatives', [CorrelativeController::class, 'index']);
+    Route::post('/branches/{branch}/correlatives', [CorrelativeController::class, 'store']);
+    Route::put('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'update']);
+    Route::delete('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'destroy']);
+    Route::post('/branches/{branch}/correlatives/batch', [CorrelativeController::class, 'createBatch']);
+    Route::post('/branches/{branch}/correlatives/{correlative}/increment', [CorrelativeController::class, 'increment']);
+    
+    // Catálogos de correlativos
+    Route::get('/correlatives/document-types', [CorrelativeController::class, 'getDocumentTypes']);
 });
 
 // Rutas de la API SUNAT
@@ -211,6 +247,31 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         
         // Resumen de configuraciones de múltiples empresas
         Route::get('/summary', [CompanyConfigController::class, 'getSummary']);
+    });
+
+    // Credenciales GRE (Guías de Remisión Electrónica)
+    Route::prefix('companies/{company}/gre-credentials')->group(function () {
+        // Obtener credenciales GRE actuales
+        Route::get('/', [GreCredentialsController::class, 'show']);
+        
+        // Actualizar credenciales GRE para un ambiente
+        Route::put('/', [GreCredentialsController::class, 'update']);
+        
+        // Probar conexión con credenciales actuales
+        Route::post('/test-connection', [GreCredentialsController::class, 'testConnection']);
+        
+        // Limpiar credenciales para un ambiente específico
+        Route::delete('/clear', [GreCredentialsController::class, 'clear']);
+        
+        // Copiar credenciales de un ambiente a otro
+        Route::post('/copy', [GreCredentialsController::class, 'copy']);
+    });
+
+    // Credenciales GRE - Configuraciones globales
+    Route::prefix('gre-credentials')->group(function () {
+        // Obtener valores por defecto para un ambiente
+        Route::get('/defaults/{mode}', [GreCredentialsController::class, 'getDefaults'])
+             ->where('mode', 'beta|produccion');
     });
     
 });

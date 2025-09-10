@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -32,8 +34,8 @@ class AuthController extends Controller
         ]);
 
         try {
-            // Crear roles del sistema si no existen
-            $this->createSystemRoles();
+            // Ejecutar seeder completo de roles y permisos automáticamente
+            $this->runRolesAndPermissionsSeeder();
 
             // Obtener rol de super admin
             $superAdminRole = Role::where('name', 'super_admin')->first();
@@ -215,24 +217,15 @@ class AuthController extends Controller
     }
 
     /**
-     * Crear roles del sistema
+     * Ejecutar seeder completo de roles y permisos automáticamente
      */
-    private function createSystemRoles()
+    private function runRolesAndPermissionsSeeder()
     {
-        $roles = Role::getSystemRoles();
-
-        foreach ($roles as $name => $data) {
-            Role::updateOrCreate(
-                ['name' => $name],
-                [
-                    'display_name' => $data['display_name'],
-                    'description' => $data['description'],
-                    'permissions' => $data['permissions'],
-                    'is_system' => $data['is_system'],
-                    'active' => true,
-                ]
-            );
-        }
+        // Instanciar el seeder y ejecutarlo directamente sin setCommand
+        $seeder = new RolesAndPermissionsSeeder();
+        
+        // Ejecutar solo la creación de permisos y roles, no usuarios por defecto
+        $seeder->runPermissionsAndRolesOnly();
     }
 
     /**

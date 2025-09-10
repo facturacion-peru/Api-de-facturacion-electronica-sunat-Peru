@@ -1,0 +1,543 @@
+<?php
+
+namespace App\Traits;
+
+use App\Models\CompanyConfiguration;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+
+trait HasCompanyConfigurations
+{
+    /**
+     * Cache key para configuraciones de empresa
+     */
+    protected function getConfigCacheKey(string $suffix = ''): string
+    {
+        return "company_config_{$this->id}" . ($suffix ? "_{$suffix}" : '');
+    }
+
+    /**
+     * Limpiar cache de configuraciones
+     */
+    public function clearConfigCache(): void
+    {
+        $patterns = [
+            $this->getConfigCacheKey(),
+            $this->getConfigCacheKey('*')
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (str_contains($pattern, '*')) {
+                // Para patrones con wildcard, necesitamos una implementación más sofisticada
+                Cache::flush(); // Simplificado por ahora
+            } else {
+                Cache::forget($pattern);
+            }
+        }
+    }
+
+    // ==================== MÉTODOS PRINCIPALES DE CONFIGURACIÓN ====================
+
+    /**
+     * Obtener configuración específica con cache
+     */
+    public function getConfig(string $configType, string $environment = null, string $serviceType = null, $default = null)
+    {
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+        $cacheKey = $this->getConfigCacheKey("{$configType}_{$environment}_{$serviceType}");
+
+        return Cache::remember($cacheKey, 3600, function () use ($configType, $environment, $serviceType, $default) {
+            $query = $this->activeConfigurations()
+                ->where('config_type', $configType)
+                ->where('environment', $environment);
+
+            if ($serviceType) {
+                $query->where('service_type', $serviceType);
+            }
+
+            $config = $query->first();
+            
+            if (!$config) {
+                // Buscar configuración general si no se encuentra específica del ambiente
+                $config = $this->activeConfigurations()
+                    ->where('config_type', $configType)
+                    ->where('environment', 'general')
+                    ->when($serviceType, function ($q) use ($serviceType) {
+                        return $q->where('service_type', $serviceType);
+                    })
+                    ->first();
+            }
+
+            return $config ? $config->config_data : $default;
+        });
+    }
+
+    /**
+     * Establecer configuración específica
+     */
+    public function setConfig(string $configType, array $configData, string $environment = null, string $serviceType = 'general', string $description = null): CompanyConfiguration
+    {
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+
+        // Buscar configuración existente
+        $config = $this->configurations()
+            ->where('config_type', $configType)
+            ->where('environment', $environment)
+            ->where('service_type', $serviceType)
+            ->first();
+
+        if ($config) {
+            // Actualizar existente
+            $config->update([
+                'config_data' => $configData,
+                'description' => $description,
+                'is_active' => true,
+            ]);
+        } else {
+            // Crear nueva
+            $config = $this->configurations()->create([
+                'config_type' => $configType,
+                'environment' => $environment,
+                'service_type' => $serviceType,
+                'config_data' => $configData,
+                'description' => $description,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->clearConfigCache();
+        return $config;
+    }
+
+    /**
+     * Obtener todas las configuraciones activas agrupadas
+     */
+    public function getAllConfigurations(): Collection
+    {
+        $cacheKey = $this->getConfigCacheKey('all');
+
+        return Cache::remember($cacheKey, 3600, function () {
+            return $this->activeConfigurations()
+                ->orderBy('config_type')
+                ->orderBy('environment')
+                ->get()
+                ->groupBy(['config_type', 'environment', 'service_type']);
+        });
+    }
+
+    // ==================== MÉTODOS ESPECÍFICOS PARA CREDENCIALES SUNAT ====================
+
+    /**
+     * Obtener credenciales SUNAT para un servicio específico
+     */
+    public function getSunatCredentials(string $serviceType = 'facturacion', string $environment = null): ?array
+    {
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+        
+        return $this->getConfig('sunat_credentials', $environment, $serviceType);
+    }
+
+    /**
+     * Establecer credenciales SUNAT para un servicio específico
+     */
+    public function setSunatCredentials(string $serviceType, array $credentials, string $environment = null): CompanyConfiguration
+    {
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+        
+        return $this->setConfig(
+            'sunat_credentials',
+            $credentials,
+            $environment,
+            $serviceType,
+            "Credenciales SUNAT para {$serviceType} en {$environment}"
+        );
+    }
+
+    /**
+     * Verificar si tiene credenciales SUNAT configuradas
+     */
+    public function hasSunatCredentials(string $serviceType = 'facturacion', string $environment = null): bool
+    {
+        $credentials = $this->getSunatCredentials($serviceType, $environment);
+        
+        if (!$credentials) {
+            return false;
+        }
+
+        // Validar campos mínimos requeridos
+        return !empty($credentials['client_id']) && !empty($credentials['client_secret']);
+    }
+
+    // ==================== MÉTODOS ESPECÍFICOS PARA GRE ====================
+
+    /**
+     * Obtener credenciales GRE (mantener compatibilidad con código existente)
+     */
+    public function getGreCredentials(): array
+    {
+        return $this->getSunatCredentials('guias_remision') ?? [];
+    }
+
+    /**
+     * Obtener Client ID para GRE
+     */
+    public function getGreClientId(): ?string
+    {
+        $credentials = $this->getGreCredentials();
+        return $credentials['client_id'] ?? null;
+    }
+
+    /**
+     * Obtener Client Secret para GRE
+     */
+    public function getGreClientSecret(): ?string
+    {
+        $credentials = $this->getGreCredentials();
+        return $credentials['client_secret'] ?? null;
+    }
+
+    /**
+     * Obtener RUC del proveedor GRE
+     */
+    public function getGreRucProveedor(): ?string
+    {
+        $credentials = $this->getGreCredentials();
+        return $credentials['ruc_proveedor'] ?? $this->ruc;
+    }
+
+    /**
+     * Obtener Usuario SOL para GRE
+     */
+    public function getGreUsuarioSol(): ?string
+    {
+        $credentials = $this->getGreCredentials();
+        return $credentials['usuario_sol'] ?? $this->usuario_sol;
+    }
+
+    /**
+     * Obtener Clave SOL para GRE
+     */
+    public function getGreClaveSol(): ?string
+    {
+        $credentials = $this->getGreCredentials();
+        return $credentials['clave_sol'] ?? $this->clave_sol;
+    }
+
+    /**
+     * Verificar si las credenciales GRE están configuradas
+     */
+    public function hasGreCredentials(): bool
+    {
+        return $this->hasSunatCredentials('guias_remision');
+    }
+
+    /**
+     * Configurar credenciales GRE para un ambiente específico
+     */
+    public function setGreCredentials(string $environment, array $credentials): CompanyConfiguration
+    {
+        return $this->setSunatCredentials('guias_remision', $credentials, $environment);
+    }
+
+    // ==================== MÉTODOS ESPECÍFICOS PARA CONFIGURACIONES DE SERVICIOS ====================
+
+    /**
+     * Obtener endpoints de servicios SUNAT
+     */
+    public function getSunatEndpoints(string $serviceType = 'facturacion'): array
+    {
+        $environment = $this->modo_produccion ? 'produccion' : 'beta';
+        
+        return $this->getConfig('service_endpoints', $environment, $serviceType, [
+            'endpoint' => '',
+            'wsdl' => '',
+            'timeout' => 30
+        ]);
+    }
+
+    /**
+     * Obtener endpoint específico para servicio
+     */
+    public function getSunatEndpoint(string $serviceType, string $type = 'endpoint'): string
+    {
+        $endpoints = $this->getSunatEndpoints($serviceType);
+        return $endpoints[$type] ?? '';
+    }
+
+    /**
+     * Obtener endpoint para facturas según modo
+     */
+    public function getInvoiceEndpoint(): string
+    {
+        return $this->getSunatEndpoint('facturacion', 'endpoint');
+    }
+
+    /**
+     * Obtener endpoint para guías de remisión
+     */
+    public function getGuideEndpoint(): string
+    {
+        return $this->getSunatEndpoint('guias_remision', 'endpoint');
+    }
+
+    /**
+     * Obtener API endpoint para guías de remisión
+     */
+    public function getGuideApiEndpoint(): string
+    {
+        return $this->getSunatEndpoint('guias_remision', 'api_endpoint');
+    }
+
+    // ==================== MÉTODOS ESPECÍFICOS PARA CONFIGURACIONES DE IMPUESTOS ====================
+
+    /**
+     * Obtener configuraciones de impuestos
+     */
+    public function getTaxSettings(): array
+    {
+        return $this->getConfig('tax_settings', 'general', null, [
+            'igv_porcentaje' => 18.00,
+            'icbper_monto' => 0.50,
+            'ivap_porcentaje' => 4.00,
+            'redondeo_automatico' => true,
+        ]);
+    }
+
+    /**
+     * Obtener porcentaje de IGV
+     */
+    public function getIgvPercentage(): float
+    {
+        $taxSettings = $this->getTaxSettings();
+        return (float) ($taxSettings['igv_porcentaje'] ?? 18.00);
+    }
+
+    /**
+     * Obtener monto del ICBPER
+     */
+    public function getIcbperAmount(): float
+    {
+        $taxSettings = $this->getTaxSettings();
+        return (float) ($taxSettings['icbper_monto'] ?? 0.50);
+    }
+
+    // ==================== MÉTODOS DE CONFIGURACIÓN ESPECÍFICOS ====================
+
+    /**
+     * Obtener configuraciones de facturación
+     */
+    public function getInvoiceConfig(): array
+    {
+        return $this->getConfig('invoice_settings', 'general') ?? [];
+    }
+
+    /**
+     * Obtener configuraciones de guías de remisión
+     */
+    public function getGuideConfig(): array
+    {
+        return $this->getConfig('gre_settings', 'general') ?? [];
+    }
+
+    /**
+     * Obtener configuraciones de documentos
+     */
+    public function getDocumentConfig(): array
+    {
+        return $this->getConfig('document_settings', 'general') ?? [];
+    }
+
+    /**
+     * Obtener configuraciones de archivos
+     */
+    public function getFileConfig(): array
+    {
+        return $this->getConfig('file_settings', 'general') ?? [];
+    }
+
+    // ==================== MÉTODOS DE VALIDACIÓN Y UTILIDAD ====================
+
+    /**
+     * Verificar si debe generar PDF automáticamente
+     */
+    public function shouldGeneratePdfAutomatically(): bool
+    {
+        $docConfig = $this->getDocumentConfig();
+        return (bool) ($docConfig['generar_pdf_automatico'] ?? false);
+    }
+
+    /**
+     * Verificar si debe enviar a SUNAT automáticamente
+     */
+    public function shouldSendToSunatAutomatically(): bool
+    {
+        $docConfig = $this->getDocumentConfig();
+        return (bool) ($docConfig['enviar_sunat_automatico'] ?? false);
+    }
+
+    /**
+     * Obtener resumen de configuraciones para logging
+     */
+    public function getConfigSummary(): array
+    {
+        $mode = $this->modo_produccion ? 'PRODUCCIÓN' : 'BETA';
+        
+        return [
+            'modo' => $mode,
+            'facturacion_endpoint' => $this->getInvoiceEndpoint(),
+            'guias_endpoint' => $this->getGuideEndpoint(),
+            'guias_api_endpoint' => $this->getGuideApiEndpoint(),
+            'igv_porcentaje' => $this->getIgvPercentage(),
+            'generar_pdf_auto' => $this->shouldGeneratePdfAutomatically(),
+            'enviar_sunat_auto' => $this->shouldSendToSunatAutomatically(),
+            'credenciales_gre_configuradas' => $this->hasGreCredentials(),
+            'gre_client_id' => $this->getGreClientId() ? '***' . substr($this->getGreClientId(), -4) : 'No configurado',
+        ];
+    }
+
+    /**
+     * Inicializar configuraciones por defecto para una empresa nueva
+     */
+    public function initializeDefaultConfigurations(): void
+    {
+        // Solo inicializar si no tiene configuraciones
+        if ($this->activeConfigurations()->count() > 0) {
+            return;
+        }
+
+        $this->createDefaultConfigurations();
+        $this->clearConfigCache();
+    }
+
+    /**
+     * Crear configuraciones por defecto
+     */
+    protected function createDefaultConfigurations(): void
+    {
+        $defaultConfigs = $this->getDefaultConfigurationData();
+
+        foreach ($defaultConfigs as $config) {
+            $this->configurations()->create($config);
+        }
+    }
+
+    /**
+     * Obtener datos de configuraciones por defecto
+     */
+    protected function getDefaultConfigurationData(): array
+    {
+        return [
+            // Endpoints de servicios SUNAT - Beta
+            [
+                'config_type' => 'service_endpoints',
+                'environment' => 'beta',
+                'service_type' => 'facturacion',
+                'config_data' => [
+                    'endpoint' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService',
+                    'wsdl' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService?wsdl',
+                    'timeout' => 30,
+                ],
+                'description' => 'Endpoints para facturación en ambiente beta'
+            ],
+            [
+                'config_type' => 'service_endpoints',
+                'environment' => 'beta',
+                'service_type' => 'guias_remision',
+                'config_data' => [
+                    'endpoint' => 'https://gre-test.nubefact.com/v1',
+                    'api_endpoint' => 'https://api-cpe-beta.sunat.gob.pe/v1/',
+                    'wsdl' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpgre-beta/billService?wsdl',
+                    'timeout' => 30,
+                ],
+                'description' => 'Endpoints para guías de remisión en ambiente beta'
+            ],
+
+            // Endpoints de servicios SUNAT - Producción
+            [
+                'config_type' => 'service_endpoints',
+                'environment' => 'produccion',
+                'service_type' => 'facturacion',
+                'config_data' => [
+                    'endpoint' => 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService',
+                    'wsdl' => 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl',
+                    'timeout' => 45,
+                ],
+                'description' => 'Endpoints para facturación en ambiente producción'
+            ],
+            [
+                'config_type' => 'service_endpoints',
+                'environment' => 'produccion',
+                'service_type' => 'guias_remision',
+                'config_data' => [
+                    'endpoint' => 'https://api-cpe.sunat.gob.pe/v1/',
+                    'api_endpoint' => 'https://api-cpe.sunat.gob.pe/v1/',
+                    'wsdl' => 'https://e-guiaremision.sunat.gob.pe/ol-ti-itemision-guia-gem/billService?wsdl',
+                    'timeout' => 45,
+                ],
+                'description' => 'Endpoints para guías de remisión en ambiente producción'
+            ],
+
+            // Credenciales SUNAT por defecto para beta
+            [
+                'config_type' => 'sunat_credentials',
+                'environment' => 'beta',
+                'service_type' => 'guias_remision',
+                'config_data' => [
+                    'client_id' => 'test-85e5b0ae-255c-4891-a595-0b98c65c9854',
+                    'client_secret' => 'test-Hty/M6QshYvPgItX2P0+Kw==',
+                    'ruc_proveedor' => '20161515648',
+                    'usuario_sol' => 'MODDATOS',
+                    'clave_sol' => 'MODDATOS',
+                ],
+                'description' => 'Credenciales por defecto para GRE en ambiente beta'
+            ],
+
+            // Configuraciones de impuestos
+            [
+                'config_type' => 'tax_settings',
+                'environment' => 'general',
+                'service_type' => 'general',
+                'config_data' => [
+                    'igv_porcentaje' => 18.00,
+                    'isc_porcentaje' => 0.00,
+                    'icbper_monto' => 0.50,
+                    'ivap_porcentaje' => 4.00,
+                    'redondeo_automatico' => true,
+                ],
+                'description' => 'Configuraciones de impuestos por defecto'
+            ],
+
+            // Configuraciones de documentos
+            [
+                'config_type' => 'document_settings',
+                'environment' => 'general',
+                'service_type' => 'general',
+                'config_data' => [
+                    'generar_xml_automatico' => true,
+                    'generar_pdf_automatico' => false,
+                    'enviar_sunat_automatico' => false,
+                    'incluir_qr_pdf' => true,
+                    'incluir_hash_pdf' => true,
+                    'logo_en_pdf' => true,
+                ],
+                'description' => 'Configuraciones de documentos por defecto'
+            ],
+
+            // Configuraciones de archivos
+            [
+                'config_type' => 'file_settings',
+                'environment' => 'general',
+                'service_type' => 'general',
+                'config_data' => [
+                    'conservar_xml' => true,
+                    'conservar_cdr' => true,
+                    'conservar_pdf' => true,
+                    'dias_conservar_archivos' => 2555, // 7 años aprox
+                    'comprimir_archivos_antiguos' => false,
+                    'backup_automatico' => false,
+                ],
+                'description' => 'Configuraciones de archivos por defecto'
+            ]
+        ];
+    }
+}

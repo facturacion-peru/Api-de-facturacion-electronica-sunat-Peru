@@ -22,11 +22,21 @@ class RolesAndPermissionsSeeder extends Seeder
     }
 
     /**
+     * Ejecutar solo la creación de permisos y roles (sin usuarios)
+     * Usado desde AuthController durante la inicialización
+     */
+    public function runPermissionsAndRolesOnly(): void
+    {
+        $this->createPermissions();
+        $this->createRoles();
+    }
+
+    /**
      * Crear permisos del sistema
      */
     private function createPermissions(): void
     {
-        $this->command->info('Creando permisos del sistema...');
+        $this->logInfo('Creando permisos del sistema...');
 
         $permissions = Permission::getSystemPermissions();
 
@@ -45,7 +55,7 @@ class RolesAndPermissionsSeeder extends Seeder
             }
         }
 
-        $this->command->info('Permisos creados: ' . Permission::count());
+        $this->logInfo('Permisos creados: ' . Permission::count());
     }
 
     /**
@@ -53,7 +63,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private function createRoles(): void
     {
-        $this->command->info('Creando roles del sistema...');
+        $this->logInfo('Creando roles del sistema...');
 
         $roles = Role::getSystemRoles();
 
@@ -73,7 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             $this->assignPermissionsToRole($role, $data['permissions']);
         }
 
-        $this->command->info('Roles creados: ' . Role::count());
+        $this->logInfo('Roles creados: ' . Role::count());
     }
 
     /**
@@ -118,7 +128,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private function createDefaultUsers(): void
     {
-        $this->command->info('Creando usuarios por defecto...');
+        $this->logInfo('Creando usuarios por defecto...');
 
         // Super Admin
         $superAdminRole = Role::where('name', 'super_admin')->first();
@@ -175,15 +185,43 @@ class RolesAndPermissionsSeeder extends Seeder
             'boletas.view',
         ]);
 
-        $this->command->info('Usuarios creados exitosamente');
-        $this->command->warn('CREDENCIALES DE ACCESO:');
-        $this->command->line('Super Admin: admin@sunatapi.com / admin123456');
-        $this->command->line('Company Admin: company@sunatapi.com / company123456');
-        $this->command->line('API Client: api@sunatapi.com / api123456');
-        $this->command->line('');
-        $this->command->warn('TOKEN API DE PRUEBA:');
-        $this->command->line($token->plainTextToken);
-        $this->command->line('');
-        $this->command->error('⚠️  CAMBIAR ESTAS CREDENCIALES EN PRODUCCIÓN ⚠️');
+        $this->logInfo('Usuarios creados exitosamente');
+        $this->logWarning('CREDENCIALES DE ACCESO:');
+        $this->logInfo('Super Admin: admin@sunatapi.com / admin123456');
+        $this->logInfo('Company Admin: company@sunatapi.com / company123456');
+        $this->logInfo('API Client: api@sunatapi.com / api123456');
+        $this->logWarning('TOKEN API DE PRUEBA:');
+        $this->logInfo($token->plainTextToken);
+        $this->logError('⚠️  CAMBIAR ESTAS CREDENCIALES EN PRODUCCIÓN ⚠️');
+    }
+
+    /**
+     * Métodos de logging que funcionan tanto desde consola como desde controlador
+     */
+    private function logInfo($message): void
+    {
+        if ($this->command) {
+            $this->command->info($message);
+        } else {
+            \Log::info("RolesSeeder: $message");
+        }
+    }
+
+    private function logWarning($message): void
+    {
+        if ($this->command) {
+            $this->command->warn($message);
+        } else {
+            \Log::warning("RolesSeeder: $message");
+        }
+    }
+
+    private function logError($message): void
+    {
+        if ($this->command) {
+            $this->command->error($message);
+        } else {
+            \Log::error("RolesSeeder: $message");
+        }
     }
 }

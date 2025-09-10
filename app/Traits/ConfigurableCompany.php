@@ -63,6 +63,23 @@ trait ConfigurableCompany
                 ]
             ],
             
+            'credenciales_gre' => [
+                'beta' => [
+                    'client_id' => 'test-85e5b0ae-255c-4891-a595-0b98c65c9854',
+                    'client_secret' => 'test-Hty/M6QshYvPgItX2P0+Kw==',
+                    'ruc_proveedor' => '20161515648',
+                    'usuario_sol' => 'MODDATOS',
+                    'clave_sol' => 'MODDATOS',
+                ],
+                'produccion' => [
+                    'client_id' => null,
+                    'client_secret' => null,
+                    'ruc_proveedor' => null,
+                    'usuario_sol' => null,
+                    'clave_sol' => null,
+                ]
+            ],
+            
             'facturacion' => [
                 'igv_porcentaje' => 18.00,
                 'isc_porcentaje' => 0.00,
@@ -382,6 +399,107 @@ trait ConfigurableCompany
         return $this->getConfig('guias_remision.verificacion_automatica', true);
     }
 
+    // ==================== MÉTODOS ESPECÍFICOS PARA CREDENCIALES GRE ====================
+
+    /**
+     * Obtener credenciales GRE para el ambiente actual
+     */
+    public function getGreCredentials(): array
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        return $this->getConfig("credenciales_gre.{$mode}", []);
+    }
+
+    /**
+     * Obtener Client ID para GRE
+     */
+    public function getGreClientId(): ?string
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        return $this->getConfig("credenciales_gre.{$mode}.client_id");
+    }
+
+    /**
+     * Obtener Client Secret para GRE
+     */
+    public function getGreClientSecret(): ?string
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        return $this->getConfig("credenciales_gre.{$mode}.client_secret");
+    }
+
+    /**
+     * Obtener RUC del proveedor GRE
+     */
+    public function getGreRucProveedor(): ?string
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        $ruc = $this->getConfig("credenciales_gre.{$mode}.ruc_proveedor");
+        
+        // Si no está configurado, usar el RUC de la empresa
+        return $ruc ?: $this->ruc;
+    }
+
+    /**
+     * Obtener Usuario SOL para GRE
+     */
+    public function getGreUsuarioSol(): ?string
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        $usuario = $this->getConfig("credenciales_gre.{$mode}.usuario_sol");
+        
+        // Si no está configurado, usar el usuario SOL general
+        return $usuario ?: $this->usuario_sol;
+    }
+
+    /**
+     * Obtener Clave SOL para GRE
+     */
+    public function getGreClaveSol(): ?string
+    {
+        $mode = $this->modo_produccion ? 'produccion' : 'beta';
+        $clave = $this->getConfig("credenciales_gre.{$mode}.clave_sol");
+        
+        // Si no está configurado, usar la clave SOL general
+        return $clave ?: $this->clave_sol;
+    }
+
+    /**
+     * Verificar si las credenciales GRE están configuradas
+     */
+    public function hasGreCredentials(): bool
+    {
+        $credentials = $this->getGreCredentials();
+        
+        return !empty($credentials['client_id']) && 
+               !empty($credentials['client_secret']) && 
+               !empty($this->getGreRucProveedor()) && 
+               !empty($this->getGreUsuarioSol()) && 
+               !empty($this->getGreClaveSol());
+    }
+
+    /**
+     * Configurar credenciales GRE para un ambiente específico
+     */
+    public function setGreCredentials(string $mode, array $credentials): bool
+    {
+        if (!in_array($mode, ['beta', 'produccion'])) {
+            throw new \InvalidArgumentException("Modo debe ser 'beta' o 'produccion'");
+        }
+
+        $validKeys = ['client_id', 'client_secret', 'ruc_proveedor', 'usuario_sol', 'clave_sol'];
+        
+        foreach ($credentials as $key => $value) {
+            if (!in_array($key, $validKeys)) {
+                throw new \InvalidArgumentException("Clave inválida: {$key}");
+            }
+            
+            $this->setConfig("credenciales_gre.{$mode}.{$key}", $value);
+        }
+
+        return true;
+    }
+
     /**
      * Obtener configuración completa formateada para logging
      */
@@ -399,6 +517,8 @@ trait ConfigurableCompany
             'generar_pdf_auto' => $this->shouldGeneratePdfAutomatically(),
             'enviar_sunat_auto' => $this->shouldSendToSunatAutomatically(),
             'verificar_guias_auto' => $this->shouldVerifyGuideAutomatically(),
+            'credenciales_gre_configuradas' => $this->hasGreCredentials(),
+            'gre_client_id' => $this->getGreClientId() ? '***' . substr($this->getGreClientId(), -4) : 'No configurado',
         ];
     }
 }

@@ -1444,17 +1444,38 @@ class DocumentService
                 throw new Exception("No se pudo cargar el certificado");
             }
             
+            // Obtener credenciales GRE de la configuración de la empresa
+            $company = $guide->company;
+            
+            if (!$company->hasGreCredentials()) {
+                throw new Exception("Las credenciales GRE no están configuradas para la empresa: {$company->razon_social}");
+            }
+            
+            $clientId = $company->getGreClientId();
+            $clientSecret = $company->getGreClientSecret();
+            $rucProveedor = $company->getGreRucProveedor();
+            $usuarioSol = $company->getGreUsuarioSol();
+            $claveSol = $company->getGreClaveSol();
+            
+            Log::info("Configurando credenciales GRE desde base de datos", [
+                'company_id' => $company->id,
+                'modo_produccion' => $company->modo_produccion,
+                'client_id' => $clientId ? '***' . substr($clientId, -4) : 'No configurado',
+                'ruc_proveedor' => $rucProveedor,
+                'usuario_sol' => $usuarioSol,
+            ]);
+            
             $api->setBuilderOptions([
                 'strict_variables' => true,
                 'optimizations' => 0,
                 'debug' => true,
                 'cache' => false,
             ])
-            ->setApiCredentials('test-85e5b0ae-255c-4891-a595-0b98c65c9854', 'test-Hty/M6QshYvPgItX2P0+Kw==')
-            ->setClaveSOL('20161515648', 'MODDATOS', 'MODDATOS')
+            ->setApiCredentials($clientId, $clientSecret)
+            ->setClaveSOL($rucProveedor, $usuarioSol, $claveSol)
             ->setCertificate($certificadoContent);
             
-            Log::info("Enviando a SUNAT con configuración directa...");
+            Log::info("Enviando a SUNAT con credenciales configuradas...");
             $result = $api->send($despatch);
             
             // Procesar resultado como en ejemplos Greenter
