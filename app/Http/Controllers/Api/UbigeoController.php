@@ -24,6 +24,10 @@ class UbigeoController extends Controller
     
     public function getProvincias(Request $request): JsonResponse
     {
+        $request->validate([
+            'region_id' => 'nullable|string|size:2'
+        ]);
+        
         $query = UbiProvincia::with('region');
         
         if ($request->has('region_id')) {
@@ -40,6 +44,12 @@ class UbigeoController extends Controller
     
     public function getDistritos(Request $request): JsonResponse
     {
+        $request->validate([
+            'provincia_id' => 'nullable|string|size:4',
+            'region_id' => 'nullable|string|size:2',
+            'search' => 'nullable|string|min:2|max:255'
+        ]);
+        
         $query = UbiDistrito::with(['provincia', 'region']);
         
         if ($request->has('provincia_id')) {
@@ -98,6 +108,13 @@ class UbigeoController extends Controller
     
     public function getUbigeoById(string $id): JsonResponse
     {
+        if (strlen($id) !== 6) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El código de ubigeo debe tener exactamente 6 dígitos'
+            ], 400);
+        }
+        
         $distrito = UbiDistrito::with(['provincia', 'region'])->find($id);
         
         if (!$distrito) {

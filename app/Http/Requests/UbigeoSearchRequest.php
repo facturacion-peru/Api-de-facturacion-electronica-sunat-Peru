@@ -23,8 +23,8 @@ class UbigeoSearchRequest extends FormRequest
     {
         return [
             'search' => 'required|string|min:3|max:255',
-            'region_id' => 'nullable|string|exists:ubi_regiones,id',
-            'provincia_id' => 'nullable|string|exists:ubi_provincias,id',
+            'region_id' => 'nullable|string|size:2',
+            'provincia_id' => 'nullable|string|size:4',
         ];
     }
     

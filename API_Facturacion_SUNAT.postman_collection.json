@@ -1,0 +1,1314 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-5678-9012-123456789012",
+		"name": "API Facturación SUNAT - Complete Collection",
+		"description": "Colección completa para probar la API de Facturación SUNAT paso a paso con certificados y configuraciones",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "📋 1. VERIFICAR SISTEMA",
+			"item": [
+				{
+					"name": "Info del Sistema",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/system/info",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"system",
+								"info"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Verificar que el sistema esté funcionando correctamente"
+		},
+		{
+			"name": "🔐 2. AUTENTICACIÓN",
+			"item": [
+				{
+					"name": "Inicializar Sistema (Crear Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    console.log('✅ Sistema inicializado correctamente');",
+									"} else {",
+									"    console.log('⚠️ Sistema ya inicializado o error');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Administrator\",\n    \"email\": \"admin@facturacion.com\",\n    \"password\": \"admin123456\",\n    \"password_confirmation\": \"admin123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/initialize",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"initialize"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('auth_token', response.data.token);",
+									"        console.log('✅ Token guardado:', response.data.token.substring(0, 20) + '...');",
+									"    }",
+									"} else {",
+									"    console.log('❌ Error en login');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@facturacion.com\",\n    \"password\": \"admin123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verificar Usuario Autenticado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Autenticación y manejo de tokens"
+		},
+		{
+			"name": "🏢 3. EMPRESAS",
+			"item": [
+				{
+					"name": "Listar Empresas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Empresa",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('company_id', response.data.id);",
+									"        console.log('✅ Empresa creada con ID:', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ruc\": \"20123456789\",\n    \"razon_social\": \"EMPRESA DEMO S.A.C.\",\n    \"nombre_comercial\": \"Empresa Demo\",\n    \"direccion\": \"Av. Javier Prado Este 123\",\n    \"ubigeo\": \"150101\",\n    \"distrito\": \"San Isidro\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-2345678\",\n    \"email\": \"contacto@empresademo.com\",\n    \"usuario_sol\": \"MODDEMO\",\n    \"clave_sol\": \"MODDEMO\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Empresa con Certificado",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ruc\": \"20123456789\",\n    \"razon_social\": \"EMPRESA DEMO S.A.C.\",\n    \"nombre_comercial\": \"Empresa Demo\",\n    \"direccion\": \"Av. Javier Prado Este 123\",\n    \"ubigeo\": \"150101\",\n    \"distrito\": \"San Isidro\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-2345678\",\n    \"email\": \"contacto@empresademo.com\",\n    \"usuario_sol\": \"MODDEMO\",\n    \"clave_sol\": \"MODDEMO\",\n    \"certificado_pem\": \"-----BEGIN CERTIFICATE-----\\nAQUI_VA_TU_CERTIFICADO_EN_FORMATO_PEM\\n-----END CERTIFICATE-----\",\n    \"certificado_password\": \"password_del_certificado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Detalle Empresa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de empresas y certificados"
+		},
+		{
+			"name": "⚙️ 4. CONFIGURACIONES",
+			"item": [
+				{
+					"name": "🔧 Setup Completo (Beta + Certificado)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\",\n    \"company\": {\n        \"ruc\": \"20123456789\",\n        \"razon_social\": \"EMPRESA DEMO S.A.C.\",\n        \"nombre_comercial\": \"Empresa Demo\",\n        \"direccion\": \"Av. Javier Prado Este 123\",\n        \"ubigeo\": \"150101\",\n        \"distrito\": \"San Isidro\",\n        \"provincia\": \"Lima\",\n        \"departamento\": \"Lima\",\n        \"telefono\": \"01-2345678\",\n        \"email\": \"contacto@empresademo.com\",\n        \"usuario_sol\": \"MODDEMO\",\n        \"clave_sol\": \"MODDEMO\"\n    },\n    \"certificate_content\": \"-----BEGIN CERTIFICATE-----\\nAQUI_VA_TU_CERTIFICADO_COMPLETO_EN_PEM\\n-----END CERTIFICATE-----\",\n    \"certificate_password\": \"password_del_certificado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/setup/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"setup",
+								"complete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🔧 Setup Completo (Producción + Certificado)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"produccion\",\n    \"company\": {\n        \"ruc\": \"20123456789\",\n        \"razon_social\": \"EMPRESA DEMO S.A.C.\",\n        \"nombre_comercial\": \"Empresa Demo\",\n        \"direccion\": \"Av. Javier Prado Este 123\",\n        \"ubigeo\": \"150101\",\n        \"distrito\": \"San Isidro\",\n        \"provincia\": \"Lima\",\n        \"departamento\": \"Lima\",\n        \"telefono\": \"01-2345678\",\n        \"email\": \"contacto@empresademo.com\",\n        \"usuario_sol\": \"MODDEMO\",\n        \"clave_sol\": \"MODDEMO\"\n    },\n    \"certificate_content\": \"-----BEGIN CERTIFICATE-----\\nAQUI_VA_TU_CERTIFICADO_COMPLETO_EN_PEM\\n-----END CERTIFICATE-----\",\n    \"certificate_password\": \"password_del_certificado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/setup/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"setup",
+								"complete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📊 Estado del Setup",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/setup/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"setup",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Configuración inicial completa del sistema para Beta y Producción"
+		},
+		{
+			"name": "🔧 5. CONFIGURACIONES EMPRESAS",
+			"item": [
+				{
+					"name": "Ver Configuración Completa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Configuración - Impuestos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/tax_settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"tax_settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Configuración - Impuestos",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"config_data\": {\n        \"igv_porcentaje\": 18.00,\n        \"isc_porcentaje\": 0.00,\n        \"icbper_monto\": 0.50,\n        \"ivap_porcentaje\": 4.00,\n        \"redondeo_automatico\": true,\n        \"decimales_precio_unitario\": 10,\n        \"decimales_cantidad\": 10\n    },\n    \"environment\": \"beta\",\n    \"config_type\": \"general\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/tax_settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"tax_settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Configuración - Documentos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/document_settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"document_settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Configuración - Documentos",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"config_data\": {\n        \"generar_xml_automatico\": true,\n        \"generar_pdf_automatico\": true,\n        \"enviar_sunat_automatico\": false,\n        \"formato_pdf_default\": \"a4\",\n        \"orientacion_pdf_default\": \"portrait\",\n        \"incluir_qr_pdf\": true,\n        \"incluir_hash_pdf\": true,\n        \"logo_en_pdf\": true\n    },\n    \"environment\": \"beta\",\n    \"config_type\": \"general\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/document_settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"document_settings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Configuración - Servicios BETA",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/service_endpoints?environment=beta",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"service_endpoints"
+							],
+							"query": [
+								{
+									"key": "environment",
+									"value": "beta"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Configuración - Servicios PRODUCCIÓN",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/service_endpoints?environment=produccion",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"service_endpoints"
+							],
+							"query": [
+								{
+									"key": "environment",
+									"value": "produccion"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Endpoints BETA",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"config_data\": {\n        \"endpoint\": \"https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService\",\n        \"wsdl\": \"https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService?wsdl\",\n        \"timeout\": 30\n    },\n    \"environment\": \"beta\",\n    \"config_type\": \"facturacion\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/service_endpoints",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"service_endpoints"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Endpoints PRODUCCIÓN",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"config_data\": {\n        \"endpoint\": \"https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService\",\n        \"wsdl\": \"https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl\",\n        \"timeout\": 30\n    },\n    \"environment\": \"produccion\",\n    \"config_type\": \"facturacion\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/service_endpoints",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"service_endpoints"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validar Servicios SUNAT",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/validate/services",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"validate",
+								"services"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resetear Configuraciones a Defaults",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/config/reset",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"config",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Configuraciones específicas por empresa para Beta y Producción"
+		},
+		{
+			"name": "🔑 6. CREDENCIALES GRE",
+			"item": [
+				{
+					"name": "Ver Credenciales GRE",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/gre-credentials",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"gre-credentials"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Credenciales GRE - BETA",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\",\n    \"client_id\": \"tu_client_id_beta\",\n    \"client_secret\": \"tu_client_secret_beta\",\n    \"username\": \"tu_username_beta\",\n    \"password\": \"tu_password_beta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/gre-credentials",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"gre-credentials"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Credenciales GRE - PRODUCCIÓN",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"produccion\",\n    \"client_id\": \"tu_client_id_produccion\",\n    \"client_secret\": \"tu_client_secret_produccion\",\n    \"username\": \"tu_username_produccion\",\n    \"password\": \"tu_password_produccion\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/gre-credentials",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"gre-credentials"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Probar Conexión GRE",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/gre-credentials/test-connection",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"gre-credentials",
+								"test-connection"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Copiar Credenciales (Beta → Producción)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_environment\": \"beta\",\n    \"to_environment\": \"produccion\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/companies/{{company_id}}/gre-credentials/copy",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"companies",
+								"{{company_id}}",
+								"gre-credentials",
+								"copy"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de credenciales para Guías de Remisión Electrónica"
+		},
+		{
+			"name": "🏪 7. SUCURSALES",
+			"item": [
+				{
+					"name": "Crear Sucursal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('branch_id', response.data.id);",
+									"        console.log('✅ Sucursal creada con ID:', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_id\": {{company_id}},\n    \"codigo\": \"0001\",\n    \"nombre\": \"Sucursal Principal\",\n    \"direccion\": \"Av. Javier Prado Este 123\",\n    \"ubigeo\": \"150101\",\n    \"distrito\": \"San Isidro\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-2345678\",\n    \"email\": \"principal@empresademo.com\",\n    \"series_factura\": [\"F001\"],\n    \"series_boleta\": [\"B001\"],\n    \"series_nota_credito\": [\"FC01\", \"BC01\"],\n    \"series_nota_debito\": [\"FD01\", \"BD01\"],\n    \"series_guia_remision\": [\"T001\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/branches",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"branches"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Sucursales",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/branches",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"branches"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de sucursales"
+		},
+		{
+			"name": "👥 8. CLIENTES",
+			"item": [
+				{
+					"name": "Crear Cliente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('client_id', response.data.id);",
+									"        console.log('✅ Cliente creado con ID:', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo_documento\": \"6\",\n    \"numero_documento\": \"20987654321\",\n    \"razon_social\": \"CLIENTE DEMO S.A.C.\",\n    \"nombre_comercial\": \"Cliente Demo\",\n    \"direccion\": \"Av. Arequipa 456\",\n    \"ubigeo\": \"150114\",\n    \"distrito\": \"Lince\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-9876543\",\n    \"email\": \"cliente@demo.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/clients",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"clients"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Clientes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/clients",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"clients"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de clientes"
+		},
+		{
+			"name": "📍 9. UBIGEOS",
+			"item": [
+				{
+					"name": "Listar Regiones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ubigeos/regiones",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ubigeos",
+								"regiones"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Provincias (Lima)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ubigeos/provincias?region_id=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ubigeos",
+								"provincias"
+							],
+							"query": [
+								{
+									"key": "region_id",
+									"value": "15"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Distritos (Lima)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ubigeos/distritos?provincia_id=1501",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ubigeos",
+								"distritos"
+							],
+							"query": [
+								{
+									"key": "provincia_id",
+									"value": "1501"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Ubigeo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ubigeos/search?search=San Isidro",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ubigeos",
+								"search"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "San Isidro"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Ubigeo por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/ubigeos/150101",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ubigeos",
+								"150101"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de ubigeos del Perú"
+		},
+		{
+			"name": "🧾 10. FACTURACIÓN",
+			"item": [
+				{
+					"name": "Crear Factura",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_id\": {{company_id}},\n    \"branch_id\": {{branch_id}},\n    \"serie\": \"F001\",\n    \"fecha_emision\": \"2025-01-10\",\n    \"moneda\": \"PEN\",\n    \"forma_pago_tipo\": \"Contado\",\n    \"client\": {\n        \"tipo_documento\": \"6\",\n        \"numero_documento\": \"20987654321\",\n        \"razon_social\": \"CLIENTE DEMO S.A.C.\",\n        \"direccion\": \"Av. Arequipa 456\",\n        \"ubigeo\": \"150114\"\n    },\n    \"detalles\": [\n        {\n            \"codigo\": \"PROD001\",\n            \"descripcion\": \"Producto de prueba\",\n            \"unidad\": \"NIU\",\n            \"cantidad\": 2,\n            \"mto_valor_unitario\": 100.00,\n            \"porcentaje_igv\": 18,\n            \"tip_afe_igv\": \"10\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"invoices"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Facturas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"invoices"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Documentos de facturación electrónica"
+		},
+		{
+			"name": "🚪 11. LOGOUT",
+			"item": [
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    pm.environment.unset('auth_token');",
+									"    console.log('✅ Sesión cerrada correctamente');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Cerrar sesión"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		}
+	]
+}
