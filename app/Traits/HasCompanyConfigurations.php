@@ -171,29 +171,40 @@ trait HasCompanyConfigurations
     // ==================== MÉTODOS ESPECÍFICOS PARA GRE ====================
 
     /**
-     * Obtener credenciales GRE (mantener compatibilidad con código existente)
+     * Obtener credenciales GRE desde la tabla companies (nuevo sistema)
      */
     public function getGreCredentials(): array
     {
-        return $this->getSunatCredentials('guias_remision') ?? [];
+        $environment = $this->modo_produccion ? 'produccion' : 'beta';
+        
+        return [
+            'client_id' => $this->getGreClientId(),
+            'client_secret' => $this->getGreClientSecret(),
+            'ruc_proveedor' => $this->getGreRucProveedor(),
+            'usuario_sol' => $this->getGreUsuarioSol(),
+            'clave_sol' => $this->getGreClaveSol(),
+            'environment' => $environment
+        ];
     }
 
     /**
-     * Obtener Client ID para GRE
+     * Obtener Client ID para GRE según ambiente
      */
     public function getGreClientId(): ?string
     {
-        $credentials = $this->getGreCredentials();
-        return $credentials['client_id'] ?? null;
+        return $this->modo_produccion 
+            ? $this->gre_client_id_produccion 
+            : $this->gre_client_id_beta;
     }
 
     /**
-     * Obtener Client Secret para GRE
+     * Obtener Client Secret para GRE según ambiente
      */
     public function getGreClientSecret(): ?string
     {
-        $credentials = $this->getGreCredentials();
-        return $credentials['client_secret'] ?? null;
+        return $this->modo_produccion 
+            ? $this->gre_client_secret_produccion 
+            : $this->gre_client_secret_beta;
     }
 
     /**
@@ -201,8 +212,7 @@ trait HasCompanyConfigurations
      */
     public function getGreRucProveedor(): ?string
     {
-        $credentials = $this->getGreCredentials();
-        return $credentials['ruc_proveedor'] ?? $this->ruc;
+        return $this->gre_ruc_proveedor ?? $this->ruc;
     }
 
     /**
@@ -210,8 +220,7 @@ trait HasCompanyConfigurations
      */
     public function getGreUsuarioSol(): ?string
     {
-        $credentials = $this->getGreCredentials();
-        return $credentials['usuario_sol'] ?? $this->usuario_sol;
+        return $this->gre_usuario_sol ?? $this->usuario_sol;
     }
 
     /**
@@ -219,8 +228,7 @@ trait HasCompanyConfigurations
      */
     public function getGreClaveSol(): ?string
     {
-        $credentials = $this->getGreCredentials();
-        return $credentials['clave_sol'] ?? $this->clave_sol;
+        return $this->gre_clave_sol ?? $this->clave_sol;
     }
 
     /**
@@ -228,15 +236,88 @@ trait HasCompanyConfigurations
      */
     public function hasGreCredentials(): bool
     {
-        return $this->hasSunatCredentials('guias_remision');
+        $clientId = $this->getGreClientId();
+        $clientSecret = $this->getGreClientSecret();
+        
+        return !empty($clientId) && !empty($clientSecret);
     }
 
     /**
      * Configurar credenciales GRE para un ambiente específico
      */
-    public function setGreCredentials(string $environment, array $credentials): CompanyConfiguration
+    public function setGreCredentials(array $credentials, string $environment = null): void
     {
-        return $this->setSunatCredentials('guias_remision', $credentials, $environment);
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+        
+        $updateData = [];
+        
+        if (isset($credentials['client_id'])) {
+            $updateData["gre_client_id_{$environment}"] = $credentials['client_id'];
+        }
+        
+        if (isset($credentials['client_secret'])) {
+            $updateData["gre_client_secret_{$environment}"] = $credentials['client_secret'];
+        }
+        
+        if (isset($credentials['ruc_proveedor'])) {
+            $updateData['gre_ruc_proveedor'] = $credentials['ruc_proveedor'];
+        }
+        
+        if (isset($credentials['usuario_sol'])) {
+            $updateData['gre_usuario_sol'] = $credentials['usuario_sol'];
+        }
+        
+        if (isset($credentials['clave_sol'])) {
+            $updateData['gre_clave_sol'] = $credentials['clave_sol'];
+        }
+        
+        if (!empty($updateData)) {
+            $this->update($updateData);
+            $this->clearConfigCache();
+        }
+    }
+
+    /**
+     * Limpiar credenciales GRE para un ambiente específico
+     */
+    public function clearGreCredentials(string $environment = null): void
+    {
+        $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
+        
+        $updateData = [
+            "gre_client_id_{$environment}" => null,
+            "gre_client_secret_{$environment}" => null,
+        ];
+        
+        $this->update($updateData);
+        $this->clearConfigCache();
+    }
+
+    /**
+     * Copiar credenciales GRE de un ambiente a otro
+     */
+    public function copyGreCredentials(string $fromEnvironment, string $toEnvironment): bool
+    {
+        $fromClientId = $fromEnvironment === 'produccion' 
+            ? $this->gre_client_id_produccion 
+            : $this->gre_client_id_beta;
+            
+        $fromClientSecret = $fromEnvironment === 'produccion' 
+            ? $this->gre_client_secret_produccion 
+            : $this->gre_client_secret_beta;
+            
+        if (empty($fromClientId) || empty($fromClientSecret)) {
+            return false;
+        }
+        
+        $credentials = [
+            'client_id' => $fromClientId,
+            'client_secret' => $fromClientSecret
+        ];
+        
+        $this->setGreCredentials($credentials, $toEnvironment);
+        
+        return true;
     }
 
     // ==================== MÉTODOS ESPECÍFICOS PARA CONFIGURACIONES DE SERVICIOS ====================
@@ -419,6 +500,65 @@ trait HasCompanyConfigurations
         foreach ($defaultConfigs as $config) {
             $this->configurations()->create($config);
         }
+    }
+
+    /**
+     * Obtener configuración completa de servicio SUNAT (compatibilidad con GreenterService)
+     */
+    public function getSunatServiceConfig(string $service): array
+    {
+        $environment = $this->modo_produccion ? 'produccion' : 'beta';
+        
+        // Mapear nombres de servicios
+        $serviceMapping = [
+            'facturacion' => 'facturacion',
+            'guias_remision' => 'guias_remision',
+            'resumenes_diarios' => 'facturacion', // Los resúmenes usan el mismo endpoint que facturas
+        ];
+        
+        $serviceType = $serviceMapping[$service] ?? $service;
+        
+        // Obtener configuración usando el nuevo sistema
+        return $this->getSunatEndpoints($serviceType);
+    }
+
+    /**
+     * Fusionar configuraciones con las por defecto (compatibilidad con CompanyConfigService)
+     */
+    public function mergeWithDefaults(): void
+    {
+        // Inicializar configuraciones por defecto si no existen
+        $this->initializeDefaultConfigurations();
+    }
+
+    /**
+     * Obtener configuraciones en formato legacy (compatibilidad con CompanyConfigService)
+     */
+    public function getConfiguracionesAttribute(): array
+    {
+        // Convertir configuraciones de la nueva estructura al formato legacy
+        $configurations = $this->getAllConfigurations();
+        
+        $legacy = [];
+        
+        foreach ($configurations as $configType => $environments) {
+            foreach ($environments as $environment => $serviceTypes) {
+                foreach ($serviceTypes as $serviceType => $configs) {
+                    $config = $configs->first();
+                    if ($config) {
+                        $legacy = array_merge_recursive($legacy, [
+                            $configType => [
+                                $serviceType => [
+                                    $environment => $config->config_data
+                                ]
+                            ]
+                        ]);
+                    }
+                }
+            }
+        }
+        
+        return $legacy;
     }
 
     /**

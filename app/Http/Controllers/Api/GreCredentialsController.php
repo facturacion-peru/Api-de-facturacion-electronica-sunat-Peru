@@ -21,20 +21,24 @@ class GreCredentialsController extends Controller
     public function show(Company $company): JsonResponse
     {
         try {
+            $currentCredentials = $company->getGreCredentials();
+            
             $credentials = [
-                'beta' => $company->getSunatCredentials('guias_remision', 'beta') ?? [],
-                'produccion' => $company->getSunatCredentials('guias_remision', 'produccion') ?? [],
+                'beta' => [
+                    'client_id' => $company->gre_client_id_beta ? '***' . substr($company->gre_client_id_beta, -4) : null,
+                    'client_secret' => $company->gre_client_secret_beta ? '***' . substr($company->gre_client_secret_beta, -4) : null,
+                    'ruc_proveedor' => $company->gre_ruc_proveedor,
+                    'usuario_sol' => $company->gre_usuario_sol,
+                    'clave_sol' => $company->gre_clave_sol ? '***' . substr($company->gre_clave_sol, -2) : null,
+                ],
+                'produccion' => [
+                    'client_id' => $company->gre_client_id_produccion ? '***' . substr($company->gre_client_id_produccion, -4) : null,
+                    'client_secret' => $company->gre_client_secret_produccion ? '***' . substr($company->gre_client_secret_produccion, -4) : null,
+                    'ruc_proveedor' => $company->gre_ruc_proveedor,
+                    'usuario_sol' => $company->gre_usuario_sol,
+                    'clave_sol' => $company->gre_clave_sol ? '***' . substr($company->gre_clave_sol, -2) : null,
+                ]
             ];
-
-            // Ocultar datos sensibles para la respuesta
-            foreach (['beta', 'produccion'] as $mode) {
-                if (!empty($credentials[$mode]['client_secret'])) {
-                    $credentials[$mode]['client_secret'] = '***' . substr($credentials[$mode]['client_secret'], -4);
-                }
-                if (!empty($credentials[$mode]['clave_sol'])) {
-                    $credentials[$mode]['clave_sol'] = '***' . substr($credentials[$mode]['clave_sol'], -4);
-                }
-            }
 
             return response()->json([
                 'success' => true,
@@ -63,13 +67,21 @@ class GreCredentialsController extends Controller
     /**
      * Actualizar credenciales GRE para un ambiente específico
      */
-    public function update(UpdateGreCredentialsRequest $request, Company $company): JsonResponse
+    public function update(Request $request, Company $company): JsonResponse
     {
         try {
-            $validated = $request->validated();
-            $modo = $validated['modo'];
+            $validated = $request->validate([
+                'environment' => 'required|in:beta,produccion',
+                'client_id' => 'required|string|max:255',
+                'client_secret' => 'required|string|max:255',
+                'ruc_proveedor' => 'nullable|string|size:11|regex:/^\d{11}$/',
+                'usuario_sol' => 'nullable|string|max:100',
+                'clave_sol' => 'nullable|string|max:100'
+            ]);
             
-            // Preparar credenciales
+            $environment = $validated['environment'];
+            
+            // Preparar credenciales sin el campo environment
             $credentials = [
                 'client_id' => $validated['client_id'],
                 'client_secret' => $validated['client_secret'],
@@ -78,22 +90,22 @@ class GreCredentialsController extends Controller
                 'clave_sol' => $validated['clave_sol'] ?? null,
             ];
 
-            // Configurar credenciales usando el trait
-            $company->setSunatCredentials('guias_remision', $credentials, $modo);
+            // Configurar credenciales usando el nuevo método
+            $company->setGreCredentials($credentials, $environment);
 
             Log::info("Credenciales GRE actualizadas", [
                 'company_id' => $company->id,
-                'modo' => $modo,
+                'environment' => $environment,
                 'client_id' => '***' . substr($credentials['client_id'], -4),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Credenciales GRE para {$modo} actualizadas correctamente",
+                'message' => "Credenciales GRE para {$environment} actualizadas correctamente",
                 'data' => [
                     'company_id' => $company->id,
-                    'modo' => $modo,
-                    'credenciales_configuradas' => $company->hasGreCredentials(),
+                    'environment' => $environment,
+                    'credenciales_configuradas' => $company->fresh()->hasGreCredentials(),
                 ]
             ]);
 
@@ -131,15 +143,11 @@ class GreCredentialsController extends Controller
             }
 
             $credentials = $company->getGreCredentials();
-            $mode = $company->modo_produccion ? 'producción' : 'beta';
+            $environment = $company->modo_produccion ? 'produccion' : 'beta';
 
-            // Aquí podrías agregar lógica real de prueba de conexión
-            // Por ahora, solo validamos que las credenciales estén completas
+            // Validar que las credenciales estén completas
             $isValid = !empty($credentials['client_id']) &&
-                      !empty($credentials['client_secret']) &&
-                      !empty($company->getGreRucProveedor()) &&
-                      !empty($company->getGreUsuarioSol()) &&
-                      !empty($company->getGreClaveSol());
+                      !empty($credentials['client_secret']);
 
             if (!$isValid) {
                 return response()->json([
@@ -150,18 +158,18 @@ class GreCredentialsController extends Controller
 
             Log::info("Test de conexión GRE", [
                 'company_id' => $company->id,
-                'modo' => $mode,
+                'environment' => $environment,
                 'result' => 'success'
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Conexión con SUNAT ({$mode}) validada correctamente",
+                'message' => "Conexión con SUNAT ({$environment}) validada correctamente",
                 'data' => [
                     'company_id' => $company->id,
-                    'modo' => $mode,
+                    'environment' => $environment,
                     'client_id' => '***' . substr($credentials['client_id'], -4),
-                    'ruc_proveedor' => $company->getGreRucProveedor(),
+                    'ruc_proveedor' => $credentials['ruc_proveedor'],
                     'timestamp' => now()->toISOString()
                 ]
             ]);
@@ -192,25 +200,42 @@ class GreCredentialsController extends Controller
                 ], 400);
             }
 
-            $company = new Company();
-            $defaults = $company->getDefaultConfigurations()['credenciales_gre'][$mode];
-
-            // Ocultar datos sensibles
-            if (!empty($defaults['client_secret'])) {
-                $defaults['client_secret'] = '***' . substr($defaults['client_secret'], -4);
-            }
-            if (!empty($defaults['clave_sol'])) {
-                $defaults['clave_sol'] = '***' . substr($defaults['clave_sol'], -4);
-            }
+            $defaults = [
+                'beta' => [
+                    'client_id' => 'test-85e5b0ae-255c-4891-a595-0b98c65c9854',
+                    'client_secret' => '***Kw==', // Ocultar por seguridad
+                    'ruc_proveedor' => '20161515648',
+                    'usuario_sol' => 'MODDATOS',
+                    'clave_sol' => '***TOS', // Ocultar por seguridad
+                    'endpoints' => [
+                        'api' => 'https://api-cpe-beta.sunat.gob.pe/v1/',
+                        'wsdl' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpgre-beta/billService?wsdl'
+                    ]
+                ],
+                'produccion' => [
+                    'client_id' => '',
+                    'client_secret' => '',
+                    'ruc_proveedor' => '',
+                    'usuario_sol' => '',
+                    'clave_sol' => '',
+                    'endpoints' => [
+                        'api' => 'https://api-cpe.sunat.gob.pe/v1/',
+                        'wsdl' => 'https://e-guiaremision.sunat.gob.pe/ol-ti-itemision-guia-gem/billService?wsdl'
+                    ]
+                ]
+            ];
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'modo' => $mode,
-                    'credenciales_default' => $defaults,
-                    'descripcion' => $mode === 'beta' 
+                    'environment' => $mode,
+                    'credentials_default' => $defaults[$mode],
+                    'description' => $mode === 'beta' 
                         ? 'Credenciales de prueba para ambiente BETA'
-                        : 'Credenciales de producción (deben ser configuradas por empresa)'
+                        : 'Credenciales de producción (deben ser configuradas por empresa)',
+                    'note' => $mode === 'beta' 
+                        ? 'Estas credenciales son de prueba y funcionan para testing'
+                        : 'Para producción debe obtener credenciales reales de SUNAT'
                 ]
             ]);
 
@@ -225,35 +250,30 @@ class GreCredentialsController extends Controller
     /**
      * Limpiar credenciales para un ambiente específico
      */
-    public function clear(GreEnvironmentRequest $request, Company $company): JsonResponse
+    public function clear(Request $request, Company $company): JsonResponse
     {
         try {
-            $validated = $request->validated();
-            $modo = $validated['modo'];
+            $validated = $request->validate([
+                'environment' => 'required|in:beta,produccion'
+            ]);
+            
+            $environment = $validated['environment'];
 
-            // Limpiar credenciales
-            $credentials = [
-                'client_id' => null,
-                'client_secret' => null,
-                'ruc_proveedor' => null,
-                'usuario_sol' => null,
-                'clave_sol' => null,
-            ];
-
-            $company->setSunatCredentials('guias_remision', $credentials, $modo);
+            // Limpiar credenciales usando el nuevo método
+            $company->clearGreCredentials($environment);
 
             Log::info("Credenciales GRE limpiadas", [
                 'company_id' => $company->id,
-                'modo' => $modo,
+                'environment' => $environment,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Credenciales GRE para {$modo} han sido limpiadas",
+                'message' => "Credenciales GRE para {$environment} han sido limpiadas",
                 'data' => [
                     'company_id' => $company->id,
-                    'modo' => $modo,
-                    'credenciales_configuradas' => $company->hasGreCredentials(),
+                    'environment' => $environment,
+                    'credenciales_configuradas' => $company->fresh()->hasGreCredentials(),
                 ]
             ]);
 
@@ -273,38 +293,40 @@ class GreCredentialsController extends Controller
     /**
      * Copiar credenciales de un ambiente a otro
      */
-    public function copy(CopyGreCredentialsRequest $request, Company $company): JsonResponse
+    public function copy(Request $request, Company $company): JsonResponse
     {
         try {
-            $validated = $request->validated();
-            $origen = $validated['origen'];
-            $destino = $validated['destino'];
+            $validated = $request->validate([
+                'from_environment' => 'required|in:beta,produccion',
+                'to_environment' => 'required|in:beta,produccion|different:from_environment'
+            ]);
+            
+            $fromEnvironment = $validated['from_environment'];
+            $toEnvironment = $validated['to_environment'];
 
-            $credencialesOrigen = $company->getSunatCredentials('guias_remision', $origen);
+            $copied = $company->copyGreCredentials($fromEnvironment, $toEnvironment);
 
-            if (empty($credencialesOrigen['client_id'])) {
+            if (!$copied) {
                 return response()->json([
                     'success' => false,
-                    'message' => "No hay credenciales configuradas en el ambiente {$origen}"
+                    'message' => "No hay credenciales configuradas en el ambiente {$fromEnvironment}"
                 ], 400);
             }
 
-            $company->setSunatCredentials('guias_remision', $credencialesOrigen, $destino);
-
             Log::info("Credenciales GRE copiadas", [
                 'company_id' => $company->id,
-                'origen' => $origen,
-                'destino' => $destino,
+                'from_environment' => $fromEnvironment,
+                'to_environment' => $toEnvironment,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Credenciales copiadas de {$origen} a {$destino}",
+                'message' => "Credenciales copiadas de {$fromEnvironment} a {$toEnvironment}",
                 'data' => [
                     'company_id' => $company->id,
-                    'origen' => $origen,
-                    'destino' => $destino,
-                    'credenciales_configuradas' => $company->hasGreCredentials(),
+                    'from_environment' => $fromEnvironment,
+                    'to_environment' => $toEnvironment,
+                    'credenciales_configuradas' => $company->fresh()->hasGreCredentials(),
                 ]
             ]);
 

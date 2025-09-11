@@ -27,6 +27,13 @@ class Company extends Model
         'clave_sol',
         'certificado_pem',
         'certificado_password',
+        'gre_client_id_beta',
+        'gre_client_secret_beta',
+        'gre_client_id_produccion',
+        'gre_client_secret_produccion',
+        'gre_ruc_proveedor',
+        'gre_usuario_sol',
+        'gre_clave_sol',
         'endpoint_beta',
         'endpoint_produccion',
         'modo_produccion',
@@ -43,6 +50,9 @@ class Company extends Model
         'clave_sol',
         'certificado_pem',
         'certificado_password',
+        'gre_client_secret_beta',
+        'gre_client_secret_produccion',
+        'gre_clave_sol',
     ];
 
     public function branches(): HasMany

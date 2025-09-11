@@ -70,7 +70,7 @@ class CompanyController extends Controller
                 'web' => 'nullable|url|max:255',
                 'usuario_sol' => 'required|string|max:50',
                 'clave_sol' => 'required|string|max:100',
-                'certificado_pem' => 'nullable|string',
+                'certificado_pem' => 'nullable|file|mimes:pem,crt,cer,txt|max:2048',
                 'certificado_password' => 'nullable|string|max:100',
                 'endpoint_beta' => 'nullable|url|max:255',
                 'endpoint_produccion' => 'nullable|url|max:255',
@@ -87,7 +87,17 @@ class CompanyController extends Controller
                 ], 422);
             }
 
-            $company = Company::create($validator->validated());
+            $validatedData = $validator->validated();
+            
+            // Procesar certificado PEM si se subió un archivo
+            if ($request->hasFile('certificado_pem')) {
+                $certificateFile = $request->file('certificado_pem');
+                $fileName = 'certificado.pem';
+                $path = $certificateFile->storeAs('certificado', $fileName, 'public');
+                $validatedData['certificado_pem'] = $path;
+            }
+
+            $company = Company::create($validatedData);
 
             Log::info("Empresa creada exitosamente", [
                 'company_id' => $company->id,
@@ -173,7 +183,7 @@ class CompanyController extends Controller
                 'web' => 'nullable|url|max:255',
                 'usuario_sol' => 'required|string|max:50',
                 'clave_sol' => 'required|string|max:100',
-                'certificado_pem' => 'nullable|string',
+                'certificado_pem' => 'nullable|file|mimes:pem,crt,cer,txt|max:2048',
                 'certificado_password' => 'nullable|string|max:100',
                 'endpoint_beta' => 'nullable|url|max:255',
                 'endpoint_produccion' => 'nullable|url|max:255',
@@ -190,7 +200,17 @@ class CompanyController extends Controller
                 ], 422);
             }
 
-            $company->update($validator->validated());
+            $validatedData = $validator->validated();
+            
+            // Procesar certificado PEM si se subió un archivo
+            if ($request->hasFile('certificado_pem')) {
+                $certificateFile = $request->file('certificado_pem');
+                $fileName = 'certificado.pem';
+                $path = $certificateFile->storeAs('certificado', $fileName, 'public');
+                $validatedData['certificado_pem'] = $path;
+            }
+
+            $company->update($validatedData);
 
             Log::info("Empresa actualizada exitosamente", [
                 'company_id' => $company->id,

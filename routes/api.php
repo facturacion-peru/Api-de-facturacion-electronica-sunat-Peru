@@ -22,36 +22,36 @@ use App\Http\Controllers\Api\SetupController;
 use App\Http\Controllers\Api\UbigeoController;
 
 // ========================
-// RUTAS DE AUTENTICACIÓN Y SETUP (SIN MIDDLEWARE)
+// RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
 // ========================
 
-// Información del sistema (público)
+// Información del sistema
 Route::get('/system/info', [AuthController::class, 'systemInfo']);
 
-// Inicialización del sistema (solo si no hay usuarios)
+// Setup del sistema
+Route::prefix('setup')->group(function () {
+    Route::post('/migrate', [SetupController::class, 'migrate']);
+    Route::post('/seed', [SetupController::class, 'seed']);
+    Route::get('/status', [SetupController::class, 'status']);
+});
+
+// Inicialización del sistema
 Route::post('/auth/initialize', [AuthController::class, 'initialize']);
 
-// Login
+// Autenticación
 Route::post('/auth/login', [AuthController::class, 'login']);
 
 // ========================
-// RUTAS PROTEGIDAS
+// RUTAS PROTEGIDAS (CON AUTENTICACIÓN)
 // ========================
-Route::middleware('auth:sanctum')->group(function () {
-    
-    // Autenticación
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+
+    // ========================
+    // AUTENTICACIÓN Y USUARIO
+    // ========================
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/create-user', [AuthController::class, 'createUser']);
-    
-    // Setup del sistema
-    Route::prefix('setup')->group(function () {
-        Route::post('/migrate', [SetupController::class, 'migrate']);
-        Route::post('/seed', [SetupController::class, 'seed']);
-        Route::get('/status', [SetupController::class, 'status']);
-        Route::post('/complete', [SetupController::class, 'setup']);
-        Route::post('/configure-sunat', [SetupController::class, 'configureSunat']);
-    });
     
     // Usuario autenticado
     Route::get('/user', function (Request $request) {
@@ -59,36 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========================
-    // GESTIÓN DE EMPRESAS, SUCURSALES Y CLIENTES (CRUD básico)
+    // SETUP AVANZADO
     // ========================
-    
-    // Empresas
-    Route::apiResource('companies', CompanyController::class);
-    Route::post('/companies/{company}/activate', [CompanyController::class, 'activate']);
-    Route::post('/companies/{company}/toggle-production', [CompanyController::class, 'toggleProductionMode']);
-    
-    // Sucursales
-    Route::apiResource('branches', BranchController::class);
-    Route::post('/branches/{branch}/activate', [BranchController::class, 'activate']);
-    Route::get('/companies/{company}/branches', [BranchController::class, 'getByCompany']);
-    
-    // Clientes
-    Route::apiResource('clients', ClientController::class);
-    Route::post('/clients/{client}/activate', [ClientController::class, 'activate']);
-    Route::get('/companies/{company}/clients', [ClientController::class, 'getByCompany']);
-    Route::post('/clients/search-by-document', [ClientController::class, 'searchByDocument']);
-    
-    // Correlativos por sucursal
-    Route::get('/branches/{branch}/correlatives', [CorrelativeController::class, 'index']);
-    Route::post('/branches/{branch}/correlatives', [CorrelativeController::class, 'store']);
-    Route::put('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'update']);
-    Route::delete('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'destroy']);
-    Route::post('/branches/{branch}/correlatives/batch', [CorrelativeController::class, 'createBatch']);
-    Route::post('/branches/{branch}/correlatives/{correlative}/increment', [CorrelativeController::class, 'increment']);
-    
-    // Catálogos de correlativos
-    Route::get('/correlatives/document-types', [CorrelativeController::class, 'getDocumentTypes']);
-    
+    Route::prefix('setup')->group(function () {
+        Route::post('/complete', [SetupController::class, 'setup']);
+        Route::post('/configure-sunat', [SetupController::class, 'configureSunat']);
+    });
+
     // ========================
     // GESTIÓN DE UBIGEOS
     // ========================
@@ -99,16 +76,89 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/search', [UbigeoController::class, 'searchUbigeo']);
         Route::get('/{id}', [UbigeoController::class, 'getUbigeoById']);
     });
-});
 
-// Rutas de la API SUNAT
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ========================
+    // EMPRESAS Y CONFIGURACIONES
+    // ========================
     
+    // Empresas
+    Route::apiResource('companies', CompanyController::class);
+    Route::post('/companies/{company}/activate', [CompanyController::class, 'activate']);
+    Route::post('/companies/{company}/toggle-production', [CompanyController::class, 'toggleProductionMode']);
+
+    // Configuraciones de empresas
+    Route::prefix('companies/{company_id}/config')->group(function () {
+        Route::get('/', [CompanyConfigController::class, 'show']);
+        Route::get('/{section}', [CompanyConfigController::class, 'getSection']);
+        Route::put('/{section}', [CompanyConfigController::class, 'updateSection']);
+        Route::get('/validate/services', [CompanyConfigController::class, 'validateServices']);
+        Route::post('/reset', [CompanyConfigController::class, 'resetToDefaults']);
+        Route::post('/migrate', [CompanyConfigController::class, 'migrateCompany']);
+        Route::delete('/cache', [CompanyConfigController::class, 'clearCache']);
+    });
+
+    // Configuraciones generales
+    Route::prefix('config')->group(function () {
+        Route::get('/defaults', [CompanyConfigController::class, 'getDefaults']);
+        Route::get('/summary', [CompanyConfigController::class, 'getSummary']);
+    });
+
+    // ========================
+    // CREDENCIALES GRE
+    // ========================
+    
+    // Credenciales GRE por empresa
+    Route::prefix('companies/{company}/gre-credentials')->group(function () {
+        Route::get('/', [GreCredentialsController::class, 'show']);
+        Route::put('/', [GreCredentialsController::class, 'update']);
+        Route::post('/test-connection', [GreCredentialsController::class, 'testConnection']);
+        Route::delete('/clear', [GreCredentialsController::class, 'clear']);
+        Route::post('/copy', [GreCredentialsController::class, 'copy']);
+    });
+
+    // Credenciales GRE - Configuraciones globales
+    Route::prefix('gre-credentials')->group(function () {
+        Route::get('/defaults/{mode}', [GreCredentialsController::class, 'getDefaults'])
+            ->where('mode', 'beta|produccion');
+    });
+
+    // ========================
+    // SUCURSALES
+    // ========================
+    Route::apiResource('branches', BranchController::class);
+    Route::post('/branches/{branch}/activate', [BranchController::class, 'activate']);
+    Route::get('/companies/{company}/branches', [BranchController::class, 'getByCompany']);
+
+    // ========================
+    // CLIENTES
+    // ========================
+    Route::apiResource('clients', ClientController::class);
+    Route::post('/clients/{client}/activate', [ClientController::class, 'activate']);
+    Route::get('/companies/{company}/clients', [ClientController::class, 'getByCompany']);
+    Route::post('/clients/search-by-document', [ClientController::class, 'searchByDocument']);
+
+    // ========================
+    // CORRELATIVOS
+    // ========================
+    Route::get('/branches/{branch}/correlatives', [CorrelativeController::class, 'index']);
+    Route::post('/branches/{branch}/correlatives', [CorrelativeController::class, 'store']);
+    Route::put('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'update']);
+    Route::delete('/branches/{branch}/correlatives/{correlative}', [CorrelativeController::class, 'destroy']);
+    Route::post('/branches/{branch}/correlatives/batch', [CorrelativeController::class, 'createBatch']);
+    Route::post('/branches/{branch}/correlatives/{correlative}/increment', [CorrelativeController::class, 'increment']);
+    
+    // Catálogos de correlativos
+    Route::get('/correlatives/document-types', [CorrelativeController::class, 'getDocumentTypes']);
+
+    // ========================
+    // DOCUMENTOS ELECTRÓNICOS SUNAT
+    // ========================
+
     // PDF Formatos
     Route::prefix('pdf')->group(function () {
         Route::get('/formats', [PdfController::class, 'getAvailableFormats']);
     });
-    
+
     // Facturas
     Route::prefix('invoices')->group(function () {
         Route::get('/', [InvoiceController::class, 'index']);
@@ -120,7 +170,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-pdf', [InvoiceController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [InvoiceController::class, 'generatePdf']);
     });
-    
+
     // Boletas
     Route::prefix('boletas')->group(function () {
         Route::get('/', [BoletaController::class, 'index']);
@@ -131,7 +181,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-cdr', [BoletaController::class, 'downloadCdr']);
         Route::get('/{id}/download-pdf', [BoletaController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [BoletaController::class, 'generatePdf']);
-        
+
         // Funciones de resumen diario desde boletas
         Route::get('/pending-for-summary', [BoletaController::class, 'getBoletsasPendingForSummary']);
         Route::post('/create-daily-summary', [BoletaController::class, 'createDailySummaryFromDate']);
@@ -141,7 +191,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Resúmenes Diarios
     Route::prefix('daily-summaries')->group(function () {
-        Route::get('/', [DailySummaryController::class, 'index']);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+        Route::get('/', [DailySummaryController::class, 'index']);
         Route::post('/', [DailySummaryController::class, 'store']);
         Route::get('/{id}', [DailySummaryController::class, 'show']);
         Route::post('/{id}/send-sunat', [DailySummaryController::class, 'sendToSunat']);
@@ -150,7 +200,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-cdr', [DailySummaryController::class, 'downloadCdr']);
         Route::get('/{id}/download-pdf', [DailySummaryController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [DailySummaryController::class, 'generatePdf']);
-        
+
         // Funciones de gestión masiva
         Route::get('/pending', [DailySummaryController::class, 'getPendingSummaries']);
         Route::post('/check-all-pending', [DailySummaryController::class, 'checkAllPendingStatus']);
@@ -166,7 +216,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-cdr', [CreditNoteController::class, 'downloadCdr']);
         Route::get('/{id}/download-pdf', [CreditNoteController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [CreditNoteController::class, 'generatePdf']);
-        
+
         // Catálogo de motivos
         Route::get('/catalogs/motivos', [CreditNoteController::class, 'getMotivos']);
     });
@@ -181,7 +231,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-cdr', [DebitNoteController::class, 'downloadCdr']);
         Route::get('/{id}/download-pdf', [DebitNoteController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [DebitNoteController::class, 'generatePdf']);
-        
+
         // Catálogo de motivos
         Route::get('/catalogs/motivos', [DebitNoteController::class, 'getMotivos']);
     });
@@ -202,10 +252,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('voided-documents')->group(function () {
         Route::get('/', [VoidedDocumentController::class, 'index']);
         Route::post('/', [VoidedDocumentController::class, 'store']);
-        
-        // Obtener documentos disponibles para anular (DEBE IR ANTES de /{id})
         Route::get('/available-documents', [VoidedDocumentController::class, 'getDocumentsForVoiding']);
-        
         Route::get('/{id}', [VoidedDocumentController::class, 'show']);
         Route::post('/{id}/send-sunat', [VoidedDocumentController::class, 'sendToSunat']);
         Route::post('/{id}/check-status', [VoidedDocumentController::class, 'checkStatus']);
@@ -224,66 +271,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/download-cdr', [DispatchGuideController::class, 'downloadCdr']);
         Route::get('/{id}/download-pdf', [DispatchGuideController::class, 'downloadPdf']);
         Route::post('/{id}/generate-pdf', [DispatchGuideController::class, 'generatePdf']);
-        
+
         // Catálogos
         Route::get('/catalogs/transfer-reasons', [DispatchGuideController::class, 'getTransferReasons']);
         Route::get('/catalogs/transport-modes', [DispatchGuideController::class, 'getTransportModes']);
     });
-
-    // Configuraciones de Empresas
-    Route::prefix('companies/{company_id}/config')->group(function () {
-        // Obtener configuración completa o por secciones
-        Route::get('/', [CompanyConfigController::class, 'show']);
-        Route::get('/{section}', [CompanyConfigController::class, 'getSection']);
-        
-        // Actualizar configuración por secciones
-        Route::put('/{section}', [CompanyConfigController::class, 'updateSection']);
-        
-        // Validar configuraciones de servicios SUNAT
-        Route::get('/validate/services', [CompanyConfigController::class, 'validateServices']);
-        
-        // Resetear a valores por defecto
-        Route::post('/reset', [CompanyConfigController::class, 'resetToDefaults']);
-        
-        // Migrar empresa al nuevo sistema
-        Route::post('/migrate', [CompanyConfigController::class, 'migrateCompany']);
-        
-        // Limpiar cache
-        Route::delete('/cache', [CompanyConfigController::class, 'clearCache']);
-    });
-
-    // Configuraciones generales
-    Route::prefix('config')->group(function () {
-        // Obtener configuraciones por defecto
-        Route::get('/defaults', [CompanyConfigController::class, 'getDefaults']);
-        
-        // Resumen de configuraciones de múltiples empresas
-        Route::get('/summary', [CompanyConfigController::class, 'getSummary']);
-    });
-
-    // Credenciales GRE (Guías de Remisión Electrónica)
-    Route::prefix('companies/{company}/gre-credentials')->group(function () {
-        // Obtener credenciales GRE actuales
-        Route::get('/', [GreCredentialsController::class, 'show']);
-        
-        // Actualizar credenciales GRE para un ambiente
-        Route::put('/', [GreCredentialsController::class, 'update']);
-        
-        // Probar conexión con credenciales actuales
-        Route::post('/test-connection', [GreCredentialsController::class, 'testConnection']);
-        
-        // Limpiar credenciales para un ambiente específico
-        Route::delete('/clear', [GreCredentialsController::class, 'clear']);
-        
-        // Copiar credenciales de un ambiente a otro
-        Route::post('/copy', [GreCredentialsController::class, 'copy']);
-    });
-
-    // Credenciales GRE - Configuraciones globales
-    Route::prefix('gre-credentials')->group(function () {
-        // Obtener valores por defecto para un ambiente
-        Route::get('/defaults/{mode}', [GreCredentialsController::class, 'getDefaults'])
-             ->where('mode', 'beta|produccion');
-    });
-    
 });

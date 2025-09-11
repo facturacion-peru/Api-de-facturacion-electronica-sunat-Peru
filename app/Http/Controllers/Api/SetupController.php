@@ -7,7 +7,9 @@ use App\Models\Company;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class SetupController extends Controller
@@ -17,68 +19,70 @@ class SetupController extends Controller
      */
     public function setup(Request $request)
     {
+        // Verificar que las migraciones estén ejecutadas
+        if ($this->checkMigrationsPending()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debe ejecutar las migraciones primero',
+                'required_action' => 'POST /setup/migrate',
+                'current_step' => 'migrations_required'
+            ], 400);
+        }
+
+        // Verificar que haya datos de ubigeos (seeders ejecutados)
+        if (!\DB::table('ubi_regiones')->exists() || \DB::table('ubi_regiones')->count() === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debe ejecutar los seeders primero',
+                'required_action' => 'POST /setup/seed',
+                'current_step' => 'seeders_required'
+            ], 400);
+        }
+
         $request->validate([
-            'environment' => 'required|in:beta,production',
+            'environment' => 'required|in:beta,produccion',
             'company' => 'required|array',
             'company.ruc' => 'required|string|size:11',
             'company.razon_social' => 'required|string|max:255',
             'company.nombre_comercial' => 'nullable|string|max:255',
-            'company.direccion' => 'required|string',
+            'company.direccion' => 'required|string|max:255',
             'company.ubigeo' => 'required|string|size:6',
-            'company.distrito' => 'required|string',
-            'company.provincia' => 'required|string',
-            'company.departamento' => 'required|string',
-            'company.telefono' => 'nullable|string',
-            'company.email' => 'nullable|email',
-            'company.usuario_sol' => 'required|string',
-            'company.clave_sol' => 'required|string',
-            'certificate_content' => 'nullable|string',
-            'certificate_password' => 'nullable|string',
+            'company.distrito' => 'required|string|max:255',
+            'company.provincia' => 'required|string|max:255',
+            'company.departamento' => 'required|string|max:255',
+            'company.telefono' => 'nullable|string|max:255',
+            'company.email' => 'nullable|email|max:255',
+            'company.web' => 'nullable|url|max:255',
+            'company.usuario_sol' => 'required|string|max:255',
+            'company.clave_sol' => 'required|string|max:255',
+            'certificado_pem' => 'nullable|file|mimes:pem,crt,cer,txt|max:2048',
+            'certificado_password' => 'nullable|string|max:255',
+            'logo_path' => 'nullable|file|mimes:jpeg,jpg,png,gif|max:1024',
+            'modo_produccion' => 'nullable|in:true,false,1,0',
+            'activo' => 'nullable|in:true,false,1,0',
         ]);
+
+        /* return response()->json(['message' => $request->all()], 202); */
 
         try {
             DB::beginTransaction();
 
-            // 1. Crear/Actualizar empresa
-            $companyData = $request->company;
-            $companyData['environment'] = $request->environment;
-            
-            if ($request->filled('certificate_content') && $request->filled('certificate_password')) {
-                $certificatePath = $this->saveCertificate($request->certificate_content, $request->environment);
-                $companyData['certificado_pem'] = $certificatePath;
-                $companyData['certificado_password'] = $request->certificate_password;
-            }
+            // Preparar datos de la empresa
+            $companyData = $this->prepareCompanyData($request);
 
             $company = Company::updateOrCreate(
                 ['ruc' => $companyData['ruc']],
                 $companyData
             );
 
-            // 2. Crear sucursal principal si no existe
-            $branch = Branch::updateOrCreate(
-                [
-                    'company_id' => $company->id,
-                    'codigo' => '0000'
-                ],
-                [
-                    'nombre' => 'Sucursal Principal',
-                    'direccion' => $company->direccion,
-                    'ubigeo' => $company->ubigeo,
-                    'distrito' => $company->distrito,
-                    'provincia' => $company->provincia,
-                    'departamento' => $company->departamento,
-                    'activo' => true,
-                ]
-            );
+            // Crear sucursal principal
+            $branch = $this->createMainBranch($company);
 
-            // 3. Configurar empresa para SUNAT
+            // Configurar empresa para SUNAT
             $this->setupCompanyForSunat($company, $request->environment);
 
-            // 4. Asignar empresa al usuario actual si no tiene una
-            $user = $request->user();
-            if (!$user->company_id && $user->role && $user->role->name !== 'super_admin') {
-                $user->update(['company_id' => $company->id]);
-            }
+            // Asignar empresa al usuario actual si corresponde
+            $this->assignCompanyToUser($request->user(), $company);
 
             DB::commit();
 
@@ -114,8 +118,8 @@ class SetupController extends Controller
     public function migrate(Request $request)
     {
         try {
-            \Artisan::call('migrate', ['--force' => true]);
-            $output = \Artisan::output();
+            Artisan::call('migrate', ['--force' => true]);
+            $output = Artisan::output();
 
             return response()->json([
                 'message' => 'Migraciones ejecutadas exitosamente',
@@ -131,20 +135,27 @@ class SetupController extends Controller
     }
 
     /**
-     * Seed de producción
+     * Ejecutar seeders
      */
     public function seed(Request $request)
     {
+        $request->validate([
+            'class' => 'nullable|string'
+        ]);
+
         try {
-            \Artisan::call('db:seed', [
-                '--class' => 'ProductionSeeder',
+            $seederClass = $request->input('class', 'DatabaseSeeder');
+            
+            Artisan::call('db:seed', [
+                '--class' => $seederClass,
                 '--force' => true
             ]);
-            $output = \Artisan::output();
+            $output = Artisan::output();
 
             return response()->json([
-                'message' => 'Seeder ejecutado exitosamente',
-                'output' => $output
+                'message' => "Seeder '{$seederClass}' ejecutado exitosamente",
+                'output' => $output,
+                'seeder_class' => $seederClass
             ]);
 
         } catch (\Exception $e) {
@@ -161,20 +172,37 @@ class SetupController extends Controller
     public function status()
     {
         try {
+            $company = Company::first();
+            $migracionesPendientes = $this->checkMigrationsPending();
+            $ubigeosCargados = DB::table('ubi_regiones')->exists() && DB::table('ubi_regiones')->count() > 0;
+            
             $status = [
                 'database_connected' => $this->checkDatabaseConnection(),
-                'migrations_pending' => $this->checkMigrationsPending(),
+                'migrations_pending' => $migracionesPendientes,
+                'seeders_executed' => $ubigeosCargados,
                 'companies_count' => Company::count(),
                 'users_count' => User::count(),
                 'storage_writable' => is_writable(storage_path()),
                 'certificates_directory' => $this->checkCertificatesDirectory(),
-                'environment' => config('app.env'),
+                'app_environment' => config('app.env'),
+                'company_environment' => $company ? ($company->modo_produccion ? 'produccion' : 'beta') : null,
                 'debug' => config('app.debug'),
                 'app_key_set' => !empty(config('app.key')),
+                'certificate_exists' => $company ? !empty($company->certificado_pem) : false,
+                'logo_exists' => $company ? !empty($company->logo_path) : false,
+                
+                // Estado de configuración paso a paso
+                'setup_progress' => [
+                    'step_1_migrations' => !$migracionesPendientes,
+                    'step_2_seeders' => $ubigeosCargados,
+                    'step_3_company' => Company::count() > 0,
+                    'step_4_ready' => !$migracionesPendientes && $ubigeosCargados && Company::count() > 0
+                ]
             ];
 
             $status['ready_for_use'] = $status['database_connected'] && 
-                                      !$status['migrations_pending'] && 
+                                      !$status['migrations_pending'] &&
+                                      $status['seeders_executed'] &&
                                       $status['companies_count'] > 0 &&
                                       $status['app_key_set'];
 
@@ -197,7 +225,7 @@ class SetupController extends Controller
     {
         $request->validate([
             'company_id' => 'required|integer|exists:companies,id',
-            'environment' => 'required|in:beta,production',
+            'environment' => 'required|in:beta,produccion',
             'certificate_file' => 'nullable|file',
             'certificate_password' => 'nullable|string',
             'force_update' => 'boolean'
@@ -217,10 +245,11 @@ class SetupController extends Controller
 
             // Configurar certificado si se proporciona
             if ($request->hasFile('certificate_file')) {
-                $this->storeCertificateInExpectedLocation($request->file('certificate_file'));
+                $certificateFile = $request->file('certificate_file');
+                $path = $certificateFile->storeAs('certificado', 'certificado.pem', 'public');
                 
                 $company->update([
-                    'certificado_pem' => 'public/certificado/certificado.pem',
+                    'certificado_pem' => $path,
                     'certificado_password' => $request->certificate_password
                 ]);
             }
@@ -255,8 +284,8 @@ class SetupController extends Controller
             'environment' => $environment,
             'services' => [
                 'facturacion' => [
-                    'beta' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService',
-                    'produccion' => 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService'
+                    'beta' => $company->endpoint_beta ?? 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService',
+                    'produccion' => $company->endpoint_produccion ?? 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService'
                 ],
                 'guias' => [
                     'beta' => 'https://e-beta.sunat.gob.pe/ol-ti-itemision-guia-gem-beta/billService',
@@ -280,44 +309,105 @@ class SetupController extends Controller
             ]
         ];
 
-        // Guardar configuraciones usando el array configuraciones
-        $company->update(['configuraciones' => $config]);
+        // Si la empresa no tiene el campo configuraciones, podemos agregarlo si existe en el modelo
+        if (method_exists($company, 'update')) {
+            try {
+                $company->update(['configuraciones' => $config]);
+            } catch (\Exception $e) {
+                // Si no existe el campo configuraciones, continuar sin error
+                Log::info('No se pudieron guardar las configuraciones: ' . $e->getMessage());
+            }
+        }
     }
 
     /**
-     * Guardar certificado
+     * Preparar datos de la empresa con valores por defecto
      */
-    private function saveCertificate(string $content, string $environment): string
+    private function prepareCompanyData(Request $request): array
     {
-        $path = 'certificado';
-        Storage::disk('public')->makeDirectory($path);
+        $companyData = $request->company;
         
-        $fullPath = "{$path}/certificado.pem";
+        // Configurar endpoints por defecto
+        $companyData['endpoint_beta'] = 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService';
+        $companyData['endpoint_produccion'] = 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService';
         
-        Storage::disk('public')->put($fullPath, base64_decode($content));
+        // Configurar modo producción basado en environment
+        $modoproduccion = $request->input('modo_produccion');
+        $companyData['modo_produccion'] = $modoproduccion !== null 
+            ? filter_var($modoproduccion, FILTER_VALIDATE_BOOLEAN) 
+            : $request->environment === 'produccion';
+            
+        $activo = $request->input('activo');
+        $companyData['activo'] = $activo !== null 
+            ? filter_var($activo, FILTER_VALIDATE_BOOLEAN) 
+            : true;
         
-        return 'public/certificado/certificado.pem';
+        // Procesar certificado PEM si se subió un archivo
+        if ($request->hasFile('certificado_pem')) {
+            $certificateFile = $request->file('certificado_pem');
+            $path = $certificateFile->storeAs('certificado', 'certificado.pem', 'public');
+            $companyData['certificado_pem'] = $path;
+            $companyData['certificado_password'] = $request->certificado_password;
+        }
+        
+        // Procesar logo si se subió un archivo
+        if ($request->hasFile('logo_path')) {
+            $logoFile = $request->file('logo_path');
+            $fileName = 'logo.' . $logoFile->getClientOriginalExtension();
+            $logoPath = $logoFile->storeAs('logo', $fileName, 'public');
+            $companyData['logo_path'] = $logoPath;
+        }
+        
+        // Agregar campos GRE si están presentes en la solicitud
+        $greFields = [
+            'gre_client_id_beta',
+            'gre_client_secret_beta',
+            'gre_client_id_produccion',
+            'gre_client_secret_produccion',
+            'gre_ruc_proveedor',
+            'gre_usuario_sol',
+            'gre_clave_sol'
+        ];
+        
+        foreach ($greFields as $field) {
+            if ($request->has($field)) {
+                $companyData[$field] = $request->input($field);
+            }
+        }
+        
+        return $companyData;
     }
 
     /**
-     * Almacenar archivo de certificado
+     * Crear sucursal principal
      */
-    private function storeCertificate($file, string $environment): string
+    private function createMainBranch(Company $company): Branch
     {
-        $path = "certificates/{$environment}";
-        return $file->store($path, 'local');
+        return Branch::updateOrCreate(
+            [
+                'company_id' => $company->id,
+                'codigo' => '0000'
+            ],
+            [
+                'nombre' => 'Sucursal Principal',
+                'direccion' => $company->direccion,
+                'ubigeo' => $company->ubigeo,
+                'distrito' => $company->distrito,
+                'provincia' => $company->provincia,
+                'departamento' => $company->departamento,
+                'activo' => true,
+            ]
+        );
     }
 
     /**
-     * Almacenar certificado en la ubicación esperada por el sistema
+     * Asignar empresa al usuario si corresponde
      */
-    private function storeCertificateInExpectedLocation($file): void
+    private function assignCompanyToUser($user, Company $company): void
     {
-        $path = 'certificado';
-        Storage::disk('public')->makeDirectory($path);
-        
-        // Guardar con el nombre específico que espera el sistema
-        Storage::disk('public')->putFileAs($path, $file, 'certificado.pem');
+        if ($user && !$user->company_id && $user->role && $user->role->name !== 'super_admin') {
+            $user->update(['company_id' => $company->id]);
+        }
     }
 
     /**
@@ -339,8 +429,8 @@ class SetupController extends Controller
     private function checkMigrationsPending(): bool
     {
         try {
-            \Artisan::call('migrate:status');
-            $output = \Artisan::output();
+            Artisan::call('migrate:status');
+            $output = Artisan::output();
             return str_contains($output, 'Pending');
         } catch (\Exception $e) {
             return true;
@@ -352,15 +442,19 @@ class SetupController extends Controller
      */
     private function checkCertificatesDirectory(): array
     {
-        $beta = Storage::disk('local')->exists('certificates/beta');
-        $production = Storage::disk('local')->exists('certificates/production');
+        // Verificar directorios donde realmente se guardan los archivos
+        $certificadoExists = Storage::disk('public')->exists('certificado');
+        $logoExists = Storage::disk('public')->exists('logo');
         
-        if (!$beta) Storage::disk('local')->makeDirectory('certificates/beta');
-        if (!$production) Storage::disk('local')->makeDirectory('certificates/production');
+        // Crear directorios si no existen
+        if (!$certificadoExists) Storage::disk('public')->makeDirectory('certificado');
+        if (!$logoExists) Storage::disk('public')->makeDirectory('logo');
         
         return [
-            'beta' => $beta,
-            'production' => $production
+            'certificado_directory' => $certificadoExists,
+            'logo_directory' => $logoExists,
+            'certificado_file_exists' => Storage::disk('public')->exists('certificado/certificado.pem'),
+            'storage_link_exists' => is_link(public_path('storage'))
         ];
     }
 }
