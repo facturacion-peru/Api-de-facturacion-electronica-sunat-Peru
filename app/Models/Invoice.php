@@ -60,6 +60,9 @@ class Invoice extends Model
         'respuesta_sunat',
         'codigo_hash',
         'usuario_creacion',
+        'consulta_cpe_estado',
+        'consulta_cpe_respuesta',
+        'consulta_cpe_fecha',
     ];
 
     protected $casts = [
@@ -92,6 +95,8 @@ class Invoice extends Model
         'percepcion' => 'array',
         'retencion' => 'array',
         'datos_adicionales' => 'array',
+        'consulta_cpe_respuesta' => 'array',
+        'consulta_cpe_fecha' => 'datetime',
     ];
 
     public function company(): BelongsTo

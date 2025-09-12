@@ -18,8 +18,10 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CorrelativeController;
 use App\Http\Controllers\Api\GreCredentialsController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ConsultaCpeController;
 use App\Http\Controllers\Api\SetupController;
 use App\Http\Controllers\Api\UbigeoController;
+use App\Http\Controllers\Api\ConsultaCpeControllerMejorado;
 
 // ========================
 // RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
@@ -275,5 +277,22 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Catálogos
         Route::get('/catalogs/transfer-reasons', [DispatchGuideController::class, 'getTransferReasons']);
         Route::get('/catalogs/transport-modes', [DispatchGuideController::class, 'getTransportModes']);
+    });
+
+    // ========================
+    // CONSULTA DE COMPROBANTES ELECTRÓNICOS (CPE)
+    // ========================
+    Route::prefix('consulta-cpe')->group(function () {
+        // Consultas individuales por tipo de documento
+        Route::post('/factura/{id}', [ConsultaCpeController::class, 'consultarFactura']);
+        Route::post('/boleta/{id}', [ConsultaCpeController::class, 'consultarBoleta']);
+        Route::post('/nota-credito/{id}', [ConsultaCpeController::class, 'consultarNotaCredito']);
+        Route::post('/nota-debito/{id}', [ConsultaCpeController::class, 'consultarNotaDebito']);
+        
+        // Consulta masiva
+        Route::post('/masivo', [ConsultaCpeController::class, 'consultarDocumentosMasivo']);
+        
+        // Estadísticas de consultas
+        Route::get('/estadisticas', [ConsultaCpeController::class, 'estadisticasConsultas']);
     });
 });

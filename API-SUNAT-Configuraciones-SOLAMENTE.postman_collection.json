@@ -1,0 +1,1552 @@
+{
+	"info": {
+		"_postman_id": "config-only-sunat-api",
+		"name": "API SUNAT - Solo Configuraciones Paso a Paso",
+		"description": "Colección exclusiva para configurar el sistema de facturación SUNAT. No incluye ejemplos de documentos, solo configuraciones necesarias.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔧 1. SETUP INICIAL DEL SISTEMA",
+			"item": [
+				{
+					"name": "1.1 - Verificar Estado del Sistema",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/setup/status",
+							"host": ["{{base_url}}"],
+							"path": ["setup", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.2 - Ejecutar Migraciones (Si es necesario)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/setup/migrate",
+							"host": ["{{base_url}}"],
+							"path": ["setup", "migrate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "1.3 - Ejecutar Seeders (Si es necesario)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/setup/seed",
+							"host": ["{{base_url}}"],
+							"path": ["setup", "seed"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔐 2. AUTENTICACIÓN",
+			"item": [
+				{
+					"name": "2.1 - Inicializar Usuario Admin (Solo primera vez)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Administrador\",\n    \"email\": \"admin@sistema.com\",\n    \"password\": \"123456\",\n    \"password_confirmation\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/initialize",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "initialize"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.2 - Login y Obtener Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.access_token) {",
+									"        pm.collectionVariables.set('access_token', jsonData.access_token);",
+									"        console.log('✅ Token guardado: ' + jsonData.access_token.substring(0, 20) + '...');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@sistema.com\",\n    \"password\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.3 - Verificar Usuario Autenticado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "auth", "me"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🌎 3. CONFIGURACIÓN DE UBIGEOS",
+			"item": [
+				{
+					"name": "3.1 - Listar Regiones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/ubigeos/regiones",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "ubigeos", "regiones"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 - Listar Provincias de Lima",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/ubigeos/provincias?region_id=150000",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "ubigeos", "provincias"],
+							"query": [
+								{
+									"key": "region_id",
+									"value": "150000"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.3 - Listar Distritos de Lima",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/ubigeos/distritos?provincia_id=150100",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "ubigeos", "distritos"],
+							"query": [
+								{
+									"key": "provincia_id",
+									"value": "150100"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.4 - Buscar Ubigeo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/ubigeos/search?q=miraflores",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "ubigeos", "search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "miraflores"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏢 4. CONFIGURACIÓN DE EMPRESAS",
+			"item": [
+				{
+					"name": "4.1 - Listar Empresas",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('company_id', jsonData.data[0].id);",
+									"        console.log('✅ Company ID guardado: ' + jsonData.data[0].id);",
+									"        console.log('📋 Empresa: ' + jsonData.data[0].razon_social);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.2 - Ver Empresa Específica",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3 - Crear Nueva Empresa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ruc\": \"20987654321\",\n    \"razon_social\": \"MI EMPRESA SAC\",\n    \"nombre_comercial\": \"Mi Empresa\",\n    \"direccion\": \"Av. Principal 123\",\n    \"ubigeo\": \"150101\",\n    \"distrito\": \"Lima\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-1234567\",\n    \"email\": \"contacto@miempresa.com\",\n    \"usuario_sol\": \"MIEMPRESA\",\n    \"clave_sol\": \"clave123\",\n    \"modo_produccion\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.4 - Activar Empresa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.5 - Cambiar a Modo Producción",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/toggle-production",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "toggle-production"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "⚙️ 5. CONFIGURACIONES AVANZADAS DE EMPRESA",
+			"item": [
+				{
+					"name": "5.1 - Ver Configuración Completa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.2 - Ver Configuraciones por Tipo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config?type=sunat_credentials&environment=beta",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config"],
+							"query": [
+								{
+									"key": "type",
+									"value": "sunat_credentials",
+									"description": "Tipos: sunat_credentials, service_endpoints, tax_settings, invoice_settings, gre_settings, file_settings, document_settings, summary_settings, void_settings, notification_settings, security_settings"
+								},
+								{
+									"key": "environment",
+									"value": "beta",
+									"description": "Ambientes: general, beta, produccion"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.3 - Credenciales SUNAT - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/sunat_credentials",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "sunat_credentials"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.4 - Credenciales SUNAT - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\",\n    \"config_data\": {\n        \"client_id\": \"test-client-id-beta\",\n        \"client_secret\": \"test-secret-beta\",\n        \"usuario_sol\": \"TESTUSER\",\n        \"clave_sol\": \"testpass123\",\n        \"ruc\": \"20123456789\"\n    },\n    \"description\": \"Credenciales SUNAT para ambiente Beta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/sunat_credentials",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "sunat_credentials"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.5 - Endpoints de Servicios - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/service_endpoints",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "service_endpoints"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.6 - Endpoints de Servicios - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\",\n    \"service_type\": \"facturacion\",\n    \"config_data\": {\n        \"endpoint\": \"https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService\",\n        \"timeout\": 30,\n        \"retry_attempts\": 3,\n        \"max_file_size\": \"10MB\"\n    },\n    \"description\": \"Endpoints para facturación electrónica - Beta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/service_endpoints",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "service_endpoints"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.7 - Configuración Impuestos - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/tax_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "tax_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.8 - Configuración Impuestos - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"igv_porcentaje\": 18,\n        \"isc_activo\": true,\n        \"icbper_monto\": 0.30,\n        \"detraccion_activa\": true,\n        \"percepcion_activa\": false,\n        \"retencion_activa\": false\n    },\n    \"description\": \"Configuración general de impuestos\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/tax_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "tax_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.9 - Configuración Facturación - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/invoice_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "invoice_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.10 - Configuración Facturación - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"moneda_default\": \"PEN\",\n        \"tipo_operacion_default\": \"0101\",\n        \"ubl_version\": \"2.1\",\n        \"formato_numero\": \"F###-########\",\n        \"envio_automatico\": true,\n        \"generar_pdf_automatico\": true,\n        \"incluir_leyendas_automaticas\": true\n    },\n    \"description\": \"Configuración general de facturación\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/invoice_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "invoice_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.11 - Configuración GRE - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/gre_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "gre_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.12 - Configuración GRE - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"beta\",\n    \"service_type\": \"guias_remision\",\n    \"config_data\": {\n        \"api_endpoint\": \"https://api-gre-beta.sunat.gob.pe\",\n        \"timeout\": 45,\n        \"modo_traslado_default\": \"02\",\n        \"transportista_default\": null,\n        \"validar_peso\": true,\n        \"generar_qr\": true\n    },\n    \"description\": \"Configuración para Guías de Remisión Electrónica - Beta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/gre_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "gre_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.13 - Configuración Archivos - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/file_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "file_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.14 - Configuración Archivos - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"ruta_xml\": \"storage/xml/\",\n        \"ruta_cdr\": \"storage/cdr/\",\n        \"ruta_pdf\": \"storage/pdf/\",\n        \"mantener_archivos_dias\": 365,\n        \"comprimir_archivos\": true,\n        \"backup_automatico\": true\n    },\n    \"description\": \"Configuración de rutas y manejo de archivos\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/file_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "file_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.15 - Configuración Documentos - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/document_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "document_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.16 - Configuración Documentos - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"plantilla_pdf\": \"standard\",\n        \"incluir_logo\": true,\n        \"mostrar_detraccion\": true,\n        \"mostrar_qr\": true,\n        \"formato_fecha\": \"d/m/Y\",\n        \"decimales_montos\": 2,\n        \"separador_miles\": \",\"\n    },\n    \"description\": \"Configuración de formato de documentos\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/document_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "document_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.17 - Configuración Notificaciones - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/notification_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "notification_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.18 - Configuración Notificaciones - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"email_activo\": true,\n        \"email_plantilla\": \"default\",\n        \"enviar_al_cliente\": true,\n        \"enviar_copia_empresa\": true,\n        \"webhook_url\": null,\n        \"notificar_errores\": true\n    },\n    \"description\": \"Configuración de notificaciones por email\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/notification_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "notification_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.19 - Configuración Seguridad - Ver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/security_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "security_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.20 - Configuración Seguridad - Actualizar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"environment\": \"general\",\n    \"config_data\": {\n        \"ip_whitelist\": [],\n        \"require_2fa\": false,\n        \"session_timeout\": 3600,\n        \"max_login_attempts\": 5,\n        \"log_all_actions\": true,\n        \"encrypt_stored_data\": true\n    },\n    \"description\": \"Configuración de seguridad del sistema\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/security_settings",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "security_settings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.21 - Validar Todas las Configuraciones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/validate/services",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "validate", "services"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.22 - Limpiar Cache de Configuraciones",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/cache",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "cache"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5.23 - Resetear a Configuraciones por Defecto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"config_types\": [\n        \"tax_settings\",\n        \"invoice_settings\",\n        \"document_settings\"\n    ],\n    \"confirm\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/config/reset",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "config", "reset"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔑 6. CREDENCIALES GRE",
+			"item": [
+				{
+					"name": "6.1 - Ver Credenciales GRE",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/gre-credentials",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "gre-credentials"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6.2 - Actualizar Credenciales GRE",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id_beta\": \"test-cliente-id-beta\",\n    \"client_secret_beta\": \"test-secret-beta\",\n    \"client_id_produccion\": null,\n    \"client_secret_produccion\": null,\n    \"ruc_proveedor\": \"20123456789\",\n    \"usuario_sol\": \"MIUSUARIO\",\n    \"clave_sol\": \"MiClave123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/gre-credentials",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "gre-credentials"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6.3 - Probar Conexión GRE",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/gre-credentials/test-connection",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "gre-credentials", "test-connection"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6.4 - Obtener Defaults Beta",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/gre-credentials/defaults/beta",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "gre-credentials", "defaults", "beta"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏪 7. CONFIGURACIÓN DE SUCURSALES",
+			"item": [
+				{
+					"name": "7.1 - Listar Sucursales por Empresa",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('branch_id', jsonData.data[0].id);",
+									"        console.log('✅ Branch ID guardado: ' + jsonData.data[0].id);",
+									"        console.log('📋 Sucursal: ' + jsonData.data[0].nombre);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/companies/{{company_id}}/branches",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "companies", "{{company_id}}", "branches"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7.2 - Crear Nueva Sucursal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_id\": {{company_id}},\n    \"codigo\": \"0002\",\n    \"nombre\": \"Sucursal Nuevo Local\",\n    \"direccion\": \"Av. Nueva 456\",\n    \"ubigeo\": \"150102\",\n    \"distrito\": \"San Isidro\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-7654321\",\n    \"email\": \"sucursal@empresa.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/branches",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7.3 - Ver Sucursal Específica",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/branches/{{branch_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches", "{{branch_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7.4 - Activar Sucursal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/branches/{{branch_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches", "{{branch_id}}", "activate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👥 8. CONFIGURACIÓN DE CLIENTES",
+			"item": [
+				{
+					"name": "8.1 - Listar Clientes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('client_id', jsonData.data[0].id);",
+									"        console.log('✅ Client ID guardado: ' + jsonData.data[0].id);",
+									"        console.log('📋 Cliente: ' + jsonData.data[0].razon_social);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/clients",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "clients"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "8.2 - Crear Nuevo Cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_id\": {{company_id}},\n    \"tipo_documento\": \"6\",\n    \"numero_documento\": \"20111222333\",\n    \"razon_social\": \"CLIENTE CONFIGURACION SAC\",\n    \"nombre_comercial\": \"Cliente Config\",\n    \"direccion\": \"Av. Cliente 789\",\n    \"ubigeo\": \"150101\",\n    \"distrito\": \"Lima\",\n    \"provincia\": \"Lima\",\n    \"departamento\": \"Lima\",\n    \"telefono\": \"01-9988776\",\n    \"email\": \"cliente@config.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/clients",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "clients"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "8.3 - Buscar Cliente por Documento",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo_documento\": \"6\",\n    \"numero_documento\": \"20111222333\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/clients/search-by-document",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "clients", "search-by-document"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 9. CONFIGURACIÓN DE CORRELATIVOS",
+			"item": [
+				{
+					"name": "9.1 - Listar Correlativos por Sucursal",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/branches/{{branch_id}}/correlatives",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches", "{{branch_id}}", "correlatives"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "9.2 - Crear Correlativo para Facturas",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tipo_documento\": \"01\",\n    \"serie\": \"F001\",\n    \"correlativo_actual\": 1,\n    \"activo\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/branches/{{branch_id}}/correlatives",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches", "{{branch_id}}", "correlatives"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "9.3 - Crear Correlativos en Lote",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"correlativos\": [\n        {\n            \"tipo_documento\": \"03\",\n            \"serie\": \"B001\",\n            \"correlativo_actual\": 1\n        },\n        {\n            \"tipo_documento\": \"07\",\n            \"serie\": \"FC01\",\n            \"correlativo_actual\": 1\n        },\n        {\n            \"tipo_documento\": \"08\",\n            \"serie\": \"FD01\",\n            \"correlativo_actual\": 1\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/branches/{{branch_id}}/correlatives/batch",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "branches", "{{branch_id}}", "correlatives", "batch"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "9.4 - Ver Tipos de Documento",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/correlatives/document-types",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "correlatives", "document-types"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 10. CONFIGURACIONES GENERALES",
+			"item": [
+				{
+					"name": "10.1 - Ver Configuraciones por Defecto",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/config/defaults",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "config", "defaults"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "10.2 - Resumen de Configuraciones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/config/summary",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "config", "summary"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "10.3 - Ver Formatos de PDF Disponibles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/pdf/formats",
+							"host": ["{{base_url}}"],
+							"path": ["v1", "pdf", "formats"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "company_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "branch_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "client_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
