@@ -25,7 +25,7 @@ class UbigeoController extends Controller
     public function getProvincias(Request $request): JsonResponse
     {
         $request->validate([
-            'region_id' => 'nullable|string|size:2'
+            'region_id' => 'nullable|string|size:6'
         ]);
         
         $query = UbiProvincia::with('region');
@@ -45,8 +45,8 @@ class UbigeoController extends Controller
     public function getDistritos(Request $request): JsonResponse
     {
         $request->validate([
-            'provincia_id' => 'nullable|string|size:4',
-            'region_id' => 'nullable|string|size:2',
+            'provincia_id' => 'nullable|string|size:6',
+            'region_id' => 'nullable|string|size:6',
             'search' => 'nullable|string|min:2|max:255'
         ]);
         
@@ -78,7 +78,7 @@ class UbigeoController extends Controller
     
     public function searchUbigeo(UbigeoSearchRequest $request): JsonResponse
     {
-        $search = $request->validated()['search'];
+        $search = $request->validated()['q'];
         
         $distritos = UbiDistrito::with(['provincia', 'region'])
             ->where(function($query) use ($search) {
