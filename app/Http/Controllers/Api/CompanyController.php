@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Company\StoreCompanyRequest;
+use App\Http\Requests\Company\UpdateCompanyRequest;
 use App\Models\Company;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Exception;
@@ -39,92 +41,20 @@ class CompanyController extends Controller
             ]);
 
         } catch (Exception $e) {
-            Log::error("Error al listar empresas", [
-                'error' => $e->getMessage()
-            ]);
+            Log::error("Error al listar empresas", ['error' => $e->getMessage()]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener empresas: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al obtener empresas', $e);
         }
     }
 
     /**
      * Crear nueva empresa
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreCompanyRequest $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'ruc' => 'required|string|size:11|unique:companies,ruc',
-                'razon_social' => 'required|string|max:255',
-                'nombre_comercial' => 'nullable|string|max:255',
-                'direccion' => 'required|string|max:255',
-                'ubigeo' => 'required|string|size:6',
-                'distrito' => 'required|string|max:100',
-                'provincia' => 'required|string|max:100',
-                'departamento' => 'required|string|max:100',
-                'telefono' => 'nullable|string|max:20',
-                'email' => 'required|email|max:255',
-                'web' => 'nullable|url|max:255',
-                'usuario_sol' => 'required|string|max:50',
-                'clave_sol' => 'required|string|max:100',
-                'certificado_pem' => 'nullable|file|mimes:pem,crt,cer,txt|max:2048',
-                'certificado_password' => 'nullable|string|max:100',
-                'endpoint_beta' => 'nullable|url|max:255',
-                'endpoint_produccion' => 'nullable|url|max:255',
-                'modo_produccion' => 'nullable|in:true,false,1,0',
-                'logo_path' => 'nullable|file|mimes:png,jpeg,jpg|max:2048',
-                'activo' => 'boolean'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Errores de validación',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $validatedData = $validator->validated();
-            
-            // Convertir strings booleanos de form-data a booleanos reales
-            if (isset($validatedData['modo_produccion'])) {
-                $validatedData['modo_produccion'] = filter_var($validatedData['modo_produccion'], FILTER_VALIDATE_BOOLEAN);
-            } else {
-                $validatedData['modo_produccion'] = false;
-            }
-            
-            if (isset($validatedData['activo'])) {
-                $validatedData['activo'] = filter_var($validatedData['activo'], FILTER_VALIDATE_BOOLEAN);
-            } else {
-                $validatedData['activo'] = true;
-            }
-            
-            // Procesar certificado PEM si se subió un archivo
-            if ($request->hasFile('certificado_pem')) {
-                $certificateFile = $request->file('certificado_pem');
-                $fileName = 'certificado.pem';
-                $path = $certificateFile->storeAs('certificado', $fileName, 'public');
-                $validatedData['certificado_pem'] = $path;
-            }
-            
-            // Procesar logo si se subió un archivo
-            if ($request->hasFile('logo_path')) {
-                $logoFile = $request->file('logo_path');
-                $fileName = 'logo_' . time() . '.' . $logoFile->getClientOriginalExtension();
-                $path = $logoFile->storeAs('logos', $fileName, 'public');
-                $validatedData['logo_path'] = $path;
-            }
-
+            $validatedData = $this->processRequestData($request);
             $company = Company::create($validatedData);
-
-            Log::info("Empresa creada exitosamente", [
-                'company_id' => $company->id,
-                'ruc' => $company->ruc,
-                'razon_social' => $company->razon_social
-            ]);
 
             return response()->json([
                 'success' => true,
@@ -133,15 +63,7 @@ class CompanyController extends Controller
             ], 201);
 
         } catch (Exception $e) {
-            Log::error("Error al crear empresa", [
-                'request_data' => $request->all(),
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear empresa: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al crear empresa', $e);
         }
     }
 
@@ -162,12 +84,7 @@ class CompanyController extends Controller
                 'success' => true,
                 'data' => [
                     'company' => $company,
-                    'stats' => [
-                        'branches_count' => $company->branches()->count(),
-                        'configurations_count' => $company->configurations()->active()->count(),
-                        'has_gre_credentials' => $company->hasGreCredentials(),
-                        'environment_mode' => $company->modo_produccion ? 'produccion' : 'beta'
-                    ]
+                    'stats' => $this->getCompanyStats($company)
                 ]
             ]);
 
@@ -177,76 +94,17 @@ class CompanyController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener empresa: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al obtener empresa', $e);
         }
     }
 
     /**
      * Actualizar empresa
      */
-    public function update(Request $request, Company $company): JsonResponse
+    public function update(UpdateCompanyRequest $request, Company $company): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'ruc' => 'required|string|size:11|unique:companies,ruc,' . $company->id,
-                'razon_social' => 'required|string|max:255',
-                'nombre_comercial' => 'nullable|string|max:255',
-                'direccion' => 'required|string|max:255',
-                'ubigeo' => 'required|string|size:6',
-                'distrito' => 'required|string|max:100',
-                'provincia' => 'required|string|max:100',
-                'departamento' => 'required|string|max:100',
-                'telefono' => 'nullable|string|max:20',
-                'email' => 'required|email|max:255',
-                'web' => 'nullable|url|max:255',
-                'usuario_sol' => 'required|string|max:50',
-                'clave_sol' => 'required|string|max:100',
-                'certificado_pem' => 'nullable|file|mimes:pem,crt,cer,txt|max:2048',
-                'certificado_password' => 'nullable|string|max:100',
-                'endpoint_beta' => 'nullable|url|max:255',
-                'endpoint_produccion' => 'nullable|url|max:255',
-                'modo_produccion' => 'nullable|in:true,false,1,0',
-                'logo_path' => 'nullable|file|mimes:png,jpeg,jpg|max:2048',
-                'activo' => 'boolean'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Errores de validación',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $validatedData = $validator->validated();
-            
-            // Convertir strings booleanos de form-data a booleanos reales
-            if (isset($validatedData['modo_produccion'])) {
-                $validatedData['modo_produccion'] = filter_var($validatedData['modo_produccion'], FILTER_VALIDATE_BOOLEAN);
-            }
-            if (isset($validatedData['activo'])) {
-                $validatedData['activo'] = filter_var($validatedData['activo'], FILTER_VALIDATE_BOOLEAN);
-            }
-            
-            // Procesar certificado PEM si se subió un archivo
-            if ($request->hasFile('certificado_pem')) {
-                $certificateFile = $request->file('certificado_pem');
-                $fileName = 'certificado.pem';
-                $path = $certificateFile->storeAs('certificado', $fileName, 'public');
-                $validatedData['certificado_pem'] = $path;
-            }
-            
-            // Procesar logo si se subió un archivo
-            if ($request->hasFile('logo_path')) {
-                $logoFile = $request->file('logo_path');
-                $fileName = 'logo_' . time() . '.' . $logoFile->getClientOriginalExtension();
-                $path = $logoFile->storeAs('logos', $fileName, 'public');
-                $validatedData['logo_path'] = $path;
-            }
-
+            $validatedData = $this->processRequestData($request);
             $company->update($validatedData);
 
             Log::info("Empresa actualizada exitosamente", [
@@ -264,14 +122,10 @@ class CompanyController extends Controller
         } catch (Exception $e) {
             Log::error("Error al actualizar empresa", [
                 'company_id' => $company->id,
-                'request_data' => $request->all(),
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al actualizar empresa: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al actualizar empresa', $e);
         }
     }
 
@@ -281,19 +135,13 @@ class CompanyController extends Controller
     public function destroy(Company $company): JsonResponse
     {
         try {
-            // Verificar si la empresa tiene documentos asociados
-            $hasDocuments = $company->invoices()->count() > 0 ||
-                          $company->boletas()->count() > 0 ||
-                          $company->dispatchGuides()->count() > 0;
-
-            if ($hasDocuments) {
+            if ($this->hasAssociatedDocuments($company)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No se puede eliminar la empresa porque tiene documentos asociados. Considere desactivarla en su lugar.'
                 ], 400);
             }
 
-            // Marcar como inactiva en lugar de eliminar
             $company->update(['activo' => false]);
 
             Log::warning("Empresa desactivada", [
@@ -312,10 +160,7 @@ class CompanyController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al desactivar empresa: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al desactivar empresa', $e);
         }
     }
 
@@ -344,10 +189,7 @@ class CompanyController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al activar empresa: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al activar empresa', $e);
         }
     }
 
@@ -377,8 +219,8 @@ class CompanyController extends Controller
             Log::info("Modo de producción cambiado", [
                 'company_id' => $company->id,
                 'ruc' => $company->ruc,
-                'old_mode' => $oldMode ? 'produccion' : 'beta',
-                'new_mode' => $newMode ? 'produccion' : 'beta'
+                'old_mode' => $this->getModeName($oldMode),
+                'new_mode' => $this->getModeName($newMode)
             ]);
 
             return response()->json([
@@ -386,8 +228,8 @@ class CompanyController extends Controller
                 'message' => 'Modo de producción actualizado exitosamente',
                 'data' => [
                     'company_id' => $company->id,
-                    'modo_anterior' => $oldMode ? 'produccion' : 'beta',
-                    'modo_actual' => $newMode ? 'produccion' : 'beta'
+                    'modo_anterior' => $this->getModeName($oldMode),
+                    'modo_actual' => $this->getModeName($newMode)
                 ]
             ]);
 
@@ -397,10 +239,89 @@ class CompanyController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al cambiar modo de producción: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al cambiar modo de producción', $e);
         }
+    }
+
+    /**
+     * Procesar datos de la request
+     */
+    private function processRequestData(Request $request): array
+    {
+        $validatedData = $request->validated();
+
+        // Procesar booleanos
+        $validatedData['modo_produccion'] = $this->processBoolean($validatedData['modo_produccion'] ?? false);
+        $validatedData['activo'] = $this->processBoolean($validatedData['activo'] ?? true);
+
+        // Procesar archivos
+        if ($request->hasFile('certificado_pem')) {
+            $validatedData['certificado_pem'] = $this->storeFile($request->file('certificado_pem'), 'certificado', 'certificado.pem');
+        }
+
+        if ($request->hasFile('logo_path')) {
+            $fileName = 'logo_' . time() . '.' . $request->file('logo_path')->getClientOriginalExtension();
+            $validatedData['logo_path'] = $this->storeFile($request->file('logo_path'), 'logos', $fileName);
+        }
+
+        return $validatedData;
+    }
+
+    /**
+     * Procesar valor booleano
+     */
+    private function processBoolean($value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Almacenar archivo
+     */
+    private function storeFile($file, string $directory, string $fileName): string
+    {
+        return $file->storeAs($directory, $fileName, 'public');
+    }
+
+    /**
+     * Verificar documentos asociados
+     */
+    private function hasAssociatedDocuments(Company $company): bool
+    {
+        return $company->invoices()->exists() ||
+               $company->boletas()->exists() ||
+               $company->dispatchGuides()->exists();
+    }
+
+    /**
+     * Obtener estadísticas de la empresa
+     */
+    private function getCompanyStats(Company $company): array
+    {
+        return [
+            'branches_count' => $company->branches()->count(),
+            'configurations_count' => $company->configurations()->active()->count(),
+            'has_gre_credentials' => $company->hasGreCredentials(),
+            'environment_mode' => $this->getModeName($company->modo_produccion)
+        ];
+    }
+
+    /**
+     * Obtener nombre del modo
+     */
+    private function getModeName(bool $mode): string
+    {
+        return $mode ? 'produccion' : 'beta';
+    }
+
+    /**
+     * Respuesta de error estandarizada
+     */
+    private function errorResponse(string $message, Exception $e): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message . ': ' . $e->getMessage()
+        ], 500);
     }
 }
