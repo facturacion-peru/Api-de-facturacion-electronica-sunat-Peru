@@ -12,19 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             
-            // Tipo de configuración
+            // Tipo de configuración - Solo las esenciales
             $table->enum('config_type', [
-                'sunat_credentials',        // Credenciales SUNAT (facturación, GRE)
-                'service_endpoints',        // Endpoints de servicios SUNAT
                 'tax_settings',            // Configuraciones de impuestos (IGV, ICBPER, etc.)
                 'invoice_settings',        // Configuraciones específicas de facturación
                 'gre_settings',            // Configuraciones específicas de guías de remisión
-                'file_settings',           // Configuraciones de archivos (XML, PDF, CDR)
-                'document_settings',       // Configuraciones de documentos
-                'summary_settings',        // Configuraciones de resúmenes diarios
-                'void_settings',           // Configuraciones de comunicaciones de baja
-                'notification_settings',   // Configuraciones de notificaciones
-                'security_settings'        // Configuraciones de seguridad
+                'document_settings'        // Configuraciones de documentos (PDF, XML)
             ]);
             
             // Ambiente al que aplica la configuración

@@ -74,8 +74,8 @@ class CompanyController extends Controller
                 'certificado_password' => 'nullable|string|max:100',
                 'endpoint_beta' => 'nullable|url|max:255',
                 'endpoint_produccion' => 'nullable|url|max:255',
-                'modo_produccion' => 'boolean',
-                'logo_path' => 'nullable|string|max:255',
+                'modo_produccion' => 'nullable|in:true,false,1,0',
+                'logo_path' => 'nullable|file|mimes:png,jpeg,jpg|max:2048',
                 'activo' => 'boolean'
             ]);
 
@@ -89,12 +89,33 @@ class CompanyController extends Controller
 
             $validatedData = $validator->validated();
             
+            // Convertir strings booleanos de form-data a booleanos reales
+            if (isset($validatedData['modo_produccion'])) {
+                $validatedData['modo_produccion'] = filter_var($validatedData['modo_produccion'], FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $validatedData['modo_produccion'] = false;
+            }
+            
+            if (isset($validatedData['activo'])) {
+                $validatedData['activo'] = filter_var($validatedData['activo'], FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $validatedData['activo'] = true;
+            }
+            
             // Procesar certificado PEM si se subió un archivo
             if ($request->hasFile('certificado_pem')) {
                 $certificateFile = $request->file('certificado_pem');
                 $fileName = 'certificado.pem';
                 $path = $certificateFile->storeAs('certificado', $fileName, 'public');
                 $validatedData['certificado_pem'] = $path;
+            }
+            
+            // Procesar logo si se subió un archivo
+            if ($request->hasFile('logo_path')) {
+                $logoFile = $request->file('logo_path');
+                $fileName = 'logo_' . time() . '.' . $logoFile->getClientOriginalExtension();
+                $path = $logoFile->storeAs('logos', $fileName, 'public');
+                $validatedData['logo_path'] = $path;
             }
 
             $company = Company::create($validatedData);
@@ -187,8 +208,8 @@ class CompanyController extends Controller
                 'certificado_password' => 'nullable|string|max:100',
                 'endpoint_beta' => 'nullable|url|max:255',
                 'endpoint_produccion' => 'nullable|url|max:255',
-                'modo_produccion' => 'boolean',
-                'logo_path' => 'nullable|string|max:255',
+                'modo_produccion' => 'nullable|in:true,false,1,0',
+                'logo_path' => 'nullable|file|mimes:png,jpeg,jpg|max:2048',
                 'activo' => 'boolean'
             ]);
 
@@ -202,12 +223,28 @@ class CompanyController extends Controller
 
             $validatedData = $validator->validated();
             
+            // Convertir strings booleanos de form-data a booleanos reales
+            if (isset($validatedData['modo_produccion'])) {
+                $validatedData['modo_produccion'] = filter_var($validatedData['modo_produccion'], FILTER_VALIDATE_BOOLEAN);
+            }
+            if (isset($validatedData['activo'])) {
+                $validatedData['activo'] = filter_var($validatedData['activo'], FILTER_VALIDATE_BOOLEAN);
+            }
+            
             // Procesar certificado PEM si se subió un archivo
             if ($request->hasFile('certificado_pem')) {
                 $certificateFile = $request->file('certificado_pem');
                 $fileName = 'certificado.pem';
                 $path = $certificateFile->storeAs('certificado', $fileName, 'public');
                 $validatedData['certificado_pem'] = $path;
+            }
+            
+            // Procesar logo si se subió un archivo
+            if ($request->hasFile('logo_path')) {
+                $logoFile = $request->file('logo_path');
+                $fileName = 'logo_' . time() . '.' . $logoFile->getClientOriginalExtension();
+                $path = $logoFile->storeAs('logos', $fileName, 'public');
+                $validatedData['logo_path'] = $path;
             }
 
             $company->update($validatedData);

@@ -50,15 +50,10 @@ class CompanyConfigController extends Controller
     {
         try {
             $validSections = [
-                'servicios_sunat',
-                'facturacion', 
-                'guias_remision',
-                'resumenes_diarios',
-                'comunicaciones_baja',
-                'documentos',
-                'archivos',
-                'notificaciones',
-                'seguridad'
+                'tax_settings',
+                'invoice_settings',
+                'gre_settings',
+                'document_settings'
             ];
             
             if (!in_array($section, $validSections)) {
@@ -70,7 +65,7 @@ class CompanyConfigController extends Controller
             }
             
             $company = Company::findOrFail($companyId);
-            $config = $company->getConfig($section, []);
+            $config = $company->getConfig($section, null, null, []);
             
             return response()->json([
                 'success' => true,
@@ -96,15 +91,10 @@ class CompanyConfigController extends Controller
     {
         try {
             $validSections = [
-                'servicios_sunat',
-                'facturacion',
-                'guias_remision', 
-                'resumenes_diarios',
-                'comunicaciones_baja',
-                'documentos',
-                'archivos',
-                'notificaciones',
-                'seguridad'
+                'tax_settings',
+                'invoice_settings',
+                'gre_settings',
+                'document_settings'
             ];
             
             if (!in_array($section, $validSections)) {
@@ -124,7 +114,7 @@ class CompanyConfigController extends Controller
             $updated = $this->configService->updateConfiguration($company, $section, $validatedData);
             
             if ($updated) {
-                $newConfig = $company->fresh()->getConfig($section, []);
+                $newConfig = $company->fresh()->getConfig($section, null, null, []);
                 
                 return response()->json([
                     'success' => true,
@@ -361,7 +351,7 @@ class CompanyConfigController extends Controller
     private function validateSectionData(Request $request, string $section): array
     {
         switch ($section) {
-            case 'facturacion':
+            case 'tax_settings':
                 return $request->validate([
                     'igv_porcentaje' => 'sometimes|numeric|min:0|max:50',
                     'isc_porcentaje' => 'sometimes|numeric|min:0|max:50',
@@ -375,36 +365,26 @@ class CompanyConfigController extends Controller
                     'permitir_precio_cero' => 'sometimes|boolean',
                 ]);
                 
-            case 'guias_remision':
+            case 'invoice_settings':
+                return $request->validate([
+                    'ubl_version' => 'sometimes|in:2.0,2.1',
+                    'formato_numero' => 'sometimes|string|max:50',
+                    'moneda_default' => 'sometimes|in:PEN,USD,EUR',
+                    'tipo_operacion_default' => 'sometimes|string|max:10',
+                    'incluir_leyendas_automaticas' => 'sometimes|boolean',
+                    'envio_automatico' => 'sometimes|boolean',
+                ]);
+                
+            case 'gre_settings':
                 return $request->validate([
                     'peso_default_kg' => 'sometimes|numeric|min:0.001',
                     'bultos_default' => 'sometimes|integer|min:1',
-                    'verificacion_automatica' => 'sometimes|boolean',
-                    'intentos_maximos_verificacion' => 'sometimes|integer|min:1|max:20',
-                    'intervalo_verificacion_segundos' => 'sometimes|integer|min:10|max:300',
-                    'timeout_consulta_segundos' => 'sometimes|integer|min:30|max:600',
-                    'reintento_envio_fallido' => 'sometimes|integer|min:0|max:10',
                     'modalidad_transporte_default' => 'sometimes|in:01,02',
                     'motivo_traslado_default' => 'sometimes|in:01,02,03,04,05,06,07,08,09,13,14,18,19',
+                    'verificacion_automatica' => 'sometimes|boolean',
                 ]);
                 
-            case 'servicios_sunat':
-                return $request->validate([
-                    'facturacion.beta.endpoint' => 'sometimes|url',
-                    'facturacion.beta.wsdl' => 'sometimes|url',
-                    'facturacion.beta.timeout' => 'sometimes|integer|min:5|max:300',
-                    'facturacion.produccion.endpoint' => 'sometimes|url',
-                    'facturacion.produccion.wsdl' => 'sometimes|url',
-                    'facturacion.produccion.timeout' => 'sometimes|integer|min:5|max:300',
-                    'guias_remision.beta.endpoint' => 'sometimes|url',
-                    'guias_remision.beta.api_endpoint' => 'sometimes|url',
-                    'guias_remision.beta.timeout' => 'sometimes|integer|min:5|max:300',
-                    'guias_remision.produccion.endpoint' => 'sometimes|url',
-                    'guias_remision.produccion.api_endpoint' => 'sometimes|url',
-                    'guias_remision.produccion.timeout' => 'sometimes|integer|min:5|max:300',
-                ]);
-                
-            case 'documentos':
+            case 'document_settings':
                 return $request->validate([
                     'generar_xml_automatico' => 'sometimes|boolean',
                     'generar_pdf_automatico' => 'sometimes|boolean',

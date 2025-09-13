@@ -34,22 +34,10 @@ class CompanyConfigService
                 'modo_produccion' => $company->modo_produccion,
                 'activo' => $company->activo,
             ],
-            'services' => [
-                'facturacion' => $company->getSunatEndpoints('facturacion'),
-                'guias_remision' => $company->getSunatEndpoints('guias_remision'),
-            ],
-            'facturacion' => $company->getInvoiceConfig(),
-            'guias_remision' => $company->getGuideConfig(),
-            'documentos' => $company->getDocumentConfig(),
-            'archivos' => $company->getFileConfig(),
-            'impuestos' => $company->getTaxSettings(),
-            'configuraciones_adicionales' => [
-                'resumenes_diarios' => $company->getConfig('resumenes_diarios', 'general', null, []),
-                'comunicaciones_baja' => $company->getConfig('comunicaciones_baja', 'general', null, []),
-                'notificaciones' => $company->getConfig('notificaciones', 'general', null, []),
-                'seguridad' => $company->getConfig('seguridad', 'general', null, []),
-            ],
-            'summary' => $company->getConfigSummary(),
+            'tax_settings' => $company->getTaxSettings(),
+            'invoice_settings' => $company->getInvoiceConfig(),
+            'gre_settings' => $company->getGuideConfig(),
+            'document_settings' => $company->getDocumentConfig(),
         ];
         
         // Cache por 30 minutos
@@ -67,15 +55,17 @@ class CompanyConfigService
     {
         try {
             $validSections = [
-                'servicios_sunat',
-                'facturacion',
-                'guias_remision',
-                'resumenes_diarios',
-                'comunicaciones_baja',
-                'documentos',
-                'archivos',
-                'notificaciones',
-                'seguridad'
+                'sunat_credentials',
+                'service_endpoints',
+                'tax_settings',
+                'invoice_settings',
+                'gre_settings',
+                'file_settings',
+                'document_settings',
+                'summary_settings',
+                'void_settings',
+                'notification_settings',
+                'security_settings'
             ];
             
             if (!in_array($section, $validSections)) {
@@ -86,7 +76,7 @@ class CompanyConfigService
             $validatedData = $this->validateConfigurationData($section, $data);
             
             // Actualizar configuración
-            $company->setConfig($section, $validatedData);
+            $company->setConfig($section, $validatedData, null, 'general', "Configuración de {$section} actualizada");
             
             // Limpiar cache
             $this->clearCompanyCache($company);
@@ -123,7 +113,7 @@ class CompanyConfigService
                     throw new Exception("Sección no existe en configuraciones por defecto: {$section}");
                 }
                 
-                $company->setConfig($section, $defaults[$section]);
+                $company->setConfig($section, $defaults[$section], null, 'general', "Sección {$section} reseteada a valores por defecto");
                 Log::info("Sección {$section} reseteada a valores por defecto para empresa {$company->ruc}");
             } else {
                 $company->update(['configuraciones' => $defaults]);
@@ -229,13 +219,14 @@ class CompanyConfigService
     private function validateConfigurationData(string $section, array $data): array
     {
         switch ($section) {
-            case 'facturacion':
+            case 'tax_settings':
+            case 'invoice_settings':
                 return $this->validateInvoiceConfig($data);
                 
-            case 'guias_remision':
+            case 'gre_settings':
                 return $this->validateGuideConfig($data);
                 
-            case 'servicios_sunat':
+            case 'service_endpoints':
                 return $this->validateSunatServicesConfig($data);
                 
             default:

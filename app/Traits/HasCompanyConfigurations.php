@@ -79,6 +79,14 @@ trait HasCompanyConfigurations
     {
         $environment = $environment ?? ($this->modo_produccion ? 'produccion' : 'beta');
 
+        \Log::info("SetConfig Debug", [
+            'company_id' => $this->id,
+            'config_type' => $configType,
+            'environment' => $environment,
+            'service_type' => $serviceType,
+            'modo_produccion' => $this->modo_produccion
+        ]);
+
         // Buscar configuración existente
         $config = $this->configurations()
             ->where('config_type', $configType)
@@ -86,15 +94,23 @@ trait HasCompanyConfigurations
             ->where('service_type', $serviceType)
             ->first();
 
+        \Log::info("SetConfig Search Result", [
+            'found_config' => $config ? $config->id : null,
+            'existing_data' => $config ? $config->config_data : null
+        ]);
+
         if ($config) {
             // Actualizar existente
+            \Log::info("Updating existing config", ['config_id' => $config->id]);
             $config->update([
                 'config_data' => $configData,
                 'description' => $description,
                 'is_active' => true,
             ]);
+            \Log::info("Updated config data", ['new_data' => $config->fresh()->config_data]);
         } else {
             // Crear nueva
+            \Log::info("Creating new config");
             $config = $this->configurations()->create([
                 'config_type' => $configType,
                 'environment' => $environment,
@@ -103,6 +119,7 @@ trait HasCompanyConfigurations
                 'description' => $description,
                 'is_active' => true,
             ]);
+            \Log::info("Created new config", ['config_id' => $config->id]);
         }
 
         $this->clearConfigCache();
