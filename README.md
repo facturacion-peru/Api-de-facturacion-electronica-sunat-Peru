@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/SUNAT.svg/1200px-SUNAT.svg.png" alt="SUNAT Logo" width="200">
+  <img src="./public/assets/images/sunat.png" alt="SUNAT Logo" width="250">
 </p>
 
 # API de Facturación Electrónica SUNAT - Perú
@@ -211,6 +211,10 @@ Para análisis técnico detallado, consultar el archivo `README_ANALISIS_COMPLET
 Si este proyecto te ha sido útil y deseas apoyar su desarrollo:
 
 ### 💰 Yape (Perú)
+<p align="center">
+  <img src="./public/assets/images/yape.png" alt="Yape" width="100">
+</p>
+
 **Número:** `920468502`
 
 ### 💬 WhatsApp
