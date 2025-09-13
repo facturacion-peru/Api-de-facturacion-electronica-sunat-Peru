@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Boleta;
 
+use App\Models\Branch;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBoletaRequest extends FormRequest

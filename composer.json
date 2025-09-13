@@ -12,6 +12,7 @@
         "php": "^8.2",
         "dompdf/dompdf": "^3.1",
         "endroid/qr-code": "*",
+        "greenter/consulta-cpe": "*",
         "greenter/lite": "^5.1",
         "laravel-lang/common": "^6.7",
         "laravel/framework": "^12.0",

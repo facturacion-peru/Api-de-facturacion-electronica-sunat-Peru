@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\ConsultaCpeService;\nuse App\Services\ConsultaCpeServiceMejorado;
+use App\Services\ConsultaCpeService;
+use App\Services\ConsultaCpeServiceMejorado;
 use App\Models\Invoice;
 use App\Models\Boleta;
 use App\Models\CreditNote;

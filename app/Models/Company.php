@@ -144,16 +144,21 @@ class Company extends Model
         });
         
         // Después de crear una empresa, inicializar configuraciones por defecto
-        static::created(function ($company) {
-            $company->initializeDefaultConfigurations();
-        });
+        // TEMPORALMENTE DESHABILITADO - Solo crear empresa sin configuraciones adicionales
+        // static::created(function ($company) {
+        //     $company->initializeDefaultConfigurations();
+        // });
     }
 
     /**
      * Inicializar configuraciones por defecto para una empresa nueva
+     * TEMPORALMENTE DESHABILITADO - Solo crear empresa básica
      */
     public function initializeDefaultConfigurations(): void
     {
+        // DESHABILITADO TEMPORALMENTE
+        return;
+        
         // Configuraciones de impuestos
         $this->setConfig('tax_settings', [
             'igv_porcentaje' => 18.00,
