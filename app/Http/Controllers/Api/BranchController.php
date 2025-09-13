@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Branch\StoreBranchRequest;
+use App\Http\Requests\Branch\UpdateBranchRequest;
 use App\Models\Branch;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Exception;
 
 class BranchController extends Controller
@@ -52,38 +53,13 @@ class BranchController extends Controller
     /**
      * Crear nueva sucursal
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreBranchRequest $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'company_id' => 'required|integer|exists:companies,id',
-                'codigo' => 'required|string|max:10',
-                'nombre' => 'required|string|max:255',
-                'direccion' => 'required|string|max:255',
-                'ubigeo' => 'required|string|size:6',
-                'distrito' => 'required|string|max:100',
-                'provincia' => 'required|string|max:100',
-                'departamento' => 'required|string|max:100',
-                'telefono' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:255',
-                'series_factura' => 'nullable|array',
-                'series_boleta' => 'nullable|array',
-                'series_nota_credito' => 'nullable|array',
-                'series_nota_debito' => 'nullable|array',
-                'series_guia_remision' => 'nullable|array',
-                'activo' => 'boolean'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Errores de validación',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
+            $validated = $request->validated();
+            
             // Verificar que la empresa existe y está activa
-            $company = Company::where('id', $request->company_id)
+            $company = Company::where('id', $validated['company_id'])
                              ->where('activo', true)
                              ->first();
 
@@ -94,19 +70,7 @@ class BranchController extends Controller
                 ], 404);
             }
 
-            // Verificar que no exista otra sucursal con el mismo código en la misma empresa
-            $existingBranch = Branch::where('company_id', $request->company_id)
-                                   ->where('codigo', $request->codigo)
-                                   ->first();
-
-            if ($existingBranch) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ya existe una sucursal con el mismo código en esta empresa'
-                ], 400);
-            }
-
-            $branch = Branch::create($validator->validated());
+            $branch = Branch::create($validated);
 
             Log::info("Sucursal creada exitosamente", [
                 'branch_id' => $branch->id,
@@ -122,7 +86,7 @@ class BranchController extends Controller
 
         } catch (Exception $e) {
             Log::error("Error al crear sucursal", [
-                'request_data' => $request->all(),
+                'request_data' => $validated ?? [],
                 'error' => $e->getMessage()
             ]);
 
@@ -162,62 +126,26 @@ class BranchController extends Controller
     /**
      * Actualizar sucursal
      */
-    public function update(Request $request, Branch $branch): JsonResponse
+    public function update(UpdateBranchRequest $request, Branch $branch): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'company_id' => 'required|integer|exists:companies,id',
-                'codigo' => 'required|string|max:10',
-                'nombre' => 'required|string|max:255',
-                'direccion' => 'required|string|max:255',
-                'ubigeo' => 'required|string|size:6',
-                'distrito' => 'required|string|max:100',
-                'provincia' => 'required|string|max:100',
-                'departamento' => 'required|string|max:100',
-                'telefono' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:255',
-                'series_factura' => 'nullable|array',
-                'series_boleta' => 'nullable|array',
-                'series_nota_credito' => 'nullable|array',
-                'series_nota_debito' => 'nullable|array',
-                'series_guia_remision' => 'nullable|array',
-                'activo' => 'boolean'
-            ]);
+            $validated = $request->validated();
+            
+            // Verificar que la empresa nueva existe y está activa (si se está cambiando)
+            if (isset($validated['company_id'])) {
+                $company = Company::where('id', $validated['company_id'])
+                                 ->where('activo', true)
+                                 ->first();
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Errores de validación',
-                    'errors' => $validator->errors()
-                ], 422);
+                if (!$company) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La empresa especificada no existe o está inactiva'
+                    ], 404);
+                }
             }
 
-            // Verificar que la empresa nueva existe y está activa
-            $company = Company::where('id', $request->company_id)
-                             ->where('activo', true)
-                             ->first();
-
-            if (!$company) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La empresa especificada no existe o está inactiva'
-                ], 404);
-            }
-
-            // Verificar que no exista otra sucursal con el mismo código en la misma empresa
-            $existingBranch = Branch::where('company_id', $request->company_id)
-                                   ->where('codigo', $request->codigo)
-                                   ->where('id', '!=', $branch->id)
-                                   ->first();
-
-            if ($existingBranch) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ya existe otra sucursal con el mismo código en esta empresa'
-                ], 400);
-            }
-
-            $branch->update($validator->validated());
+            $branch->update($validated);
 
             Log::info("Sucursal actualizada exitosamente", [
                 'branch_id' => $branch->id,
@@ -234,7 +162,7 @@ class BranchController extends Controller
         } catch (Exception $e) {
             Log::error("Error al actualizar sucursal", [
                 'branch_id' => $branch->id,
-                'request_data' => $request->all(),
+                'request_data' => $validated ?? [],
                 'error' => $e->getMessage()
             ]);
 
