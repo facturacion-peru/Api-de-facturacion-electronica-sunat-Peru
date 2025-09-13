@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Boleta;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Branch;
+use Illuminate\Foundation\Http\FormRequest;
 
 class CreateDailySummaryRequest extends FormRequest
 {
-    public function authorize(): bool
+     public function authorize(): bool
     {
         return true;
     }

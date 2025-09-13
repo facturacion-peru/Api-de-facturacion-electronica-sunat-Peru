@@ -4,21 +4,25 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HandlesPdfGeneration;
+use App\Http\Requests\Boleta\CreateDailySummaryRequest;
+use App\Http\Requests\Boleta\GetBoletasPendingRequest;
+use App\Http\Requests\Boleta\IndexBoletaRequest;
+use App\Http\Requests\Boleta\StoreBoletaRequest;
 use App\Models\Boleta;
+use App\Models\DailySummary;
 use App\Services\DocumentService;
 use App\Services\FileService;
-use App\Http\Requests\IndexBoletaRequest;
-use App\Http\Requests\StoreBoletaRequest;
-use App\Http\Requests\CreateDailySummaryRequest;
-use App\Http\Requests\GetBoletasPendingRequest;
-use Illuminate\Http\Request;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class BoletaController extends Controller
 {
     use HandlesPdfGeneration;
-    protected $documentService;
-    protected $fileService;
+
+    protected DocumentService $documentService;
+    protected FileService $fileService;
 
     public function __construct(DocumentService $documentService, FileService $fileService)
     {
@@ -26,52 +30,36 @@ class BoletaController extends Controller
         $this->fileService = $fileService;
     }
 
+    /**
+     * Listar boletas con filtros
+     */
     public function index(IndexBoletaRequest $request): JsonResponse
     {
-        $query = Boleta::with(['company', 'branch', 'client']);
+        try {
+            $query = Boleta::with(['company', 'branch', 'client']);
+            $this->applyFilters($query, $request);
+            
+            $perPage = $request->get('per_page', 15);
+            $boletas = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        // Filtros
-        if ($request->has('company_id')) {
-            $query->where('company_id', $request->company_id);
+            return response()->json([
+                'success' => true,
+                'data' => $boletas->items(),
+                'pagination' => $this->getPaginationData($boletas)
+            ]);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al listar boletas', $e);
         }
-
-        if ($request->has('branch_id')) {
-            $query->where('branch_id', $request->branch_id);
-        }
-
-        if ($request->has('estado_sunat')) {
-            $query->where('estado_sunat', $request->estado_sunat);
-        }
-
-        if ($request->has('fecha_desde')) {
-            $query->whereDate('fecha_emision', '>=', $request->fecha_desde);
-        }
-
-        if ($request->has('fecha_hasta')) {
-            $query->whereDate('fecha_emision', '<=', $request->fecha_hasta);
-        }
-
-        $perPage = $request->get('per_page', 15);
-        $boletas = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $boletas->items(),
-            'pagination' => [
-                'current_page' => $boletas->currentPage(),
-                'last_page' => $boletas->lastPage(),
-                'per_page' => $boletas->perPage(),
-                'total' => $boletas->total(),
-            ]
-        ]);
     }
 
+    /**
+     * Crear nueva boleta
+     */
     public function store(StoreBoletaRequest $request): JsonResponse
     {
-        
         try {
             $validated = $request->validated();
-            /* return response()->json(['datos' => $validated], 200); */
             $boleta = $this->documentService->createBoleta($validated);
 
             return response()->json([
@@ -80,14 +68,14 @@ class BoletaController extends Controller
                 'message' => 'Boleta creada correctamente'
             ], 201);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear la boleta: ' . $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al crear la boleta', $e);
         }
     }
 
+    /**
+     * Obtener boleta específica
+     */
     public function show(string $id): JsonResponse
     {
         try {
@@ -97,14 +85,14 @@ class BoletaController extends Controller
                 'success' => true,
                 'data' => $boleta
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Boleta no encontrada'
-            ], 404);
+        } catch (Exception $e) {
+            return $this->notFoundResponse('Boleta no encontrada');
         }
     }
 
+    /**
+     * Enviar boleta a SUNAT
+     */
     public function sendToSunat(string $id): JsonResponse
     {
         try {
@@ -125,102 +113,94 @@ class BoletaController extends Controller
                     'data' => $result['document']->load(['company', 'branch', 'client']),
                     'message' => 'Boleta enviada exitosamente a SUNAT'
                 ]);
-            } else {
-                // Manejar diferentes tipos de error
-                $errorCode = 'UNKNOWN';
-                $errorMessage = 'Error desconocido';
-                
-                if (is_object($result['error'])) {
-                    if (method_exists($result['error'], 'getCode')) {
-                        $errorCode = $result['error']->getCode();
-                    } elseif (property_exists($result['error'], 'code')) {
-                        $errorCode = $result['error']->code;
-                    }
-                    
-                    if (method_exists($result['error'], 'getMessage')) {
-                        $errorMessage = $result['error']->getMessage();
-                    } elseif (property_exists($result['error'], 'message')) {
-                        $errorMessage = $result['error']->message;
-                    }
-                }
-                
-                return response()->json([
-                    'success' => false,
-                    'data' => $result['document'],
-                    'message' => 'Error al enviar a SUNAT: ' . $errorMessage,
-                    'error_code' => $errorCode
-                ], 400);
             }
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno: ' . $e->getMessage()
-            ], 500);
+
+            return $this->handleSunatError($result);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error interno al enviar a SUNAT', $e);
         }
     }
 
-    public function downloadXml(string $id): \Symfony\Component\HttpFoundation\Response
+    /**
+     * Descargar XML de boleta
+     */
+    public function downloadXml(string $id): Response
     {
         try {
             $boleta = Boleta::findOrFail($id);
             
-            if (empty($boleta->xml_path) || !file_exists(storage_path('app/' . $boleta->xml_path))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'XML no encontrado'
-                ], 404);
+            if (!$this->fileService->fileExists($boleta->xml_path)) {
+                return $this->notFoundResponse('XML no encontrado');
             }
 
-            return response()->download(
-                storage_path('app/' . $boleta->xml_path),
+            return $this->fileService->downloadFile(
+                $boleta->xml_path,
                 $boleta->numero_completo . '.xml',
                 ['Content-Type' => 'application/xml']
             );
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al descargar XML: ' . $e->getMessage()
-            ], 500);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al descargar XML', $e);
         }
     }
 
-    public function downloadCdr(string $id): \Symfony\Component\HttpFoundation\Response
+    /**
+     * Descargar CDR de boleta
+     */
+    public function downloadCdr(string $id): Response
     {
         try {
             $boleta = Boleta::findOrFail($id);
             
-            if (empty($boleta->cdr_path) || !file_exists(storage_path('app/' . $boleta->cdr_path))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'CDR no encontrado'
-                ], 404);
+            if (!$this->fileService->fileExists($boleta->cdr_path)) {
+                return $this->notFoundResponse('CDR no encontrado');
             }
 
-            return response()->download(
-                storage_path('app/' . $boleta->cdr_path),
+            return $this->fileService->downloadFile(
+                $boleta->cdr_path,
                 'R-' . $boleta->numero_completo . '.zip',
                 ['Content-Type' => 'application/zip']
             );
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al descargar CDR: ' . $e->getMessage()
-            ], 500);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al descargar CDR', $e);
         }
     }
 
-    public function downloadPdf($id, Request $request)
+    /**
+     * Descargar PDF de boleta
+     */
+    public function downloadPdf(string $id, Request $request): Response
     {
-        $boleta = Boleta::findOrFail($id);
-        return $this->downloadDocumentPdf($boleta, $request);
+        try {
+            $boleta = Boleta::findOrFail($id);
+            return $this->downloadDocumentPdf($boleta, $request);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al descargar PDF', $e);
+        }
     }
 
+    /**
+     * Generar PDF de boleta
+     */
+    public function generatePdf(string $id, Request $request): Response
+    {
+        try {
+            $boleta = Boleta::with(['company', 'branch', 'client'])->findOrFail($id);
+            return $this->generateDocumentPdf($boleta, 'boleta', $request);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al generar PDF', $e);
+        }
+    }
+
+    /**
+     * Crear resumen diario desde fecha
+     */
     public function createDailySummaryFromDate(CreateDailySummaryRequest $request): JsonResponse
     {
         try {
             $validated = $request->validated();
-
-            // Crear resumen diario automáticamente desde las boletas pendientes
             $summary = $this->documentService->createSummaryFromBoletas($validated);
 
             return response()->json([
@@ -229,19 +209,18 @@ class BoletaController extends Controller
                 'message' => 'Resumen diario creado correctamente'
             ], 201);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear resumen diario',
-                'error' => $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al crear resumen diario', $e);
         }
     }
 
-    public function sendSummaryToSunat($summaryId): JsonResponse
+    /**
+     * Enviar resumen a SUNAT
+     */
+    public function sendSummaryToSunat(string $summaryId): JsonResponse
     {
         try {
-            $summary = \App\Models\DailySummary::with(['company', 'branch', 'boletas'])->findOrFail($summaryId);
+            $summary = DailySummary::with(['company', 'branch', 'boletas'])->findOrFail($summaryId);
 
             if ($summary->estado_sunat === 'ACEPTADO') {
                 return response()->json([
@@ -259,28 +238,27 @@ class BoletaController extends Controller
                     'ticket' => $result['ticket'],
                     'message' => 'Resumen enviado correctamente a SUNAT'
                 ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'data' => $result['document']->load(['company', 'branch', 'boletas']),
-                    'message' => 'Error al enviar resumen a SUNAT',
-                    'error' => $result['error']
-                ], 400);
             }
 
-        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno: ' . $e->getMessage()
-            ], 500);
+                'data' => $result['document']->load(['company', 'branch', 'boletas']),
+                'message' => 'Error al enviar resumen a SUNAT',
+                'error' => $result['error']
+            ], 400);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error interno al enviar resumen', $e);
         }
     }
 
-    public function checkSummaryStatus($summaryId): JsonResponse
+    /**
+     * Consultar estado de resumen
+     */
+    public function checkSummaryStatus(string $summaryId): JsonResponse
     {
         try {
-            $summary = \App\Models\DailySummary::with(['company', 'branch', 'boletas'])->findOrFail($summaryId);
-
+            $summary = DailySummary::with(['company', 'branch', 'boletas'])->findOrFail($summaryId);
             $result = $this->documentService->checkSummaryStatus($summary);
 
             if ($result['success']) {
@@ -289,33 +267,26 @@ class BoletaController extends Controller
                     'data' => $result['document']->load(['company', 'branch', 'boletas']),
                     'message' => 'Estado del resumen consultado correctamente'
                 ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al consultar estado: ' . ($result['error'] ?? 'Error desconocido')
-                ], 400);
             }
 
-        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Error al consultar estado: ' . ($result['error'] ?? 'Error desconocido')
+            ], 400);
+
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al consultar estado del resumen', $e);
         }
     }
 
+    /**
+     * Obtener boletas pendientes para resumen
+     */
     public function getBoletsasPendingForSummary(GetBoletasPendingRequest $request): JsonResponse
     {
         try {
             $validated = $request->validated();
-
-            $boletas = Boleta::with(['company', 'branch', 'client'])
-                            ->where('company_id', $validated['company_id'])
-                            ->where('branch_id', $validated['branch_id'])
-                            ->whereDate('fecha_emision', $validated['fecha_emision'])
-                            ->where('estado_sunat', 'PENDIENTE')
-                            ->whereNull('daily_summary_id')
-                            ->get();
+            $boletas = $this->getPendingBoletas($validated);
 
             return response()->json([
                 'success' => true,
@@ -324,18 +295,107 @@ class BoletaController extends Controller
                 'message' => 'Boletas pendientes obtenidas correctamente'
             ]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener boletas pendientes',
-                'error' => $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener boletas pendientes', $e);
         }
     }
 
-    public function generatePdf($id, Request $request)
+    /**
+     * Aplicar filtros a la consulta
+     */
+    private function applyFilters($query, Request $request): void
     {
-        $boleta = Boleta::with(['company', 'branch', 'client'])->findOrFail($id);
-        return $this->generateDocumentPdf($boleta, 'boleta', $request);
+        $filters = [
+            'company_id' => 'where',
+            'branch_id' => 'where',
+            'estado_sunat' => 'where',
+            'fecha_desde' => 'whereDate|>=',
+            'fecha_hasta' => 'whereDate|<='
+        ];
+
+        foreach ($filters as $field => $operation) {
+            if ($request->has($field)) {
+                $parts = explode('|', $operation);
+                $method = $parts[0];
+                $operator = $parts[1] ?? null;
+
+                if ($operator) {
+                    $query->$method('fecha_emision', $operator, $request->$field);
+                } else {
+                    $query->$method($field, $request->$field);
+                }
+            }
+        }
+    }
+
+    /**
+     * Obtener boletas pendientes
+     */
+    private function getPendingBoletas(array $filters)
+    {
+        return Boleta::with(['company', 'branch', 'client'])
+            ->where('company_id', $filters['company_id'])
+            ->where('branch_id', $filters['branch_id'])
+            ->whereDate('fecha_emision', $filters['fecha_emision'])
+            ->where('estado_sunat', 'PENDIENTE')
+            ->whereNull('daily_summary_id')
+            ->get();
+    }
+
+    /**
+     * Manejar error de SUNAT
+     */
+    private function handleSunatError(array $result): JsonResponse
+    {
+        $error = $result['error'];
+        $errorCode = 'UNKNOWN';
+        $errorMessage = 'Error desconocido';
+
+        if (is_object($error)) {
+            $errorCode = method_exists($error, 'getCode') ? $error->getCode() : ($error->code ?? $errorCode);
+            $errorMessage = method_exists($error, 'getMessage') ? $error->getMessage() : ($error->message ?? $errorMessage);
+        }
+
+        return response()->json([
+            'success' => false,
+            'data' => $result['document'],
+            'message' => 'Error al enviar a SUNAT: ' . $errorMessage,
+            'error_code' => $errorCode
+        ], 400);
+    }
+
+    /**
+     * Obtener datos de paginación
+     */
+    private function getPaginationData($paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+        ];
+    }
+
+    /**
+     * Respuesta de error estandarizada
+     */
+    private function errorResponse(string $message, Exception $e): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message . ': ' . $e->getMessage()
+        ], 500);
+    }
+
+    /**
+     * Respuesta de no encontrado
+     */
+    private function notFoundResponse(string $message): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message
+        ], 404);
     }
 }

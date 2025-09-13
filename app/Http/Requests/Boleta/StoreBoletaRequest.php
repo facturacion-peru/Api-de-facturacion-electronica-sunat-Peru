@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Boleta;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Branch;
 
 class StoreBoletaRequest extends FormRequest
 {

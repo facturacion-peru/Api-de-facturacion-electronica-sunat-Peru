@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Boleta;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 class IndexBoletaRequest extends FormRequest
 {
-    public function authorize(): bool
+     public function authorize(): bool
     {
         return true;
     }
