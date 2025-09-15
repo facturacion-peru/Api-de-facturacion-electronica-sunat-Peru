@@ -1,1 +1,0 @@
-{"success":false,"message":"Error al generar PDF","error":"json_decode(): Argument #1 ($json) must be of type string, array given (View: C:\\laragon\\www\\api-facturacion-sunat-v0\\resources\\views\\pdf\\a4\\invoice.blade.php)"}
