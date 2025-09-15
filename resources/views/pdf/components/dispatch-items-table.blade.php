@@ -1,7 +1,7 @@
 {{-- PDF Dispatch Items Table Component --}}
 {{-- Props: $detalles, $format --}}
 @php
-    $maxFilas = in_array($format, ['a5', 'A5']) ? 8 : 18;
+    $maxFilas = in_array($format, ['a5', 'A5']) ? 8 : 10;
     $contador = count($detalles);
 @endphp
 

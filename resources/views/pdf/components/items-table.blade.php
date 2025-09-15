@@ -1,7 +1,7 @@
 {{-- PDF Items Table Component --}}
 {{-- Props: $detalles, $format --}}
 @php
-     $maxFilas = in_array($format, ['a5', 'A5']) ? 10 : 20;
+     $maxFilas = in_array($format, ['a5', 'A5']) ? 8 : 15;
     $contador = count($detalles);
 @endphp
 
