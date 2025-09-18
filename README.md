@@ -108,7 +108,18 @@ php artisan migrate
 - **TaxCalculationService**: Cálculo de impuestos
 - **SeriesService**: Gestión de series documentarias
 
-## 📚 Uso del API
+## 📚 Documentación de la API
+
+### 📖 Documentación Oficial
+**Documentación completa y actualizada disponible en:**
+👉 **[https://apigo.apuuraydev.com/](https://apigo.apuuraydev.com/)**
+
+Esta documentación oficial incluye:
+- Guías detalladas de uso
+- Ejemplos de implementación
+- Referencia completa de endpoints
+- Códigos de respuesta y errores
+- Casos de uso prácticos
 
 ### Endpoints Principales
 
@@ -183,7 +194,7 @@ php artisan test --filter=InvoiceTest
 
 ## 📖 Documentación Técnica
 
-Para análisis técnico detallado, consultar el archivo `README_ANALISIS_COMPLETO.md` que contiene:
+Para análisis técnico detallado, consultar el archivo `VERIFICAR_MA.md` que contiene:
 - Arquitectura completa del sistema
 - Análisis de código y patrones utilizados
 - Diagramas de flujo de procesos
