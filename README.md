@@ -110,6 +110,17 @@ php artisan migrate
 
 ## 📚 Documentación de la API
 
+### 🎥 Video Tutorial Completo
+**Aprende a implementar el sistema paso a paso:**
+👉 **[Ver Playlist Completa en YouTube](https://www.youtube.com/watch?v=HrrEdjY_7MU&list=PLfwfiNJ5Qw-ZlCfGnWjnILOI4OJfJkGp5)**
+
+Esta playlist incluye:
+- Instalación completa del sistema
+- Configuración de certificados SUNAT
+- Ejemplos reales de implementación
+- Casos de uso prácticos
+- Resolución de problemas comunes
+
 ### 📖 Documentación Oficial
 **Documentación completa y actualizada disponible en:**
 👉 **[https://apigo.apuuraydev.com/](https://apigo.apuuraydev.com/)**
