@@ -56,8 +56,8 @@ Sistema completo de facturación electrónica para SUNAT Perú desarrollado con 
 
 1. **Clonar el repositorio**
 ```bash
-git clone [repository-url]
-cd api-facturacion-sunat-v0
+git clone clone https://github.com/yorchavez9/Api-de-facturacion-electronica-sunat-Peru.git
+cd Api-de-facturacion-electronica-sunat-Peru
 ```
 
 2. **Instalar dependencias**
@@ -89,6 +89,17 @@ php artisan migrate
 6. **Configurar certificados SUNAT**
 - Colocar certificado .pfx en `storage/certificates/`
 - Configurar rutas en el archivo .env
+
+### Conversión de Certificado .pfx a .pem
+
+Si necesitas convertir tu certificado de formato .pfx a .pem, ejecuta el siguiente comando en terminal:
+
+```bash
+# Convertir de .PFX a .PEM
+openssl pkcs12 -in certificado.pfx -out certificado_correcto.pem -nodes
+```
+
+**Nota:** Este comando te pedirá la contraseña de tu certificado .pfx y generará un archivo .pem que puedes usar directamente en el sistema.
 
 ## 🏗️ Arquitectura del Sistema
 
