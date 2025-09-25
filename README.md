@@ -132,96 +132,17 @@ Esta playlist incluye:
 - Casos de uso prácticos
 - Resolución de problemas comunes
 
-### 📖 Documentación Oficial
-**Documentación completa y actualizada disponible en:**
+### 📖 Documentación y Ejemplos
+
+**Documentación completa y actualizada:**
 👉 **[https://apigo.apuuraydev.com/](https://apigo.apuuraydev.com/)**
 
-Esta documentación oficial incluye:
-- Guías detalladas de uso
-- Ejemplos de implementación
-- Referencia completa de endpoints
-- Códigos de respuesta y errores
-- Casos de uso prácticos
-
-### Endpoints Principales
-
-#### Facturas
-```http
-GET    /api/invoices              # Listar facturas
-POST   /api/invoices              # Crear factura
-GET    /api/invoices/{id}         # Obtener factura
-POST   /api/invoices/{id}/send    # Enviar a SUNAT
-```
-
-#### Boletas
-```http
-GET    /api/boletas               # Listar boletas
-POST   /api/boletas               # Crear boleta  
-POST   /api/boletas/summary       # Crear resumen diario
-```
-
-#### Consultas
-```http
-GET    /api/cpe/consult/{ruc}/{type}/{serie}/{number}  # Consultar CPE
-```
-
-### Ejemplo de Creación de Factura
-```json
-{
-  "company_id": 1,
-  "branch_id": 1,
-  "client_id": 1,
-  "serie": "F001",
-  "correlativo": 1,
-  "fecha_emision": "2024-01-15",
-  "moneda": "PEN",
-  "tipo_operacion": "0101",
-  "items": [
-    {
-      "codigo": "PROD001",
-      "descripcion": "Producto ejemplo",
-      "cantidad": 2,
-      "precio_unitario": 100.00,
-      "tipo_afectacion_igv": "10"
-    }
-  ]
-}
-```
-
-## 📋 Comandos Artisan Disponibles
-
-```bash
-# Generar certificados de prueba
-php artisan sunat:generate-certificates
-
-# Sincronizar estados con SUNAT  
-php artisan sunat:sync-status
-
-# Generar resúmenes diarios pendientes
-php artisan sunat:daily-summaries
-
-# Limpiar archivos temporales
-php artisan sunat:clean-files
-```
-
-## 🧪 Testing
-
-```bash
-# Ejecutar todas las pruebas
-php artisan test
-
-# Ejecutar pruebas específicas
-php artisan test --filter=InvoiceTest
-```
-
-## 📖 Documentación Técnica
-
-Para análisis técnico detallado, consultar el archivo `VERIFICAR_MA.md` que contiene:
-- Arquitectura completa del sistema
-- Análisis de código y patrones utilizados
-- Diagramas de flujo de procesos
-- Evaluación de calidad empresarial
-- Recomendaciones de optimización
+**Ejemplos listos para usar:**
+En el directorio `ejemplos-postman/` encontrarás colecciones completas listas para importar en Postman o herramientas similares, con ejemplos de:
+- Facturas, boletas y notas
+- Guías de remisión
+- Consultas CPE
+- Configuraciones avanzadas
 
 ## ⚖️ Licencia y Uso
 
