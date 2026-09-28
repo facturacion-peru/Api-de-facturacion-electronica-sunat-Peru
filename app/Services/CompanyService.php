@@ -9,7 +9,9 @@ use App\Models\Company;
 use App\Models\Establishment;
 use App\Models\User;
 use App\Rules\Ruc;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CompanyService
 {
@@ -56,5 +58,45 @@ class CompanyService
 
             return new CreatedCompany($company->load('mainEstablishment.district'), $invitation);
         });
+    }
+
+    /**
+     * Datos editables por la propia empresa (HU-5.1). Audita cada cambio con
+     * su valor anterior y nuevo.
+     *
+     * @param  array{nombre_comercial?: ?string, email?: string, phone?: ?string}  $data
+     */
+    public function update(Company $company, array $data, User $actor): Company
+    {
+        $company->fill($data);
+        $changes = [];
+
+        foreach ($company->getDirty() as $field => $value) {
+            $changes[$field] = ['from' => $company->getOriginal($field), 'to' => $value];
+        }
+
+        if ($changes !== []) {
+            $company->save();
+            $this->audit->record('company.updated', $company, $changes, actor: $actor);
+        }
+
+        return $company;
+    }
+
+    /** Guarda el logo en el disco público y borra el anterior. */
+    public function updateLogo(Company $company, UploadedFile $logo, User $actor): Company
+    {
+        $previous = $company->logo_path;
+        $path = $logo->store("companies/{$company->id}", 'public');
+
+        $company->update(['logo_path' => $path]);
+
+        if ($previous !== null && $previous !== $path) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        $this->audit->record('company.logo_updated', $company, actor: $actor);
+
+        return $company;
     }
 }

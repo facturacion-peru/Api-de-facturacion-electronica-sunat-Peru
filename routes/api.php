@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
@@ -34,8 +35,12 @@ Route::prefix('v1')->group(function () {
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::get('/company', [CompanyController::class, 'show']);
 
         Route::middleware('role:company_admin')->group(function () {
+            Route::patch('/company', [CompanyController::class, 'update']);
+            Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
+
             Route::get('/users', [UserController::class, 'index']);
             Route::patch('/users/{user}', [UserController::class, 'update']);
 
