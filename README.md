@@ -1,183 +1,79 @@
-<p align="center">
-  <img src="./public/assets/images/sunat.png" alt="SUNAT Logo" width="250">
-</p>
+# API de facturación electrónica SUNAT (SaaS)
 
-# API de Facturación Electrónica SUNAT - Perú
+API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT. La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12">
-  <img src="https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
-  <img src="https://img.shields.io/badge/Greenter-5.1-4CAF50?style=for-the-badge" alt="Greenter 5.1">
-  <img src="https://img.shields.io/badge/SUNAT-Compatible-0066CC?style=for-the-badge" alt="SUNAT Compatible">
-</p>
+El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones viven en [`../docs`](../docs), empezando por la [constitución](../docs/constitution.md) y el [índice de specs](../docs/specs/README.md).
 
-Sistema completo de facturación electrónica para SUNAT Perú desarrollado con **Laravel 12** y la librería **Greenter 5.1**. Este proyecto implementa todas las funcionalidades necesarias para la generación, envío y gestión de comprobantes de pago electrónicos según las normativas de SUNAT.
+## Estado
 
-## 🚀 Características Principales
+| Spec | Qué cubre | Estado |
+|---|---|---|
+| [001](../docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
+| 002–005 | Inventario, tickets, configuración SUNAT, emisión en beta | En aclaración |
 
-### Documentos Electrónicos Soportados
-- ✅ **Facturas** (Tipo 01)
-- ✅ **Boletas de Venta** (Tipo 03) 
+El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
-### Funcionalidades del Sistema
-- 🏢 **Multi-empresa**: Gestión de múltiples empresas y sucursales
-- 🔐 **Autenticación OAuth2** para APIs de SUNAT
-- 📄 **Generación automática de PDF** con diseño profesional
+## Stack
 
-### Tecnologías Utilizadas
-- **Framework**: Laravel 12 con PHP 8.2+
-- **SUNAT Integration**: Greenter 5.1
-- **Base de Datos**: MySQL/PostgreSQL compatible
-- **PDF Generation**: DomPDF con plantillas personalizadas
-- **QR Codes**: Endroid QR Code
-- **Authentication**: Laravel Sanctum
-- **Testing**: PestPHP
+Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1, DomPDF y QR están instalados para la emisión (spec 005). La API no usa toolchain JavaScript.
 
-## 🛠️ Instalación
+## Puesta en marcha
 
-### Requisitos Previos
-- PHP 8.2 o superior
-- Composer
-- MySQL 8.0+ o PostgreSQL
-- Certificado digital SUNAT (.pfx)
-
-### Pasos de Instalación
-
-1. **Clonar el repositorio**
-```bash
-git clone clone https://github.com/yorchavez9/Api-de-facturacion-electronica-sunat-Peru.git
-cd Api-de-facturacion-electronica-sunat-Peru
-```
-
-2. **Instalar dependencias**
 ```bash
 composer install
-```
-
-3. **Configurar variables de entorno**
-```bash
 cp .env.example .env
 php artisan key:generate
+# Configura DB_* (PostgreSQL) y FRONTEND_URL en .env
+php artisan migrate --seed          # tablas + ubigeos oficiales
+php artisan platform:create-admin   # primer administrador de la plataforma (interactivo)
+php artisan company:create          # alta de una empresa e invitación a su administrador
+php artisan serve                   # http://127.0.0.1:8000
 ```
 
-4. **Configurar base de datos en .env**
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=facturacion_sunat
-DB_USERNAME=tu_usuario
-DB_PASSWORD=tu_password
-```
+En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitación y de recuperación aparecen en `storage/logs/laravel.log`. `company:create` también muestra el enlace de invitación en consola.
 
-5. **Ejecutar migraciones**
+## Variables de entorno propias
+
+| Variable | Descripción |
+|---|---|
+| `FRONTEND_URL` | Base de los enlaces de invitación (`/invitacion/{token}`) y recuperación (`/restablecer`). Por defecto `http://localhost:5173` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*` |
+| `SANCTUM_EXPIRATION` | Minutos de vida del token (1440 = 24 h) |
+
+## Seguridad y aislamiento
+
+- **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
+- **Rutas por grupo** (`routes/api.php`):
+  - Públicas: solo los flujos de autenticación, con límite de intentos.
+  - Empresa: `auth:sanctum` + `tenant`.
+  - Plataforma: `auth:sanctum` + `platform.admin`.
+- **Toda ruta de empresa nueva** debe declararse en `tests/Feature/Tenancy/TenantRoutes.php`; si no, la suite falla.
+- **Auditoría** inmutable vía `App\Audit\AuditLogger`, que elimina contraseñas y secretos antes de guardar.
+- **Errores** con el mismo formato en todo `api/*`: `{ success: false, message, errors? }`.
+
+## Endpoints (`/api/v1`)
+
+Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y documentación interactiva en `/docs`.
+
+| Grupo | Endpoints |
+|---|---|
+| Público | `POST auth/login`, `auth/forgot-password`, `auth/reset-password` · `GET invitations/{token}` · `POST invitations/{token}/accept` |
+| Sesión | `POST auth/logout` · `GET auth/me` |
+| Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
+| Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
+
+Las rutas de gestión de la empresa exigen el rol `company_admin`.
+
+## Pruebas
+
 ```bash
-php artisan migrate
+php artisan test        # SQLite en memoria (rápido)
+composer test:pgsql     # la misma suite contra PostgreSQL (base db_api_sunat_testing)
+vendor/bin/pint --test  # estilo
 ```
 
-6. **Configurar certificados SUNAT**
-- Colocar certificado .pfx en `storage/certificates/`
-- Configurar rutas en el archivo .env
+Corre ambas: algunas diferencias entre SQLite y PostgreSQL (p. ej. `FOR UPDATE` con agregados) solo aparecen en PostgreSQL.
 
-### Conversión de Certificado .pfx a .pem
+## Origen
 
-Si necesitas convertir tu certificado de formato .pfx a .pem, ejecuta el siguiente comando en terminal:
-
-```bash
-# Convertir de .PFX a .PEM
-openssl pkcs12 -in certificado.pfx -out certificado_correcto.pem -nodes
-```
-
-**Nota:** Este comando te pedirá la contraseña de tu certificado .pfx y generará un archivo .pem que puedes usar directamente en el sistema.
-
-## 🏗️ Arquitectura del Sistema
-
-### Estructura de Modelos
-- **Company**: Empresas emisoras
-- **Branch**: Sucursales por empresa
-- **Client**: Clientes y proveedores
-- **Invoice/Boleta/CreditNote/DebitNote**: Documentos electrónicos
-- **DailySummary**: Resúmenes diarios de boletas
-- **CompanyConfiguration**: Configuraciones por empresa
-
-### Servicios Principales
-- **DocumentService**: Lógica de negocio para documentos
-- **SunatService**: Integración con APIs de SUNAT  
-- **PdfService**: Generación de documentos PDF
-- **FileService**: Gestión de archivos XML/PDF
-- **TaxCalculationService**: Cálculo de impuestos
-- **SeriesService**: Gestión de series documentarias
-
-## 📚 Documentación de la API
-
-### 🎥 Video Tutorial Completo
-**Aprende a implementar el sistema paso a paso:**
-👉 **[Ver Playlist Completa en YouTube](https://www.youtube.com/watch?v=HrrEdjY_7MU&list=PLfwfiNJ5Qw-ZlCfGnWjnILOI4OJfJkGp5)**
-
-Esta playlist incluye:
-- Instalación completa del sistema
-- Configuración de certificados SUNAT
-- Ejemplos reales de implementación
-- Casos de uso prácticos
-- Resolución de problemas comunes
-
-### 📖 Documentación y Ejemplos
-
-**Documentación completa y actualizada:**
-👉 **[https://apigo.apuuraydev.com/](https://apigo.apuuraydev.com/)**
-
-**Ejemplos listos para usar:**
-En el directorio `ejemplos-postman/` encontrarás colecciones completas listas para importar en Postman o herramientas similares, con ejemplos de:
-- Facturas, boletas y notas
-- Guías de remisión
-- Consultas CPE
-- Configuraciones avanzadas
-
-## ⚖️ Licencia y Uso
-
-**Este proyecto es de uso libre bajo las siguientes condiciones:**
-
-- ✅ Puedes usar, modificar y distribuir el código libremente
-- ✅ Puedes usarlo para proyectos comerciales y personales
-- ⚠️ **Todo el uso es bajo tu propia responsabilidad**
-- ⚠️ No se ofrece garantía ni soporte oficial
-- ⚠️ Debes cumplir con las normativas de SUNAT de tu país
-
-### Importante
-- Asegúrate de tener los certificados digitales válidos de SUNAT
-- Configura correctamente los endpoints según tu ambiente (beta/producción)
-- Realiza pruebas exhaustivas antes de usar en producción
-- Mantén actualizadas las librerías de seguridad
-
-## 🤝 Soporte y Donaciones
-
-Si este proyecto te ha sido útil y deseas apoyar su desarrollo:
-
-### 💰 Yape (Perú)
-<p align="center">
-  <img src="./public/assets/images/yape.png" alt="Yape" width="100">
-</p>
-
-**Número:** `920468502`
-
-### 💬 WhatsApp
-**Contacto:** [https://wa.link/z50dwk](https://wa.link/z50dwk)
-
-### 📧 Contribuciones
-- Fork el proyecto
-- Crea una rama para tu feature
-- Envía un pull request
-
----
-
-## 📞 Contacto
-
-Para consultas técnicas o colaboraciones:
-- **WhatsApp**: [https://wa.link/z50dwk](https://wa.link/z50dwk)
-- **Yape**: 920468502
-
----
-
-**⚡ Desarrollado con Laravel 12 y Greenter 5.1 para la comunidad peruana**
-
-*"Facilitando la facturación electrónica en Perú - Un documento a la vez"*
+Este repositorio parte de [yorchavez9/Api-de-facturacion-electronica-sunat-Peru](https://github.com/yorchavez9/Api-de-facturacion-electronica-sunat-Peru), un proyecto de uso libre y bajo responsabilidad de quien lo usa. Su integración con Greenter, las plantillas de PDF y los datos de ubigeo se conservan como base para la emisión de comprobantes.
