@@ -1,8 +1,17 @@
 <?php
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +21,42 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // La API no redirige a una pantalla de login: responde 401 (ver withExceptions).
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Las rutas api/* responden siempre JSON, pida o no el cliente JSON.
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson()
+        );
+
+        // Sobre de error uniforme: { success: false, message, errors? }.
+        // Nunca incluye trazas ni el mensaje de excepciones no controladas.
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            [$status, $message, $errors] = match (true) {
+                $e instanceof ValidationException => [422, 'Los datos enviados no son válidos.', $e->errors()],
+                $e instanceof AuthenticationException => [401, 'No autenticado.', null],
+                $e instanceof AuthorizationException,
+                $e instanceof AccessDeniedHttpException => [403, 'No tienes permiso para realizar esta acción.', null],
+                $e instanceof ModelNotFoundException,
+                $e instanceof NotFoundHttpException => [404, 'Recurso no encontrado.', null],
+                $e instanceof ThrottleRequestsException => [429, 'Demasiados intentos. Inténtalo más tarde.', null],
+                $e instanceof HttpExceptionInterface => [$e->getStatusCode(), $e->getMessage() ?: 'Error en la petición.', null],
+                default => [500, 'Error interno del servidor.', null],
+            };
+
+            $body = ['success' => false, 'message' => $message];
+
+            if ($errors !== null) {
+                $body['errors'] = $errors;
+            }
+
+            $headers = $e instanceof HttpExceptionInterface ? $e->getHeaders() : [];
+
+            return response()->json($body, $status, $headers);
+        });
     })->create();
