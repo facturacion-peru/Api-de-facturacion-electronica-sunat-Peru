@@ -65,7 +65,7 @@ it('ningún log recibe getChanges() ni el cuerpo completo de la petición', func
         preg_match_all('/(?:Log::|logger\()[^;]*;/s', $code, $calls);
 
         foreach ($calls[0] as $call) {
-            if (preg_match('/getChanges\(|getDirty\(|getAttributes\(|->all\(\)|request\(\)->input\(\)/', $call)) {
+            if (preg_match('/getChanges\(|getDirty\(|getAttributes\(|->all\(\)|->input\(\)|->validated\(\)/', $call)) {
                 $offenders[] = $file->getFilename();
             }
         }
