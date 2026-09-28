@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
@@ -16,7 +17,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Público
     Route::middleware('throttle:auth')->group(function () {
-        //
+        Route::get('/invitations/{token}', [InvitationAcceptanceController::class, 'show']);
+        Route::post('/invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept']);
     });
 
     // Empresa

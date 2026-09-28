@@ -3,6 +3,8 @@
 /*
  * T023 · Reglas de arquitectura que protegen la seguridad (principio IV):
  * - Ningún FormRequest autoriza con un `return true` incondicional.
+ * - Fuera de Requests/Auth (flujos públicos de autenticación, constitución
+ *   1.1.1), todo FormRequest declara authorize().
  * - Ningún Log:: recibe getChanges() ni el cuerpo completo de la petición,
  *   porque ahí viajan contraseñas y secretos (hallazgo H-3 de la evaluación).
  */
@@ -33,6 +35,25 @@ it('ningún FormRequest autoriza incondicionalmente', function () {
     }
 
     expect($offenders)->toBe([], 'authorize() debe delegar en una Policy o en el rol: '.implode(', ', $offenders));
+});
+
+it('todo FormRequest fuera de Auth declara authorize()', function () {
+    $offenders = [];
+    $base = dirname(__DIR__, 3).'/app/Http/Requests';
+
+    foreach (phpFilesIn($base) as $file) {
+        $relative = substr($file->getPathname(), strlen($base) + 1);
+
+        if (str_starts_with($relative, 'Auth/')) {
+            continue;
+        }
+
+        if (! preg_match('/function\s+authorize\s*\(/', file_get_contents($file->getPathname()))) {
+            $offenders[] = $relative;
+        }
+    }
+
+    expect($offenders)->toBe([], 'Falta authorize() en: '.implode(', ', $offenders));
 });
 
 it('ningún log recibe getChanges() ni el cuerpo completo de la petición', function () {
