@@ -24,6 +24,40 @@ class InvitationService
 
     public function __construct(private AuditLogger $audit) {}
 
+    /** Nuevo token y nueva vigencia; el enlace anterior deja de servir. */
+    public function resend(Invitation $invitation, User $actor): IssuedInvitation
+    {
+        $this->ensureNotAccepted($invitation);
+
+        $token = Str::random(64);
+        $invitation->forceFill([
+            'token_hash' => Invitation::hashToken($token),
+            'expires_at' => now()->addHours(self::VALID_HOURS),
+        ])->save();
+
+        $this->audit->record('invitation.resent', $invitation, ['email' => $invitation->email], actor: $actor);
+
+        Notification::route('mail', $invitation->email)
+            ->notify(new InvitationNotification($token, $invitation->company, $invitation->role, $invitation->expires_at));
+
+        return new IssuedInvitation($invitation, $token);
+    }
+
+    public function cancel(Invitation $invitation, User $actor): void
+    {
+        $this->ensureNotAccepted($invitation);
+
+        $this->audit->record('invitation.cancelled', $invitation, ['email' => $invitation->email], actor: $actor);
+        $invitation->delete();
+    }
+
+    private function ensureNotAccepted(Invitation $invitation): void
+    {
+        if ($invitation->accepted_at !== null) {
+            throw ValidationException::withMessages(['invitation' => 'La invitación ya fue aceptada.']);
+        }
+    }
+
     /** Busca por token (sin scope: el invitado aún no tiene empresa). */
     public function findByToken(string $token): ?Invitation
     {

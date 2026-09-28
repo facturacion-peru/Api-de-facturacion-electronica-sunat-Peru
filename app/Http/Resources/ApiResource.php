@@ -11,6 +11,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 abstract class ApiResource extends JsonResource
 {
+    /** Listado con el mismo sobre, paginado o no. */
+    public static function collection($resource): ApiCollection
+    {
+        return new ApiCollection($resource, static::class);
+    }
+
     /** @return array<string, mixed> */
     public function with(Request $request): array
     {

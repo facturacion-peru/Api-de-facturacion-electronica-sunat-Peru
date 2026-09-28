@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,13 @@ Route::prefix('v1')->group(function () {
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
+
+        Route::middleware('role:company_admin')->group(function () {
+            Route::get('/invitations', [InvitationController::class, 'index']);
+            Route::post('/invitations', [InvitationController::class, 'store']);
+            Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend']);
+            Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy']);
+        });
 
         Route::prefix('ubigeos')->group(function () {
             Route::get('/regiones', [UbigeoController::class, 'getRegiones']);
