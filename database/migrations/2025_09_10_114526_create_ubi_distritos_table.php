@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('info_busqueda', 255)->default('');
             $table->string('provincia_id', 6)->default('');
             $table->string('region_id', 6)->default('');
-            
+
             $table->foreign('provincia_id')->references('id')->on('ubi_provincias');
             $table->foreign('region_id')->references('id')->on('ubi_regiones');
         });

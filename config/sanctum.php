@@ -93,19 +93,19 @@ return [
     'security' => [
         // Habilitar verificación de IP por token
         'verify_ip' => env('SANCTUM_VERIFY_IP', false),
-        
+
         // Habilitar logging de uso de tokens
         'log_token_usage' => env('SANCTUM_LOG_USAGE', true),
-        
+
         // Tiempo máximo de inactividad antes de requerir reautenticación (minutos)
         'max_inactivity' => env('SANCTUM_MAX_INACTIVITY', 120), // 2 horas
-        
+
         // Límite de tokens concurrentes por usuario
         'max_tokens_per_user' => env('SANCTUM_MAX_TOKENS', 10),
-        
+
         // Habilitar rotación de tokens
         'rotate_tokens' => env('SANCTUM_ROTATE_TOKENS', false),
-        
+
         // Tiempo antes de expirar tokens inactivos (días)
         'purge_inactive_tokens_days' => env('SANCTUM_PURGE_DAYS', 30),
     ],

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +12,7 @@ class UbiRegionesSeeder extends Seeder
      */
     public function run(): void
     {
-       $regiones = [
+        $regiones = [
             ['id' => '010000', 'nombre' => 'Amazonas'],
             ['id' => '020000', 'nombre' => 'Áncash'],
             ['id' => '030000', 'nombre' => 'Apurímac'],

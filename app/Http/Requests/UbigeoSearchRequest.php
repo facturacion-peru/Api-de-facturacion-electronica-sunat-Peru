@@ -27,7 +27,7 @@ class UbigeoSearchRequest extends FormRequest
             'provincia_id' => 'nullable|string|size:6',
         ];
     }
-    
+
     public function messages(): array
     {
         return [

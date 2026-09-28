@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\UbiDistrito;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class UbiDistritoSeeder extends Seeder
@@ -14,22 +13,23 @@ class UbiDistritoSeeder extends Seeder
     public function run(): void
     {
         $filePath = public_path('data_ubi.txt');
-        
-        if (!file_exists($filePath)) {
+
+        if (! file_exists($filePath)) {
             $this->command->error('File data_ubi.txt not found in public directory');
+
             return;
         }
-        
+
         // Temporalmente desactivar las restricciones de clave foránea
         \Schema::disableForeignKeyConstraints();
-        
+
         $file = fopen($filePath, 'r');
         $header = fgetcsv($file, 0, '|'); // Skip header line
-        
+
         $batchSize = 1000;
         $batch = [];
         $count = 0;
-        
+
         while (($row = fgetcsv($file, 0, '|')) !== false) {
             if (count($row) === 5) {
                 $batch[] = [
@@ -39,9 +39,9 @@ class UbiDistritoSeeder extends Seeder
                     'provincia_id' => trim($row[3]),
                     'region_id' => trim($row[4]),
                 ];
-                
+
                 $count++;
-                
+
                 if (count($batch) >= $batchSize) {
                     UbiDistrito::insert($batch);
                     $batch = [];
@@ -49,17 +49,17 @@ class UbiDistritoSeeder extends Seeder
                 }
             }
         }
-        
+
         // Insert remaining records
-        if (!empty($batch)) {
+        if (! empty($batch)) {
             UbiDistrito::insert($batch);
         }
-        
+
         fclose($file);
-        
+
         // Reactivar las restricciones de clave foránea
         \Schema::enableForeignKeyConstraints();
-        
+
         $this->command->info("Successfully imported {$count} districts from data_ubi.txt");
     }
 }
