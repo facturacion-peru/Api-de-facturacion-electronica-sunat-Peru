@@ -61,6 +61,11 @@ Route::prefix('v1')->group(function () {
 
     // Plataforma
     Route::middleware(['auth:sanctum', 'platform.admin'])->prefix('platform')->group(function () {
+        Route::get('/companies', [PlatformCompanyController::class, 'index']);
         Route::post('/companies', [PlatformCompanyController::class, 'store']);
+        Route::get('/companies/{company}', [PlatformCompanyController::class, 'show']);
+        Route::patch('/companies/{company}', [PlatformCompanyController::class, 'update']);
+        Route::post('/companies/{company}/activate', [PlatformCompanyController::class, 'activate']);
+        Route::post('/companies/{company}/deactivate', [PlatformCompanyController::class, 'deactivate']);
     });
 });

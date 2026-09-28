@@ -61,14 +61,21 @@ class CompanyService
     }
 
     /**
-     * Datos editables por la propia empresa (HU-5.1). Audita cada cambio con
-     * su valor anterior y nuevo.
+     * Actualiza datos de la empresa y audita cada cambio con su valor anterior
+     * y nuevo. Qué campos se admiten lo decide la request: la empresa edita
+     * solo contacto (HU-5.1); la plataforma también RUC, razón social y
+     * régimen (HU-5.2). Si cambia el RUC se recalcula el tipo de persona.
      *
-     * @param  array{nombre_comercial?: ?string, email?: string, phone?: ?string}  $data
+     * @param  array<string, mixed>  $data
      */
     public function update(Company $company, array $data, User $actor): Company
     {
         $company->fill($data);
+
+        if ($company->isDirty('ruc')) {
+            $company->person_type = Ruc::personType($company->ruc);
+        }
+
         $changes = [];
 
         foreach ($company->getDirty() as $field => $value) {
@@ -96,6 +103,30 @@ class CompanyService
         }
 
         $this->audit->record('company.logo_updated', $company, actor: $actor);
+
+        return $company;
+    }
+
+    /**
+     * Activa o desactiva la empresa (HU-7). Al desactivar se revocan las
+     * sesiones de todos sus usuarios; los datos se conservan.
+     */
+    public function setActive(Company $company, bool $active, User $actor): Company
+    {
+        if ($company->active === $active) {
+            return $company;
+        }
+
+        DB::transaction(function () use ($company, $active, $actor) {
+            $company->update(['active' => $active]);
+
+            if (! $active) {
+                User::whereIn('id', $company->memberships()->select('user_id'))
+                    ->each(fn (User $user) => $user->tokens()->delete());
+            }
+
+            $this->audit->record($active ? 'company.activated' : 'company.deactivated', $company, actor: $actor);
+        });
 
         return $company;
     }
