@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CompanyRole;
+use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,6 +62,12 @@ class User extends Authenticatable
     public function membership(): HasOne
     {
         return $this->hasOne(CompanyMembership::class)->withoutGlobalScopes();
+    }
+
+    /** El enlace apunta a la pantalla del frontend, no a una ruta de Laravel. */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     public function isPlatformAdmin(): bool

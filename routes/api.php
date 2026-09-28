@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
+use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,8 @@ Route::prefix('v1')->group(function () {
     // Público
     Route::middleware('throttle:auth')->group(function () {
         Route::post('/auth/login', [AuthController::class, 'login']);
+        Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
+        Route::post('/auth/reset-password', [PasswordResetController::class, 'reset']);
         Route::get('/invitations/{token}', [InvitationAcceptanceController::class, 'show']);
         Route::post('/invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept']);
     });
