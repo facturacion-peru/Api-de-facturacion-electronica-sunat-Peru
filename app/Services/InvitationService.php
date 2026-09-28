@@ -19,7 +19,7 @@ class InvitationService
 
     public function __construct(private AuditLogger $audit) {}
 
-    public function issue(Company $company, string $email, CompanyRole $role, User $inviter): Invitation
+    public function issue(Company $company, string $email, CompanyRole $role, User $inviter): IssuedInvitation
     {
         $token = Str::random(64);
 
@@ -41,6 +41,6 @@ class InvitationService
         DB::afterCommit(fn () => Notification::route('mail', $invitation->email)
             ->notify(new InvitationNotification($token, $company, $role, $invitation->expires_at)));
 
-        return $invitation;
+        return new IssuedInvitation($invitation, $token);
     }
 }

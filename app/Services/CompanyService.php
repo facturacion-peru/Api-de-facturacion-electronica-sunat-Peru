@@ -24,7 +24,7 @@ class CompanyService
      *
      * @param  array{ruc: string, razon_social: string, nombre_comercial?: ?string, tax_regime: string, email: string, phone?: ?string, address: string, ubigeo: string, admin_email: string}  $data
      */
-    public function create(array $data, User $actor): Company
+    public function create(array $data, User $actor): CreatedCompany
     {
         return DB::transaction(function () use ($data, $actor) {
             $company = Company::create([
@@ -52,9 +52,9 @@ class CompanyService
                 'razon_social' => $company->razon_social,
             ], actor: $actor);
 
-            $this->invitations->issue($company, $data['admin_email'], CompanyRole::CompanyAdmin, $actor);
+            $invitation = $this->invitations->issue($company, $data['admin_email'], CompanyRole::CompanyAdmin, $actor);
 
-            return $company->load('mainEstablishment.district');
+            return new CreatedCompany($company->load('mainEstablishment.district'), $invitation);
         });
     }
 }

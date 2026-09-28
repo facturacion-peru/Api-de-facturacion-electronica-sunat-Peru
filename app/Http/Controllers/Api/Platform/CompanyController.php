@@ -15,8 +15,8 @@ class CompanyController extends Controller
 
     public function store(StoreCompanyRequest $request): JsonResponse
     {
-        $company = $this->companies->create($request->validated(), $request->user());
+        $created = $this->companies->create($request->validated(), $request->user());
 
-        return CompanyResource::make($company)->response()->setStatusCode(201);
+        return CompanyResource::make($created->company)->response()->setStatusCode(201);
     }
 }
