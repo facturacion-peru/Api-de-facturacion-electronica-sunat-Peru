@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('id', 6)->primary();
             $table->string('nombre', 255)->default('');
             $table->string('region_id', 6)->default('');
-            
+
             $table->foreign('region_id')->references('id')->on('ubi_regiones');
         });
     }

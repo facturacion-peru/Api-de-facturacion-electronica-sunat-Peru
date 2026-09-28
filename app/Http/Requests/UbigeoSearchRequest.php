@@ -7,11 +7,11 @@ use Illuminate\Foundation\Http\FormRequest;
 class UbigeoSearchRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Datos de referencia públicos para cualquier usuario autenticado.
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user() !== null;
     }
 
     /**
@@ -27,7 +27,7 @@ class UbigeoSearchRequest extends FormRequest
             'provincia_id' => 'nullable|string|size:6',
         ];
     }
-    
+
     public function messages(): array
     {
         return [

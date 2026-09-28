@@ -2,72 +2,60 @@
 
 namespace Database\Factories;
 
+use App\Enums\PersonType;
+use App\Enums\TaxRegime;
 use App\Models\Company;
+use App\Models\Establishment;
+use App\Rules\Ruc;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Company>
+ * @extends Factory<Company>
  */
 class CompanyFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
-    protected $model = Company::class;
-
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            'ruc' => '20' . fake()->unique()->numerify('#########'),
-            'razon_social' => fake()->company(),
-            'nombre_comercial' => 'EMPRESA PRUEBA',
-            'direccion' => 'AV. EJEMPLO 123',
-            'ubigeo' => '150101',
-            'distrito' => 'LIMA',
-            'provincia' => 'LIMA',
-            'departamento' => 'LIMA',
-            'telefono' => '01-1234567',
-            'email' => 'test@empresa.com',
-            'web' => 'https://empresa.com',
-            'usuario_sol' => 'TESTUSER',
-            'clave_sol' => 'TESTPASS',
-            'certificado_pem' => '-----BEGIN CERTIFICATE-----
-MIICertificateDataForTesting
------END CERTIFICATE-----',
-            'certificado_password' => 'TESTCERTPASS',
-            'endpoint_beta' => 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService',
-            'endpoint_produccion' => 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService',
-            'modo_produccion' => false,
-            'logo_path' => null,
-            'configuraciones' => null,
-            'activo' => true,
+            'ruc' => self::validRuc('20'),
+            'razon_social' => mb_strtoupper(fake()->company()).' S.A.C.',
+            'nombre_comercial' => fake()->optional()->company(),
+            'person_type' => PersonType::Juridica,
+            'tax_regime' => TaxRegime::Rmt,
+            'email' => fake()->unique()->companyEmail(),
+            'phone' => fake()->optional()->numerify('9########'),
+            'active' => true,
         ];
     }
 
-    /**
-     * Indicate that the company is in production mode.
-     */
-    public function production(): static
+    public function naturalPerson(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'modo_produccion' => true,
+        return $this->state(fn () => [
+            'ruc' => self::validRuc('10'),
+            'person_type' => PersonType::Natural,
         ]);
     }
 
-    /**
-     * Indicate that the company is inactive.
-     */
     public function inactive(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'activo' => false,
-        ]);
+        return $this->state(fn () => ['active' => false]);
+    }
+
+    /** Crea también el establecimiento principal, como hace el alta real. */
+    public function withMainEstablishment(): static
+    {
+        return $this->afterCreating(function (Company $company) {
+            Establishment::factory()->main()->for($company)->create();
+        });
+    }
+
+    /** RUC aleatorio con dígito verificador válido (módulo 11). */
+    public static function validRuc(string $prefix): string
+    {
+        do {
+            $base = $prefix.fake()->numerify('########');
+        } while (Company::where('ruc', 'like', $base.'%')->exists());
+
+        return $base.Ruc::checkDigit($base);
     }
 }

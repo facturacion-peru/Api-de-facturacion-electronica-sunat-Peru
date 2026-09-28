@@ -2,6 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\CompanyRole;
+use App\Models\Company;
+use App\Models\CompanyMembership;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -30,6 +34,29 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    public function platformAdmin(): static
+    {
+        return $this->state(fn () => ['is_platform_admin' => true]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['active' => false]);
+    }
+
+    /** Usuario de empresa con su pertenencia y rol. */
+    public function forCompany(Company $company, CompanyRole $role = CompanyRole::Seller, bool $active = true): static
+    {
+        return $this->afterCreating(function (User $user) use ($company, $role, $active) {
+            CompanyMembership::factory()->create([
+                'company_id' => $company->id,
+                'user_id' => $user->id,
+                'role' => $role,
+                'active' => $active,
+            ]);
+        });
     }
 
     /**

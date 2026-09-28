@@ -7,7 +7,6 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
-use ReflectionClass;
 use ReflectionMethod;
 use Throwable;
 
@@ -60,7 +59,7 @@ class GenerateOpenApiSpec extends Command
             'info' => [
                 'title' => config('app.name'),
                 'version' => '1.0.0',
-                'description' => "Documentación generada automáticamente desde `routes/api.php` y las clases "
+                'description' => 'Documentación generada automáticamente desde `routes/api.php` y las clases '
                     ."`App\\Http\\Requests\\*`.\n\nPara probar los endpoints protegidos: llama a "
                     .'`POST /api/auth/login`, copia el `access_token` y pégalo en **Authorize**.',
             ],
@@ -512,8 +511,17 @@ class GenerateOpenApiSpec extends Command
             'name' => $match[1],
             'in' => 'path',
             'required' => ! isset($match[2]),
-            'schema' => ['type' => in_array($match[1], ['section'], true) ? 'string' : 'integer'],
+            'schema' => ['type' => $this->isStringPathParameter($route, $match[1]) ? 'string' : 'integer'],
         ], $matches);
+    }
+
+    /**
+     * Los identificadores de modelo son enteros; los tokens de invitación y
+     * los códigos de ubigeo (6 dígitos con ceros a la izquierda) son cadenas.
+     */
+    private function isStringPathParameter(RoutingRoute $route, string $name): bool
+    {
+        return $name === 'token' || ($name === 'id' && str_contains($route->uri(), 'ubigeos/'));
     }
 
     /**

@@ -2,22 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-
     public function run(): void
     {
-
-        // Ejecutar seeders de la API SUNAT
+        // Datos oficiales: se cargan en todos los entornos.
         $this->call([
-            /* RolesAndPermissionsSeeder::class, */
             UbiRegionesSeeder::class,
             UbiProvinciasSeeder::class,
-            UbiDistritoSeeder::class
+            UbiDistritoSeeder::class,
         ]);
+
+        // Cuentas de prueba: solo en desarrollo local.
+        if (app()->environment('local')) {
+            $this->call(DevelopmentSeeder::class);
+        }
     }
 }
