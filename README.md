@@ -24,10 +24,29 @@ composer install
 cp .env.example .env
 php artisan key:generate
 # Configura DB_* (PostgreSQL) y FRONTEND_URL en .env
-php artisan migrate --seed          # tablas + ubigeos oficiales
+php artisan migrate --seed          # tablas + ubigeos (+ cuentas de prueba si APP_ENV=local)
+php artisan serve                   # http://127.0.0.1:8000
+```
+
+### Cuentas de prueba (solo `APP_ENV=local`)
+
+`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`; en cualquier otro entorno se omite. Todas usan la contraseña `Clave-demo-123`.
+
+| Correo | Rol | Empresa |
+|---|---|---|
+| `plataforma@demo.test` | Administrador de la plataforma | — |
+| `admin@demo.test` | Administrador de empresa | Empresa Demo S.A.C. |
+| `vendedor@demo.test` | Vendedor | Empresa Demo S.A.C. |
+| `inactivo@demo.test` | Vendedor desactivado | Empresa Demo S.A.C. |
+| `admin@otra.test` | Administrador de empresa | Otra Empresa S.A.C. (para probar el aislamiento) |
+
+> Nunca pongas `APP_ENV=local` en un servidor accesible desde fuera: crearía estas cuentas con una contraseña pública.
+
+### Fuera de desarrollo
+
+```bash
 php artisan platform:create-admin   # primer administrador de la plataforma (interactivo)
 php artisan company:create          # alta de una empresa e invitación a su administrador
-php artisan serve                   # http://127.0.0.1:8000
 ```
 
 En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitación y de recuperación aparecen en `storage/logs/laravel.log`. `company:create` también muestra el enlace de invitación en consola.
