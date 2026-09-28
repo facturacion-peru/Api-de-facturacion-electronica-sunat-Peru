@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Audit\Exceptions\AuditLogImmutable;
 use App\Tenancy\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * Registro de auditoría. Inmutable desde T020; se escribe solo con AuditLogger.
+ * Registro de auditoría: inmutable y escrito solo por App\Audit\AuditLogger.
+ * Admite company_id nulo para eventos de plataforma (p. ej. un login fallido
+ * de un correo que no existe).
  */
 class AuditLog extends Model
 {
@@ -33,6 +36,17 @@ class AuditLog extends Model
             'changes' => 'array',
             'created_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new AuditLogImmutable);
+        static::deleting(fn () => throw new AuditLogImmutable);
+    }
+
+    public static function allowsNullCompany(): bool
+    {
+        return true;
     }
 
     public function actor(): BelongsTo

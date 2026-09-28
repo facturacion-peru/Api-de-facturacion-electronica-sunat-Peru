@@ -16,7 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *   TenantContextMissing. `withoutTenancy()` es la única salida y solo debe
  *   usarse en código de plataforma.
  * - Escritura con contexto: rellena company_id y rechaza uno ajeno.
- * - Escritura sin contexto: solo con company_id explícito (consola, plataforma).
+ * - Escritura sin contexto: solo con company_id explícito (consola, plataforma),
+ *   salvo modelos que admiten company_id nulo (allowsNullCompany()).
  */
 trait BelongsToCompany
 {
@@ -28,6 +29,10 @@ trait BelongsToCompany
             $tenant = app(TenantContext::class);
 
             if ($model->company_id === null) {
+                if (! $tenant->has() && static::allowsNullCompany()) {
+                    return;
+                }
+
                 if (! $tenant->has()) {
                     throw new TenantContextMissing($model::class);
                 }
@@ -41,6 +46,12 @@ trait BelongsToCompany
         static::updating(function (Model $model) {
             static::guardTenant($model, app(TenantContext::class));
         });
+    }
+
+    /** Solo la auditoría admite registros sin empresa (eventos de plataforma). */
+    public static function allowsNullCompany(): bool
+    {
+        return false;
     }
 
     /** @return Builder<static> */
