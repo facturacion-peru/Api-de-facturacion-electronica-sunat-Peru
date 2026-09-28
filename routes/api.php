@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Company\InvitationController;
+use App\Http\Controllers\Api\Company\UserController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
 
         Route::middleware('role:company_admin')->group(function () {
+            Route::get('/users', [UserController::class, 'index']);
+            Route::patch('/users/{user}', [UserController::class, 'update']);
+
             Route::get('/invitations', [InvitationController::class, 'index']);
             Route::post('/invitations', [InvitationController::class, 'store']);
             Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend']);
