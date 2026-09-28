@@ -21,7 +21,7 @@ class UbiDistritoSeeder extends Seeder
         }
         
         // Temporalmente desactivar las restricciones de clave foránea
-        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        \Schema::disableForeignKeyConstraints();
         
         $file = fopen($filePath, 'r');
         $header = fgetcsv($file, 0, '|'); // Skip header line
@@ -58,7 +58,7 @@ class UbiDistritoSeeder extends Seeder
         fclose($file);
         
         // Reactivar las restricciones de clave foránea
-        \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        \Schema::enableForeignKeyConstraints();
         
         $this->command->info("Successfully imported {$count} districts from data_ubi.txt");
     }

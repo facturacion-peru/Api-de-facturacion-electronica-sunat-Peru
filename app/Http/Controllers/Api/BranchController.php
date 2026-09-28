@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\RespondsWithCollections;
 use App\Http\Requests\Branch\StoreBranchRequest;
 use App\Http\Requests\Branch\UpdateBranchRequest;
 use App\Models\Branch;
@@ -14,6 +15,8 @@ use Exception;
 
 class BranchController extends Controller
 {
+    use RespondsWithCollections;
+
     /**
      * Listar sucursales de una empresa
      */
@@ -29,13 +32,10 @@ class BranchController extends Controller
 
             $branches = $query->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => $branches,
-                'meta' => [
-                    'total' => $branches->count(),
-                    'companies_count' => $branches->unique('company_id')->count()
-                ]
+            return $this->collectionResponse($branches, null, [
+                'stats' => [
+                    'companies_count' => $branches->unique('company_id')->count(),
+                ],
             ]);
 
         } catch (Exception $e) {
@@ -264,15 +264,14 @@ class BranchController extends Controller
                               ])
                               ->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => $branches,
-                'meta' => [
-                    'company_id' => $company->id,
-                    'company_name' => $company->razon_social,
-                    'total_branches' => $branches->count(),
-                    'active_branches' => $branches->where('activo', true)->count()
-                ]
+            return $this->collectionResponse($branches, null, [
+                'company' => [
+                    'id' => $company->id,
+                    'razon_social' => $company->razon_social,
+                ],
+                'stats' => [
+                    'active_branches' => $branches->where('activo', true)->count(),
+                ],
             ]);
 
         } catch (Exception $e) {

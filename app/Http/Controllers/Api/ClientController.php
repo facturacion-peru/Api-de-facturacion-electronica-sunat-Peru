@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\RespondsWithCollections;
 use App\Models\Client;
 use App\Models\Company;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Exception;
 
 class ClientController extends Controller
 {
+    use RespondsWithCollections;
+
     /**
      * Listar clientes
      */
@@ -43,16 +46,7 @@ class ClientController extends Controller
 
             $clients = $query->paginate(20);
 
-            return response()->json([
-                'success' => true,
-                'data' => $clients->items(),
-                'meta' => [
-                    'total' => $clients->total(),
-                    'per_page' => $clients->perPage(),
-                    'current_page' => $clients->currentPage(),
-                    'last_page' => $clients->lastPage()
-                ]
-            ]);
+            return $this->paginatedResponse($clients);
 
         } catch (Exception $e) {
             Log::error("Error al listar clientes", [
@@ -343,17 +337,11 @@ class ClientController extends Controller
                              ->orderBy('razon_social')
                              ->paginate(50);
 
-            return response()->json([
-                'success' => true,
-                'data' => $clients->items(),
-                'meta' => [
-                    'company_id' => $company->id,
-                    'company_name' => $company->razon_social,
-                    'total' => $clients->total(),
-                    'per_page' => $clients->perPage(),
-                    'current_page' => $clients->currentPage(),
-                    'last_page' => $clients->lastPage()
-                ]
+            return $this->paginatedResponse($clients, null, [
+                'company' => [
+                    'id' => $company->id,
+                    'razon_social' => $company->razon_social,
+                ],
             ]);
 
         } catch (Exception $e) {

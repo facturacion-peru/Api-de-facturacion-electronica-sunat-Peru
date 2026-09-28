@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\RespondsWithCollections;
 use App\Http\Controllers\Traits\HandlesPdfGeneration;
 use App\Services\DocumentService;
 use App\Services\FileService;
@@ -14,7 +15,7 @@ use Illuminate\Http\JsonResponse;
 
 class InvoiceController extends Controller
 {
-    use HandlesPdfGeneration;
+    use HandlesPdfGeneration, RespondsWithCollections;
     protected $documentService;
     protected $fileService;
 
@@ -53,11 +54,7 @@ class InvoiceController extends Controller
             $perPage = $request->get('per_page', 15);
             $invoices = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            return response()->json([
-                'success' => true,
-                'data' => $invoices,
-                'message' => 'Facturas obtenidas correctamente'
-            ]);
+            return $this->paginatedResponse($invoices, 'Facturas obtenidas correctamente');
 
         } catch (\Exception $e) {
             return response()->json([

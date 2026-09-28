@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\RespondsWithCollections;
 use App\Http\Controllers\Traits\HandlesPdfGeneration;
 use App\Http\Requests\Boleta\CreateDailySummaryRequest;
 use App\Http\Requests\Boleta\GetBoletasPendingRequest;
@@ -19,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class BoletaController extends Controller
 {
-    use HandlesPdfGeneration;
+    use HandlesPdfGeneration, RespondsWithCollections;
 
     protected DocumentService $documentService;
     protected FileService $fileService;
@@ -42,11 +43,7 @@ class BoletaController extends Controller
             $perPage = $request->get('per_page', 15);
             $boletas = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            return response()->json([
-                'success' => true,
-                'data' => $boletas->items(),
-                'pagination' => $this->getPaginationData($boletas)
-            ]);
+            return $this->paginatedResponse($boletas);
 
         } catch (Exception $e) {
             return $this->errorResponse('Error al listar boletas', $e);
@@ -367,15 +364,6 @@ class BoletaController extends Controller
     /**
      * Obtener datos de paginación
      */
-    private function getPaginationData($paginator): array
-    {
-        return [
-            'current_page' => $paginator->currentPage(),
-            'last_page' => $paginator->lastPage(),
-            'per_page' => $paginator->perPage(),
-            'total' => $paginator->total(),
-        ];
-    }
 
     /**
      * Respuesta de error estandarizada

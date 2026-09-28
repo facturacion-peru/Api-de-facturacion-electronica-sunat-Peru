@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\RespondsWithCollections;
 use App\Http\Requests\Company\StoreCompanyRequest;
 use App\Http\Requests\Company\UpdateCompanyRequest;
 use App\Models\Company;
@@ -14,6 +15,8 @@ use Exception;
 
 class CompanyController extends Controller
 {
+    use RespondsWithCollections;
+
     /**
      * Listar todas las empresas
      */
@@ -30,14 +33,11 @@ class CompanyController extends Controller
                 ])
                 ->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => $companies,
-                'meta' => [
-                    'total' => $companies->count(),
+            return $this->collectionResponse($companies, null, [
+                'stats' => [
                     'active_count' => $companies->where('activo', true)->count(),
-                    'production_count' => $companies->where('modo_produccion', true)->count()
-                ]
+                    'production_count' => $companies->where('modo_produccion', true)->count(),
+                ],
             ]);
 
         } catch (Exception $e) {

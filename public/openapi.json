@@ -1,0 +1,4419 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "API Facturación SUNAT - BETA",
+        "version": "1.0.0",
+        "description": "Documentación generada automáticamente desde `routes/api.php` y las clases `App\\Http\\Requests\\*`.\n\nPara probar los endpoints protegidos: llama a `POST /api/auth/login`, copia el `access_token` y pégalo en **Authorize**."
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Servidor actual"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "APP_URL (local)"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "Token personal de Laravel Sanctum."
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "auth"
+        },
+        {
+            "name": "boletas"
+        },
+        {
+            "name": "branches"
+        },
+        {
+            "name": "clients"
+        },
+        {
+            "name": "companies"
+        },
+        {
+            "name": "config"
+        },
+        {
+            "name": "consulta-cpe"
+        },
+        {
+            "name": "correlatives"
+        },
+        {
+            "name": "invoices"
+        },
+        {
+            "name": "pdf"
+        },
+        {
+            "name": "setup"
+        },
+        {
+            "name": "system"
+        },
+        {
+            "name": "ubigeos"
+        }
+    ],
+    "paths": {
+        "/api/auth/initialize": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Inicializar sistema - Crear primer super admin",
+                "operationId": "authInitialize",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255,
+                                        "description": "Debe ser único en `users`."
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email"
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login - Autenticación",
+                "operationId": "authLogin",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/setup/migrate": {
+            "post": {
+                "tags": [
+                    "setup"
+                ],
+                "summary": "Migrar base de datos",
+                "operationId": "setupMigrate",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                }
+            }
+        },
+        "/api/setup/seed": {
+            "post": {
+                "tags": [
+                    "setup"
+                ],
+                "summary": "Ejecutar seeders",
+                "operationId": "setupSeed",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "class": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/setup/status": {
+            "get": {
+                "tags": [
+                    "setup"
+                ],
+                "summary": "Estado del sistema",
+                "operationId": "setupStatus",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                }
+            }
+        },
+        "/api/system/info": {
+            "get": {
+                "tags": [
+                    "system"
+                ],
+                "summary": "Obtener información del sistema",
+                "operationId": "authSystemInfo",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/create-user": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Crear usuarios adicionales (solo super admin)",
+                "operationId": "authCreateUser",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255,
+                                        "description": "Debe ser único en `users`."
+                                    },
+                                    "role_name": {
+                                        "type": "string",
+                                        "description": "Debe existir en `roles,name`."
+                                    },
+                                    "company_id": {
+                                        "type": "integer",
+                                        "nullable": true,
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "user_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "system",
+                                            "user",
+                                            "api_client"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "role_name",
+                                    "user_type"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout",
+                "operationId": "authLogout",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Información del usuario autenticado",
+                "operationId": "authMe",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas": {
+            "get": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Listar boletas con filtros",
+                "operationId": "boletaIndex",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Debe existir en `companies,id`."
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Debe existir en `branches,id`."
+                        }
+                    },
+                    {
+                        "name": "estado_sunat",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                                "PENDIENTE",
+                                "PROCESANDO",
+                                "ACEPTADO",
+                                "RECHAZADO"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "fecha_desde",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "fecha_hasta",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true,
+                            "description": "Debe ser posterior a `fecha_desde`."
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "nullable": true,
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Crear nueva boleta",
+                "operationId": "boletaStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "string",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "branch_id": {
+                                        "type": "string",
+                                        "description": "Debe existir en `branches,id`."
+                                    },
+                                    "serie": {
+                                        "type": "string",
+                                        "maxLength": 4
+                                    },
+                                    "fecha_emision": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "ubl_version": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 5
+                                    },
+                                    "tipo_operacion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 4
+                                    },
+                                    "moneda": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 3
+                                    },
+                                    "metodo_envio": {
+                                        "type": "string",
+                                        "enum": [
+                                            "individual",
+                                            "resumen_diario"
+                                        ]
+                                    },
+                                    "forma_pago_tipo": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "forma_pago_cuotas": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "client": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "properties": {
+                                            "tipo_documento": {
+                                                "type": "string",
+                                                "maxLength": 1
+                                            },
+                                            "numero_documento": {
+                                                "type": "string",
+                                                "maxLength": 15
+                                            },
+                                            "razon_social": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "nombre_comercial": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "direccion": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "ubigeo": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 6
+                                            },
+                                            "distrito": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "provincia": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "departamento": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "telefono": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 20
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "format": "email",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            }
+                                        },
+                                        "required": [
+                                            "tipo_documento",
+                                            "numero_documento",
+                                            "razon_social"
+                                        ]
+                                    },
+                                    "detalles": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "codigo": {
+                                                    "type": "string",
+                                                    "maxLength": 30
+                                                },
+                                                "descripcion": {
+                                                    "type": "string",
+                                                    "maxLength": 255
+                                                },
+                                                "unidad": {
+                                                    "type": "string",
+                                                    "maxLength": 3
+                                                },
+                                                "cantidad": {
+                                                    "type": "number",
+                                                    "minimum": 0.01
+                                                },
+                                                "mto_valor_unitario": {
+                                                    "type": "number",
+                                                    "minimum": 0
+                                                },
+                                                "mto_valor_gratuito": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                },
+                                                "porcentaje_igv": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 100
+                                                },
+                                                "porcentaje_ivap": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0,
+                                                    "maximum": 100
+                                                },
+                                                "tip_afe_igv": {
+                                                    "type": "string",
+                                                    "maxLength": 2
+                                                },
+                                                "isc": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                },
+                                                "icbper": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                },
+                                                "factor_icbper": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "codigo",
+                                                "descripcion",
+                                                "unidad",
+                                                "cantidad",
+                                                "mto_valor_unitario",
+                                                "porcentaje_igv",
+                                                "tip_afe_igv"
+                                            ]
+                                        }
+                                    },
+                                    "leyendas": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "maxLength": 4
+                                                },
+                                                "value": {
+                                                    "type": "string",
+                                                    "maxLength": 255
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "value"
+                                            ]
+                                        }
+                                    },
+                                    "datos_adicionales": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "usuario_creacion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    }
+                                },
+                                "required": [
+                                    "company_id",
+                                    "branch_id",
+                                    "serie",
+                                    "fecha_emision",
+                                    "metodo_envio",
+                                    "client",
+                                    "detalles",
+                                    "leyendas"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}": {
+            "get": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Obtener boleta específica",
+                "operationId": "boletaShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}/download-cdr": {
+            "get": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Descargar CDR de boleta",
+                "operationId": "boletaDownloadCdr",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}/download-pdf": {
+            "get": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Descargar PDF de boleta",
+                "operationId": "boletaDownloadPdf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}/download-xml": {
+            "get": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Descargar XML de boleta",
+                "operationId": "boletaDownloadXml",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}/generate-pdf": {
+            "post": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Generar PDF de boleta",
+                "operationId": "boletaGeneratePdf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/boletas/{id}/send-sunat": {
+            "post": {
+                "tags": [
+                    "boletas"
+                ],
+                "summary": "Enviar boleta a SUNAT",
+                "operationId": "boletaSendToSunat",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches": {
+            "get": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Listar sucursales de una empresa",
+                "operationId": "branchIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Crear nueva sucursal",
+                "operationId": "branchStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "codigo": {
+                                        "type": "string",
+                                        "maxLength": 10
+                                    },
+                                    "nombre": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "contacto_nombre": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "series_factura": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_boleta": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_credito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_debito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_guia_remision": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "company_id",
+                                    "codigo",
+                                    "nombre",
+                                    "direccion",
+                                    "ubigeo",
+                                    "distrito",
+                                    "provincia",
+                                    "departamento"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}": {
+            "get": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Obtener sucursal específica",
+                "operationId": "branchShow",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Actualizar sucursal",
+                "operationId": "branchUpdate",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "codigo": {
+                                        "type": "string",
+                                        "maxLength": 10
+                                    },
+                                    "nombre": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "contacto_nombre": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "series_factura": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_boleta": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_credito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_debito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_guia_remision": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Actualizar sucursal",
+                "operationId": "branchUpdatePatch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "codigo": {
+                                        "type": "string",
+                                        "maxLength": 10
+                                    },
+                                    "nombre": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "contacto_nombre": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "series_factura": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_boleta": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_credito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_nota_debito": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "series_guia_remision": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Eliminar sucursal (soft delete - marcar como inactiva)",
+                "operationId": "branchDestroy",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}/activate": {
+            "post": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Activar sucursal",
+                "operationId": "branchActivate",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}/correlatives": {
+            "get": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Listar correlativos de una sucursal",
+                "operationId": "correlativeIndex",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Crear nuevo correlativo para una sucursal",
+                "operationId": "correlativeStore",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}/correlatives/batch": {
+            "post": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Crear correlativos por lote para una sucursal",
+                "operationId": "correlativeCreateBatch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}/correlatives/{correlative}": {
+            "put": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Actualizar correlativo",
+                "operationId": "correlativeUpdate",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "correlative",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Eliminar correlativo",
+                "operationId": "correlativeDestroy",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "correlative",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches/{branch}/correlatives/{correlative}/increment": {
+            "post": {
+                "tags": [
+                    "branches"
+                ],
+                "summary": "Incrementar correlativo (uso interno del sistema)",
+                "operationId": "correlativeIncrement",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "correlative",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/clients": {
+            "get": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Listar clientes",
+                "operationId": "clientIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Crear nuevo cliente",
+                "operationId": "clientStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/clients/search-by-document": {
+            "post": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Buscar cliente por número de documento",
+                "operationId": "clientSearchByDocument",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/clients/{client}": {
+            "get": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Obtener cliente específico",
+                "operationId": "clientShow",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Actualizar cliente",
+                "operationId": "clientUpdate",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Actualizar cliente",
+                "operationId": "clientUpdatePatch",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Eliminar cliente (soft delete - marcar como inactivo)",
+                "operationId": "clientDestroy",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/clients/{client}/activate": {
+            "post": {
+                "tags": [
+                    "clients"
+                ],
+                "summary": "Activar cliente",
+                "operationId": "clientActivate",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Listar todas las empresas",
+                "operationId": "companyIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Crear nueva empresa",
+                "operationId": "companyStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "ruc": {
+                                        "type": "string",
+                                        "minLength": 11,
+                                        "maxLength": 11,
+                                        "description": "Debe ser único en `companies,ruc`."
+                                    },
+                                    "razon_social": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "nombre_comercial": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255
+                                    },
+                                    "web": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "usuario_sol": {
+                                        "type": "string",
+                                        "maxLength": 50
+                                    },
+                                    "clave_sol": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "certificado_pem": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "certificado_password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    },
+                                    "endpoint_beta": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "endpoint_produccion": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "modo_produccion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "true",
+                                            "false",
+                                            "1",
+                                            "0"
+                                        ]
+                                    },
+                                    "logo_path": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "ruc",
+                                    "razon_social",
+                                    "direccion",
+                                    "ubigeo",
+                                    "distrito",
+                                    "provincia",
+                                    "departamento",
+                                    "email",
+                                    "usuario_sol",
+                                    "clave_sol"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Obtener configuración completa de una empresa",
+                "operationId": "companyConfigShow",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config/cache": {
+            "delete": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Limpiar cache de configuración",
+                "operationId": "companyConfigClearCache",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config/migrate": {
+            "post": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Migrar empresa al nuevo sistema de configuraciones",
+                "operationId": "companyConfigMigrateCompany",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config/reset": {
+            "post": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Resetear configuración a valores por defecto",
+                "operationId": "companyConfigResetToDefaults",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config/validate/services": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Validar estado de configuraciones de servicios SUNAT",
+                "operationId": "companyConfigValidateServices",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company_id}/config/{section}": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Obtener configuración de una sección específica",
+                "operationId": "companyConfigGetSection",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "section",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Actualizar configuración de una sección específica",
+                "operationId": "companyConfigUpdateSection",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "section",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company}": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Obtener empresa específica",
+                "operationId": "companyShow",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Actualizar empresa",
+                "operationId": "companyUpdate",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "ruc": {
+                                        "type": "string",
+                                        "minLength": 11,
+                                        "maxLength": 11
+                                    },
+                                    "razon_social": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "nombre_comercial": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255
+                                    },
+                                    "web": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "usuario_sol": {
+                                        "type": "string",
+                                        "maxLength": 50
+                                    },
+                                    "clave_sol": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "certificado_pem": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "certificado_password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    },
+                                    "endpoint_beta": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "endpoint_produccion": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "modo_produccion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "true",
+                                            "false",
+                                            "1",
+                                            "0"
+                                        ]
+                                    },
+                                    "logo_path": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "ruc",
+                                    "razon_social",
+                                    "direccion",
+                                    "ubigeo",
+                                    "distrito",
+                                    "provincia",
+                                    "departamento",
+                                    "email",
+                                    "usuario_sol",
+                                    "clave_sol"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Actualizar empresa",
+                "operationId": "companyUpdatePatch",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "ruc": {
+                                        "type": "string",
+                                        "minLength": 11,
+                                        "maxLength": 11
+                                    },
+                                    "razon_social": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "nombre_comercial": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "direccion": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "distrito": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "provincia": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "departamento": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "telefono": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255
+                                    },
+                                    "web": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "usuario_sol": {
+                                        "type": "string",
+                                        "maxLength": 50
+                                    },
+                                    "clave_sol": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "certificado_pem": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "certificado_password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    },
+                                    "endpoint_beta": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "endpoint_produccion": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "modo_produccion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "true",
+                                            "false",
+                                            "1",
+                                            "0"
+                                        ]
+                                    },
+                                    "logo_path": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "activo": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "ruc",
+                                    "razon_social",
+                                    "direccion",
+                                    "ubigeo",
+                                    "distrito",
+                                    "provincia",
+                                    "departamento",
+                                    "email",
+                                    "usuario_sol",
+                                    "clave_sol"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Eliminar empresa (soft delete)",
+                "operationId": "companyDestroy",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company}/activate": {
+            "post": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Activar empresa",
+                "operationId": "companyActivate",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company}/branches": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Obtener sucursales de una empresa específica",
+                "operationId": "branchGetByCompany",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company}/clients": {
+            "get": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Obtener clientes de una empresa específica",
+                "operationId": "clientGetByCompany",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/companies/{company}/toggle-production": {
+            "post": {
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Cambiar modo de producción",
+                "operationId": "companyToggleProductionMode",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/config/defaults": {
+            "get": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Obtener configuraciones por defecto",
+                "operationId": "companyConfigGetDefaults",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/config/summary": {
+            "get": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Obtener resumen de configuración para múltiples empresas",
+                "operationId": "companyConfigGetSummary",
+                "parameters": [
+                    {
+                        "name": "company_ids",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": []
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/consulta-cpe/boleta/{id}": {
+            "post": {
+                "tags": [
+                    "consulta-cpe"
+                ],
+                "summary": "Consultar estado de una boleta específica",
+                "operationId": "consultaCpeConsultarBoleta",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/consulta-cpe/estadisticas": {
+            "get": {
+                "tags": [
+                    "consulta-cpe"
+                ],
+                "summary": "Obtener estadísticas de consultas por empresa",
+                "operationId": "consultaCpeEstadisticasConsultas",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "Debe existir en `companies,id`."
+                        }
+                    },
+                    {
+                        "name": "fecha_desde",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "fecha_hasta",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true,
+                            "description": "Debe ser posterior a `fecha_desde`."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/consulta-cpe/factura/{id}": {
+            "post": {
+                "tags": [
+                    "consulta-cpe"
+                ],
+                "summary": "Consultar estado de una factura específica",
+                "operationId": "consultaCpeConsultarFactura",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/consulta-cpe/masivo": {
+            "post": {
+                "tags": [
+                    "consulta-cpe"
+                ],
+                "summary": "Consulta masiva de documentos por empresa",
+                "operationId": "consultaCpeConsultarDocumentosMasivo",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "string",
+                                        "description": "Debe existir en `companies,id`."
+                                    }
+                                },
+                                "required": [
+                                    "company_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/correlatives/document-types": {
+            "get": {
+                "tags": [
+                    "correlatives"
+                ],
+                "summary": "Obtener tipos de documentos disponibles",
+                "operationId": "correlativeGetDocumentTypes",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices": {
+            "get": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Listar invoices",
+                "operationId": "invoiceIndex",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Debe existir en `companies,id`."
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Debe existir en `branches,id`."
+                        }
+                    },
+                    {
+                        "name": "estado_sunat",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                                "PENDIENTE",
+                                "PROCESANDO",
+                                "ACEPTADO",
+                                "RECHAZADO"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "fecha_desde",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "fecha_hasta",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true,
+                            "description": "Debe ser posterior a `fecha_desde`."
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "nullable": true,
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Crear invoices",
+                "operationId": "invoiceStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "string",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "branch_id": {
+                                        "type": "string",
+                                        "description": "Debe existir en `branches,id`."
+                                    },
+                                    "serie": {
+                                        "type": "string",
+                                        "maxLength": 4
+                                    },
+                                    "fecha_emision": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "fecha_vencimiento": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true,
+                                        "description": "Debe ser posterior a `fecha_emision`."
+                                    },
+                                    "moneda": {
+                                        "type": "string",
+                                        "enum": [
+                                            "PEN",
+                                            "USD"
+                                        ]
+                                    },
+                                    "tipo_operacion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 4
+                                    },
+                                    "forma_pago_tipo": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Contado",
+                                            "Credito"
+                                        ]
+                                    },
+                                    "forma_pago_cuotas": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "moneda": {
+                                                    "type": "string",
+                                                    "description": "Condicional: `required_with:forma_pago_cuotas`."
+                                                },
+                                                "monto": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "description": "Condicional: `required_with:forma_pago_cuotas`."
+                                                },
+                                                "fecha_pago": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "description": "Condicional: `required_with:forma_pago_cuotas`."
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "client": {
+                                        "type": "object",
+                                        "properties": {
+                                            "tipo_documento": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "1",
+                                                    "4",
+                                                    "6",
+                                                    "0"
+                                                ]
+                                            },
+                                            "numero_documento": {
+                                                "type": "string",
+                                                "maxLength": 15
+                                            },
+                                            "razon_social": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "nombre_comercial": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "direccion": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "ubigeo": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "minLength": 6,
+                                                "maxLength": 6
+                                            },
+                                            "distrito": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "provincia": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "departamento": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            },
+                                            "telefono": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 20
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "format": "email",
+                                                "nullable": true,
+                                                "maxLength": 100
+                                            }
+                                        },
+                                        "required": [
+                                            "tipo_documento",
+                                            "numero_documento",
+                                            "razon_social"
+                                        ]
+                                    },
+                                    "detalles": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "codigo": {
+                                                    "type": "string",
+                                                    "maxLength": 50
+                                                },
+                                                "descripcion": {
+                                                    "type": "string",
+                                                    "maxLength": 500
+                                                },
+                                                "unidad": {
+                                                    "type": "string",
+                                                    "maxLength": 3
+                                                },
+                                                "cantidad": {
+                                                    "type": "number",
+                                                    "minimum": 0.001
+                                                },
+                                                "mto_valor_unitario": {
+                                                    "type": "number",
+                                                    "minimum": 0
+                                                },
+                                                "porcentaje_igv": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                },
+                                                "porcentaje_ivap": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0,
+                                                    "maximum": 100
+                                                },
+                                                "mto_valor_gratuito": {
+                                                    "type": "number",
+                                                    "nullable": true,
+                                                    "minimum": 0
+                                                },
+                                                "tip_afe_igv": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "enum": [
+                                                        "10",
+                                                        "11",
+                                                        "12",
+                                                        "13",
+                                                        "14",
+                                                        "15",
+                                                        "16",
+                                                        "17",
+                                                        "20",
+                                                        "21",
+                                                        "30",
+                                                        "31",
+                                                        "32",
+                                                        "33",
+                                                        "34",
+                                                        "35",
+                                                        "36",
+                                                        "40"
+                                                    ]
+                                                },
+                                                "codigo_producto_sunat": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "maxLength": 50
+                                                }
+                                            },
+                                            "required": [
+                                                "codigo",
+                                                "descripcion",
+                                                "unidad",
+                                                "cantidad",
+                                                "mto_valor_unitario"
+                                            ]
+                                        }
+                                    },
+                                    "detraccion": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "properties": {
+                                            "codigo_bien_servicio": {
+                                                "type": "string",
+                                                "maxLength": 3,
+                                                "description": "Condicional: `required_with:detraccion`."
+                                            },
+                                            "codigo_medio_pago": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 3
+                                            },
+                                            "cuenta_banco": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 20
+                                            },
+                                            "porcentaje": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Condicional: `required_with:detraccion`."
+                                            },
+                                            "monto": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "minimum": 0
+                                            }
+                                        }
+                                    },
+                                    "percepcion": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "properties": {
+                                            "cod_regimen": {
+                                                "type": "string",
+                                                "maxLength": 2,
+                                                "description": "Condicional: `required_with:percepcion`."
+                                            },
+                                            "tasa": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Condicional: `required_with:percepcion`."
+                                            },
+                                            "monto": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:percepcion`."
+                                            },
+                                            "monto_base": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:percepcion`."
+                                            },
+                                            "monto_total": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:percepcion`."
+                                            }
+                                        }
+                                    },
+                                    "retencion": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "properties": {
+                                            "cod_regimen": {
+                                                "type": "string",
+                                                "maxLength": 2,
+                                                "description": "Condicional: `required_with:retencion`."
+                                            },
+                                            "tasa": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Condicional: `required_with:retencion`."
+                                            },
+                                            "monto": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:retencion`."
+                                            },
+                                            "monto_base": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:retencion`."
+                                            },
+                                            "monto_total": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "description": "Condicional: `required_with:retencion`."
+                                            }
+                                        }
+                                    },
+                                    "guias": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "documentos_relacionados": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "datos_adicionales": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "usuario_creacion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    }
+                                },
+                                "required": [
+                                    "company_id",
+                                    "branch_id",
+                                    "serie",
+                                    "fecha_emision",
+                                    "moneda",
+                                    "forma_pago_tipo",
+                                    "client",
+                                    "detalles"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}": {
+            "get": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Obtener invoices",
+                "operationId": "invoiceShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}/download-cdr": {
+            "get": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Download cdr invoices",
+                "operationId": "invoiceDownloadCdr",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}/download-pdf": {
+            "get": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Download pdf invoices",
+                "operationId": "invoiceDownloadPdf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}/download-xml": {
+            "get": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Download xml invoices",
+                "operationId": "invoiceDownloadXml",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}/generate-pdf": {
+            "post": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Generate pdf invoices",
+                "operationId": "invoiceGeneratePdf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{id}/send-sunat": {
+            "post": {
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Send to sunat invoices",
+                "operationId": "invoiceSendToSunat",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pdf/formats": {
+            "get": {
+                "tags": [
+                    "pdf"
+                ],
+                "summary": "Obtener formatos disponibles para PDF",
+                "operationId": "pdfGetAvailableFormats",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/setup/complete": {
+            "post": {
+                "tags": [
+                    "setup"
+                ],
+                "summary": "Setup completo del sistema",
+                "operationId": "setupSetup",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "environment": {
+                                        "type": "string",
+                                        "enum": [
+                                            "beta",
+                                            "produccion"
+                                        ]
+                                    },
+                                    "company": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "properties": {
+                                            "ruc": {
+                                                "type": "string",
+                                                "minLength": 11,
+                                                "maxLength": 11
+                                            },
+                                            "razon_social": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "nombre_comercial": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "direccion": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "ubigeo": {
+                                                "type": "string",
+                                                "minLength": 6,
+                                                "maxLength": 6
+                                            },
+                                            "distrito": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "provincia": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "departamento": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "telefono": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "format": "email",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "web": {
+                                                "type": "string",
+                                                "format": "uri",
+                                                "nullable": true,
+                                                "maxLength": 255
+                                            },
+                                            "usuario_sol": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            },
+                                            "clave_sol": {
+                                                "type": "string",
+                                                "maxLength": 255
+                                            }
+                                        },
+                                        "required": [
+                                            "ruc",
+                                            "razon_social",
+                                            "direccion",
+                                            "ubigeo",
+                                            "distrito",
+                                            "provincia",
+                                            "departamento",
+                                            "usuario_sol",
+                                            "clave_sol"
+                                        ]
+                                    },
+                                    "certificado_pem": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 2048
+                                    },
+                                    "certificado_password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "logo_path": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "maxLength": 1024
+                                    },
+                                    "modo_produccion": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "true",
+                                            "false",
+                                            "1",
+                                            "0"
+                                        ]
+                                    },
+                                    "activo": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "true",
+                                            "false",
+                                            "1",
+                                            "0"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "environment",
+                                    "company"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/setup/configure-sunat": {
+            "post": {
+                "tags": [
+                    "setup"
+                ],
+                "summary": "Configuración del entorno SUNAT",
+                "operationId": "setupConfigureSunat",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "description": "Debe existir en `companies,id`."
+                                    },
+                                    "environment": {
+                                        "type": "string",
+                                        "enum": [
+                                            "beta",
+                                            "produccion"
+                                        ]
+                                    },
+                                    "certificate_file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "certificate_password": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "force_update": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "company_id",
+                                    "environment"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ubigeos/distritos": {
+            "get": {
+                "tags": [
+                    "ubigeos"
+                ],
+                "summary": "Get distritos ubigeos",
+                "operationId": "ubigeoGetDistritos",
+                "parameters": [
+                    {
+                        "name": "provincia_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 6,
+                            "maxLength": 6
+                        }
+                    },
+                    {
+                        "name": "region_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 6,
+                            "maxLength": 6
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 2,
+                            "maxLength": 255
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ubigeos/provincias": {
+            "get": {
+                "tags": [
+                    "ubigeos"
+                ],
+                "summary": "Get provincias ubigeos",
+                "operationId": "ubigeoGetProvincias",
+                "parameters": [
+                    {
+                        "name": "region_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 6,
+                            "maxLength": 6
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ubigeos/regiones": {
+            "get": {
+                "tags": [
+                    "ubigeos"
+                ],
+                "summary": "Get regiones ubigeos",
+                "operationId": "ubigeoGetRegiones",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ubigeos/search": {
+            "get": {
+                "tags": [
+                    "ubigeos"
+                ],
+                "summary": "Search ubigeo ubigeos",
+                "operationId": "ubigeoSearchUbigeo",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "region_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 6,
+                            "maxLength": 6
+                        }
+                    },
+                    {
+                        "name": "provincia_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 6,
+                            "maxLength": 6
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ubigeos/{id}": {
+            "get": {
+                "tags": [
+                    "ubigeos"
+                ],
+                "summary": "Get ubigeo by id ubigeos",
+                "operationId": "ubigeoGetUbigeoById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    }
+}

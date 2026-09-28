@@ -26,13 +26,17 @@ return new class extends Migration
                 ->delete();
         }
         
-        // Actualizar la estructura del ENUM removiendo tipos no utilizados
-        DB::statement("ALTER TABLE company_configurations MODIFY COLUMN config_type ENUM(
-            'tax_settings',
-            'invoice_settings', 
-            'gre_settings',
-            'document_settings'
-        ) NOT NULL");
+        // Actualizar la estructura del ENUM removiendo tipos no utilizados.
+        // Solo aplica a MySQL/MariaDB: en otros motores (PostgreSQL, SQLite) la
+        // columna ya se crea con los 4 valores vigentes y no requiere cambios.
+        if (DB::getDriverName() === 'mysql' || DB::getDriverName() === 'mariadb') {
+            DB::statement("ALTER TABLE company_configurations MODIFY COLUMN config_type ENUM(
+                'tax_settings',
+                'invoice_settings',
+                'gre_settings',
+                'document_settings'
+            ) NOT NULL");
+        }
         
         // Asegurar que existen configuraciones básicas para empresas existentes
         $companies = DB::table('companies')->where('activo', 1)->get();
@@ -147,7 +151,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Revertir cambios - restaurar ENUM original
+        // Revertir cambios - restaurar ENUM original (solo MySQL/MariaDB)
+        if (DB::getDriverName() !== 'mysql' && DB::getDriverName() !== 'mariadb') {
+            return;
+        }
+
         DB::statement("ALTER TABLE company_configurations MODIFY COLUMN config_type ENUM(
             'sunat_credentials',
             'service_endpoints',
