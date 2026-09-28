@@ -6,6 +6,7 @@ use App\Enums\PersonType;
 use App\Enums\TaxRegime;
 use App\Models\Company;
 use App\Models\Establishment;
+use App\Rules\Ruc;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -55,15 +56,6 @@ class CompanyFactory extends Factory
             $base = $prefix.fake()->numerify('########');
         } while (Company::where('ruc', 'like', $base.'%')->exists());
 
-        $weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-        $sum = 0;
-
-        foreach (str_split($base) as $i => $digit) {
-            $sum += (int) $digit * $weights[$i];
-        }
-
-        $check = 11 - ($sum % 11);
-
-        return $base.($check === 10 ? 0 : ($check === 11 ? 1 : $check));
+        return $base.Ruc::checkDigit($base);
     }
 }
