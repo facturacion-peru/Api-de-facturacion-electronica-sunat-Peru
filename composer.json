@@ -64,6 +64,12 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "test:pgsql": [
+            "@php artisan config:clear --ansi",
+            "@putenv DB_CONNECTION=pgsql",
+            "@putenv DB_DATABASE=db_api_sunat_testing",
+            "@php artisan test"
         ]
     },
     "extra": {

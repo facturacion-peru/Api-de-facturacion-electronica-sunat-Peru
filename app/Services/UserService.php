@@ -57,6 +57,10 @@ class UserService
         });
     }
 
+    /**
+     * Bloquea las filas y las cuenta en PHP: PostgreSQL no admite FOR UPDATE
+     * junto con count().
+     */
     private function otherActiveAdmins(CompanyMembership $membership): int
     {
         return CompanyMembership::query()
@@ -64,6 +68,7 @@ class UserService
             ->where('active', true)
             ->whereKeyNot($membership->id)
             ->lockForUpdate()
+            ->pluck('id')
             ->count();
     }
 }
