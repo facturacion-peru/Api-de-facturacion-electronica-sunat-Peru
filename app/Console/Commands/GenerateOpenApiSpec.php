@@ -512,8 +512,17 @@ class GenerateOpenApiSpec extends Command
             'name' => $match[1],
             'in' => 'path',
             'required' => ! isset($match[2]),
-            'schema' => ['type' => in_array($match[1], ['section'], true) ? 'string' : 'integer'],
+            'schema' => ['type' => $this->isStringPathParameter($route, $match[1]) ? 'string' : 'integer'],
         ], $matches);
+    }
+
+    /**
+     * Los identificadores de modelo son enteros; los tokens de invitación y
+     * los códigos de ubigeo (6 dígitos con ceros a la izquierda) son cadenas.
+     */
+    private function isStringPathParameter(RoutingRoute $route, string $name): bool
+    {
+        return $name === 'token' || ($name === 'id' && str_contains($route->uri(), 'ubigeos/'));
     }
 
     /**
