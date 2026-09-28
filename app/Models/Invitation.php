@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CompanyRole;
+use App\Tenancy\BelongsToCompany;
 use Database\Factories\InvitationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Invitation extends Model
 {
     /** @use HasFactory<InvitationFactory> */
-    use HasFactory;
+    use BelongsToCompany, HasFactory;
 
     protected $fillable = [
         'company_id',
@@ -45,11 +46,6 @@ class Invitation extends Model
     public function isPending(): bool
     {
         return $this->accepted_at === null && $this->expires_at->isFuture();
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function inviter(): BelongsTo

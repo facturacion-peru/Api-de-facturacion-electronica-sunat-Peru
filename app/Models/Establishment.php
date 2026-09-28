@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Tenancy\BelongsToCompany;
 use Database\Factories\EstablishmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Establishment extends Model
 {
     /** @use HasFactory<EstablishmentFactory> */
-    use HasFactory;
+    use BelongsToCompany, HasFactory;
 
     public const MAIN_CODE = '0000';
 
@@ -29,11 +30,6 @@ class Establishment extends Model
         return [
             'is_main' => 'boolean',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function district(): BelongsTo

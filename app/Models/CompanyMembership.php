@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CompanyRole;
+use App\Tenancy\BelongsToCompany;
 use Database\Factories\CompanyMembershipFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CompanyMembership extends Model
 {
     /** @use HasFactory<CompanyMembershipFactory> */
-    use HasFactory;
+    use BelongsToCompany, HasFactory;
 
     protected $table = 'company_user';
 
@@ -29,11 +30,6 @@ class CompanyMembership extends Model
             'role' => CompanyRole::class,
             'active' => 'boolean',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function user(): BelongsTo
