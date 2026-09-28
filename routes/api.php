@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Company\AuditLogController;
 use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
@@ -48,6 +49,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/invitations', [InvitationController::class, 'store']);
             Route::post('/invitations/{invitation}/resend', [InvitationController::class, 'resend']);
             Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy']);
+
+            Route::get('/audit-logs', [AuditLogController::class, 'index']);
         });
 
         Route::prefix('ubigeos')->group(function () {
