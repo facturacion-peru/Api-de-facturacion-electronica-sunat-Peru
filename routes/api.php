@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,6 @@ Route::prefix('v1')->group(function () {
 
     // Plataforma
     Route::middleware(['auth:sanctum', 'platform.admin'])->prefix('platform')->group(function () {
-        //
+        Route::post('/companies', [PlatformCompanyController::class, 'store']);
     });
 });
