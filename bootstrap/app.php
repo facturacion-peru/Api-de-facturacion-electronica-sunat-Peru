@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureCompanyRole;
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\ResolveTenant;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -23,6 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // La API no redirige a una pantalla de login: responde 401 (ver withExceptions).
         $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
+
+        $middleware->alias([
+            'tenant' => ResolveTenant::class,
+            'role' => EnsureCompanyRole::class,
+            'platform.admin' => EnsurePlatformAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Las rutas api/* responden siempre JSON, pida o no el cliente JSON.
