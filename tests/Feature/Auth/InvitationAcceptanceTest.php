@@ -5,6 +5,7 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Hash;
 
 /*
@@ -97,7 +98,7 @@ it('rechaza si el correo ya tiene cuenta', function () {
 });
 
 it('limita los intentos', function () {
-    foreach (range(1, 10) as $i) {
+    foreach (range(1, AppServiceProvider::PUBLIC_AUTH_PER_MINUTE) as $i) {
         $this->getJson('/api/v1/invitations/'.str_repeat('c', 64));
     }
 

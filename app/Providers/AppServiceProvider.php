@@ -13,6 +13,9 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** Peticiones por minuto e IP a las rutas públicas de autenticación. */
+    public const PUBLIC_AUTH_PER_MINUTE = 30;
+
     /**
      * Register any application services.
      */
@@ -27,9 +30,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Rutas públicas de autenticación (principio IV). El bloqueo por
-        // intentos fallidos de login por correo + IP va aparte (RF-012).
-        RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
+        // Rutas públicas de autenticación (principio IV). Holgado porque una
+        // oficina comparte IP pública; la defensa contra fuerza bruta es el
+        // bloqueo por cuenta (5 fallos en 15 min por correo + IP, RF-012).
+        RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(self::PUBLIC_AUTH_PER_MINUTE)->by($request->ip()));
 
         // User no tiene scope de empresa: {user} se resuelve solo entre los
         // miembros de la empresa del contexto (fuera de uno, siempre 404).
