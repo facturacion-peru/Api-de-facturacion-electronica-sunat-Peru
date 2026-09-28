@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
@@ -17,12 +18,18 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Público
     Route::middleware('throttle:auth')->group(function () {
+        Route::post('/auth/login', [AuthController::class, 'login']);
         Route::get('/invitations/{token}', [InvitationAcceptanceController::class, 'show']);
         Route::post('/invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept']);
     });
 
+    // Cualquier usuario autenticado: cerrar su propia sesión.
+    Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
+        Route::get('/auth/me', [AuthController::class, 'me']);
+
         Route::prefix('ubigeos')->group(function () {
             Route::get('/regiones', [UbigeoController::class, 'getRegiones']);
             Route::get('/provincias', [UbigeoController::class, 'getProvincias']);

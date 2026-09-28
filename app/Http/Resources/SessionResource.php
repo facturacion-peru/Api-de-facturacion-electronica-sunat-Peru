@@ -31,6 +31,7 @@ class SessionResource extends ApiResource
                 fn () => now()->addMinutes((int) config('sanctum.expiration'))->toIso8601String(),
             ),
             'user' => UserResource::make($this->resource),
+            'platform_admin' => $this->is_platform_admin,
             'company' => $company ? [
                 'id' => $company->id,
                 'ruc' => $company->ruc,
