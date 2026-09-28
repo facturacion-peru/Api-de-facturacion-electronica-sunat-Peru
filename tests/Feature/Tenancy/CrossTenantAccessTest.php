@@ -1,0 +1,116 @@
+<?php
+
+use App\Audit\AuditLogger;
+use App\Enums\CompanyRole;
+use App\Models\Company;
+use App\Models\Invitation;
+use App\Models\User;
+use App\Tenancy\TenantContext;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+
+/*
+ * T090 · HU-4.1 a HU-4.3: un usuario de la empresa A nunca lee ni modifica
+ * datos de la empresa B (RF-030 a RF-033, CE-002). Recorre el inventario de
+ * TenantRoutes.php, que TenantRoutesCoverageTest mantiene completo.
+ */
+
+function tenantRoutes(string $type): array
+{
+    return collect(require __DIR__.'/TenantRoutes.php')
+        ->filter(fn (array $case) => $case['type'] === $type)
+        ->map(fn (array $case, string $route) => [$route, $case])
+        ->all();
+}
+
+beforeEach(function () {
+    Notification::fake();
+    Storage::fake('public');
+
+    $this->a = Company::factory()->withMainEstablishment()->create(['razon_social' => 'Empresa A S.A.C.']);
+    $this->b = Company::factory()->withMainEstablishment()->create(['razon_social' => 'Empresa B S.A.C.', 'nombre_comercial' => 'Marca B']);
+
+    $this->adminA = User::factory()->forCompany($this->a, CompanyRole::CompanyAdmin)->create();
+    $this->adminB = User::factory()->forCompany($this->b, CompanyRole::CompanyAdmin)->create(['email' => 'admin-b@empresa-b.pe']);
+    $this->sellerB = User::factory()->forCompany($this->b, CompanyRole::Seller)->create(['email' => 'vendedor-b@empresa-b.pe']);
+    $this->invitationB = Invitation::factory()->create(['company_id' => $this->b->id, 'email' => 'invitado-b@empresa-b.pe']);
+
+    app(TenantContext::class)->run($this->b, fn () => app(AuditLogger::class)->record('b.accion_secreta', $this->sellerB, actor: $this->adminB));
+
+    $this->token = $this->adminA->createToken('t')->plainTextToken;
+
+    /** Rastros de B que nunca deben aparecer en una respuesta a A. */
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta'];
+});
+
+function callAsA(string $method, string $uri, array $data = [])
+{
+    app('auth')->forgetGuards();
+
+    return test()->withToken(test()->token)->json($method, $uri, $data);
+}
+
+function expectNoTraceOfB($response): void
+{
+    foreach (test()->bMarkers as $marker) {
+        expect($response->getContent())->not->toContain($marker);
+    }
+}
+
+it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string $route, array $case) {
+    [$method, $uri] = explode(' ', $route, 2);
+    $idOfB = match ($case['param']) {
+        'user' => $this->sellerB->id,
+        'invitation' => $this->invitationB->id,
+    };
+    $payload = $method === 'PATCH' ? ['active' => false, 'role' => 'seller'] : [];
+
+    $ofB = callAsA($method, '/'.str_replace('{'.$case['param'].'}', (string) $idOfB, $uri), $payload);
+    $missing = callAsA($method, '/'.str_replace('{'.$case['param'].'}', '999999', $uri), $payload);
+
+    $ofB->assertNotFound();
+    expect($ofB->json())->toBe($missing->json());
+    expectNoTraceOfB($ofB);
+
+    expect($this->sellerB->membership()->first()->active)->toBeTrue()
+        ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
+})->with(tenantRoutes('resource'));
+
+it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route) {
+    [$method, $uri] = explode(' ', $route, 2);
+
+    $response = callAsA($method, '/'.$uri, ['company_id' => $this->b->id, 'actor_id' => $this->adminB->id]);
+
+    $response->assertOk();
+    expectNoTraceOfB($response);
+})->with(tenantRoutes('list'));
+
+it('los datos propios son siempre los de A', function (string $route) {
+    [$method, $uri] = explode(' ', $route, 2);
+
+    $response = callAsA($method, '/'.$uri, ['company_id' => $this->b->id]);
+
+    $response->assertOk();
+    expect($response->json('data.company.id') ?? $response->json('data.id'))->toBe($this->a->id);
+    expectNoTraceOfB($response);
+})->with(tenantRoutes('own'));
+
+it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $route) {
+    $bBefore = $this->b->fresh()->toArray();
+
+    $response = match ($route) {
+        'PATCH api/v1/company' => callAsA('PATCH', '/api/v1/company', ['company_id' => $this->b->id, 'id' => $this->b->id, 'nombre_comercial' => 'Hackeada']),
+        'POST api/v1/company/logo' => callAsA('POST', '/api/v1/company/logo', ['company_id' => $this->b->id, 'logo' => UploadedFile::fake()->image('logo.png')]),
+        'POST api/v1/invitations' => callAsA('POST', '/api/v1/invitations', ['company_id' => $this->b->id, 'email' => 'nuevo@example.com', 'role' => 'seller']),
+    };
+
+    expect($response->status())->toBeLessThan(500);
+    expect($this->b->fresh()->toArray())->toBe($bBefore);
+    expect(Invitation::withoutTenancy()->where('company_id', $this->b->id)->pluck('email')->all())->toBe(['invitado-b@empresa-b.pe']);
+    expectNoTraceOfB($response);
+})->with(array_keys(tenantRoutes('write')));
+
+it('las rutas de referencia exentas justifican su exención', function (string $route, array $case) {
+    expect($case['reason'] ?? '')->not->toBeEmpty();
+})->with(tenantRoutes('reference'));
