@@ -7,7 +7,6 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
-use ReflectionClass;
 use ReflectionMethod;
 use Throwable;
 
@@ -60,7 +59,7 @@ class GenerateOpenApiSpec extends Command
             'info' => [
                 'title' => config('app.name'),
                 'version' => '1.0.0',
-                'description' => "Documentación generada automáticamente desde `routes/api.php` y las clases "
+                'description' => 'Documentación generada automáticamente desde `routes/api.php` y las clases '
                     ."`App\\Http\\Requests\\*`.\n\nPara probar los endpoints protegidos: llama a "
                     .'`POST /api/auth/login`, copia el `access_token` y pégalo en **Authorize**.',
             ],
