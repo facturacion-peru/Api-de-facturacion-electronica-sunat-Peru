@@ -47,6 +47,8 @@ return [
         'timeout' => (int) env('SUNAT_TIMEOUT', 10),
         // Envío de comprobantes: más holgado que la comprobación de conexión.
         'send_timeout' => (int) env('SUNAT_SEND_TIMEOUT', 15),
+        // Beta responde 401 si se envía segundos después de otro documento (spike T002).
+        'rate_limit_pause' => (int) env('SUNAT_RATE_LIMIT_PAUSE', 5),
     ],
 
 ];

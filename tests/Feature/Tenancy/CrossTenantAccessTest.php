@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Invitation;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\SalesDocument;
 use App\Models\Series;
 use App\Models\SunatSetting;
 use App\Models\Ticket;
@@ -140,6 +141,11 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'POST api/v1/sunat/certificate' => callAsA('POST', '/api/v1/sunat/certificate', ['company_id' => $this->b->id, 'password' => 'x']),
         'POST api/v1/sunat/validate' => callAsA('POST', '/api/v1/sunat/validate', ['company_id' => $this->b->id]),
         'POST api/v1/customers' => callAsA('POST', '/api/v1/customers', ['company_id' => $this->b->id, 'document_type' => '1', 'document_number' => '11223344', 'name' => 'Cliente de A']),
+        'POST api/v1/sales-documents' => callAsA('POST', '/api/v1/sales-documents', [
+            'company_id' => $this->b->id, 'idempotency_key' => $this->ticketB->idempotency_key, 'document_type' => '03',
+            'series_id' => $this->seriesB->id, 'customer_id' => $this->customerB->id, 'payment_method' => 'cash',
+            'lines' => [['product_id' => $this->productB->id, 'quantity' => '1']],
+        ]),
         'POST api/v1/series' => callAsA('POST', '/api/v1/series', ['company_id' => $this->b->id, 'document_type' => '03', 'code' => 'B777']),
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
@@ -153,7 +159,9 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ->and($this->sunatB->fresh()->sol_password)->toBe('ClaveSolDeB')
         ->and($this->sunatB->fresh()->status->value)->toBe('pending')
         ->and(Series::withoutTenancy()->where('company_id', $this->b->id)->pluck('code')->all())->toBe(['BZ99'])
-        ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B']);
+        ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B'])
+        ->and(SalesDocument::withoutTenancy()->count())->toBe(0)
+        ->and($this->seriesB->fresh()->last_number)->toBe(42);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
 

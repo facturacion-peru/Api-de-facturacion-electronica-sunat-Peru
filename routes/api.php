@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\Sales\CustomerController;
+use App\Http\Controllers\Api\Sales\SalesDocumentController;
 use App\Http\Controllers\Api\Sales\TicketController;
 use App\Http\Controllers\Api\Sunat\SeriesController;
 use App\Http\Controllers\Api\Sunat\SunatController;
@@ -59,6 +60,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+        Route::post('/sales-documents', [SalesDocumentController::class, 'store']);
 
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);

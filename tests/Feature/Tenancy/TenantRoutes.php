@@ -51,6 +51,7 @@ return [
     'GET api/v1/customers' => ['type' => 'list'],
     'POST api/v1/customers' => ['type' => 'write'],
     'PATCH api/v1/customers/{customer}' => ['type' => 'resource', 'param' => 'customer'],
+    'POST api/v1/sales-documents' => ['type' => 'write'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
