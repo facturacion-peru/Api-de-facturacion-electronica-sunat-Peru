@@ -80,7 +80,8 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
     expectNoTraceOfB($ofB);
 
     expect($this->productB->fresh()->name)->toBe('Producto secreto de B')
-        ->and($this->productB->fresh()->active)->toBeTrue();
+        ->and($this->productB->fresh()->active)->toBeTrue()
+        ->and(ProductLot::withoutTenancy()->where('product_id', $this->productB->id)->count())->toBe(1);
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
