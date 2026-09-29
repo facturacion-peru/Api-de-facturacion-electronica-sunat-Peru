@@ -7,14 +7,17 @@ use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionTrigger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\IndexSalesDocumentRequest;
+use App\Http\Requests\Sales\SalesDocumentPdfRequest;
 use App\Http\Requests\Sales\StoreSalesDocumentRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\SalesDocumentResource;
 use App\Models\SalesDocument;
+use App\Sales\DocumentPdf;
 use App\Services\SalesDocumentService;
 use App\Sunat\SunatDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -85,5 +88,43 @@ class SalesDocumentController extends Controller
         abort_unless($dispatcher->send($salesDocument, SubmissionTrigger::Manual, $request->user()), 409, 'Este comprobante ya se está enviando a SUNAT.');
 
         return SalesDocumentResource::make($salesDocument->refresh()->load(['lines', 'seller', 'submissions']));
+    }
+
+    public function pdf(SalesDocumentPdfRequest $request, SalesDocument $salesDocument, DocumentPdf $pdf): Response
+    {
+        $format = $request->validated('format', 'a4');
+
+        return response($pdf->render($salesDocument->load(['lines', 'company']), $format), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$salesDocument->display_number}-{$format}.pdf\"",
+        ]);
+    }
+
+    /** XML firmado, con el nombre que usa SUNAT: RUC-tipo-serie-número. */
+    public function xml(SalesDocument $salesDocument): Response
+    {
+        return response($salesDocument->xml, 200, [
+            'Content-Type' => 'application/xml',
+            'Content-Disposition' => "attachment; filename=\"{$this->sunatName($salesDocument)}.xml\"",
+        ]);
+    }
+
+    public function cdr(SalesDocument $salesDocument): Response|JsonResponse
+    {
+        // Respuesta directa: el manejador global unifica los 404 para no revelar
+        // recursos de otras empresas, pero este comprobante sí es de la empresa.
+        if ($salesDocument->cdr === null) {
+            return response()->json(['success' => false, 'message' => 'SUNAT aún no devolvió el CDR de este comprobante.'], 404);
+        }
+
+        return response(base64_decode($salesDocument->cdr), 200, [
+            'Content-Type' => 'application/zip',
+            'Content-Disposition' => "attachment; filename=\"R-{$this->sunatName($salesDocument)}.zip\"",
+        ]);
+    }
+
+    private function sunatName(SalesDocument $document): string
+    {
+        return "{$document->issuer_ruc}-{$document->document_type->value}-{$document->series_code}-{$document->number}";
     }
 }

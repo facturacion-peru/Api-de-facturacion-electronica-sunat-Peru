@@ -64,6 +64,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/sales-documents', [SalesDocumentController::class, 'store']);
         Route::get('/sales-documents/{salesDocument}', [SalesDocumentController::class, 'show']);
         Route::post('/sales-documents/{salesDocument}/retry', [SalesDocumentController::class, 'retry']);
+        Route::get('/sales-documents/{salesDocument}/pdf', [SalesDocumentController::class, 'pdf']);
+        Route::get('/sales-documents/{salesDocument}/xml', [SalesDocumentController::class, 'xml']);
+        Route::get('/sales-documents/{salesDocument}/cdr', [SalesDocumentController::class, 'cdr']);
 
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);
