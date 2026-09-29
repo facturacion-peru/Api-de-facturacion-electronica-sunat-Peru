@@ -28,6 +28,18 @@ final class Decimal
         return bcadd(str_starts_with($value, '-') ? bcsub($value, $half, $scale + 1) : bcadd($value, $half, $scale + 1), '0', $scale);
     }
 
+    /** Redondeo mitad hacia arriba, lejos de cero (2.345 → 2.35; -2.345 → -2.35). */
+    public static function round(string $value, int $scale = 2): string
+    {
+        return self::fromDb($value, $scale);
+    }
+
+    /** Producto exacto redondeado a la escala (importe = cantidad × precio). */
+    public static function mul(string $a, string $b, int $scale = 2): string
+    {
+        return self::round(bcmul($a, $b, $scale + 6), $scale);
+    }
+
     /** @param  iterable<mixed>  $values */
     public static function sum(iterable $values, int $scale = 3): string
     {

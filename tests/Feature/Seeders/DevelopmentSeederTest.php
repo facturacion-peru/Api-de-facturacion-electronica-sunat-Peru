@@ -5,6 +5,7 @@ use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Database\Seeders\DatabaseSeeder;
@@ -44,7 +45,7 @@ it('en local crea la plataforma, las empresas demo y sus usuarios', function () 
         ->and(Hash::check(DevelopmentSeeder::PASSWORD, User::where('email', 'admin@demo.test')->value('password')))->toBeTrue();
 
     $azucar = Product::withoutTenancy()->where('code', 'AZU-001')->first();
-    expect(app(TenantContext::class)->run($azucar->company, fn () => $azucar->stock()))->toBe('50.500');
+    expect(app(TenantContext::class)->run($azucar->company, fn () => $azucar->stock()))->toBe('48.000'); // 50.500 − 2.500 vendidos en la venta demo
 
     Company::with('mainEstablishment')->get()->each(
         fn (Company $company) => expect($company->mainEstablishment?->code)->toBe('0000')
@@ -60,7 +61,9 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
     expect(User::count())->toBe(5)
         ->and(Company::count())->toBe(2)
         ->and(Product::withoutTenancy()->count())->toBe(6)
-        ->and(ProductLot::withoutTenancy()->count())->toBe(7);
+        ->and(ProductLot::withoutTenancy()->count())->toBe(7)
+        ->and(Ticket::withoutTenancy()->count())->toBe(4)
+        ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1);
 });
 
 it('fuera de local no crea usuarios ni empresas', function (string $env) {

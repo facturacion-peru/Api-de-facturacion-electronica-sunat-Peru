@@ -10,7 +10,8 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 |---|---|---|
 | [001](../docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
 | [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
-| 003–005 | Tickets, configuración SUNAT, emisión en beta | En aclaración |
+| [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
+| 004–005 | Configuración SUNAT, emisión en beta | En aclaración |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -31,7 +32,7 @@ php artisan serve                   # http://127.0.0.1:8000
 
 ### Cuentas de prueba (solo `APP_ENV=local`)
 
-`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes). En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
+`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes) y ventas demo (una anulada). En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
 
 | Correo | Rol | Empresa |
 |---|---|---|
@@ -80,6 +81,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Público | `POST auth/login`, `auth/forgot-password`, `auth/reset-password` · `GET invitations/{token}` · `POST invitations/{token}/accept` |
 | Sesión | `POST auth/logout` · `GET auth/me` |
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
+| Ventas | `GET/POST tickets` · `GET tickets/{id}` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
 
@@ -91,6 +93,7 @@ Las rutas de gestión de la empresa, las escrituras de inventario, el historial 
 - **Salida de lotes:** FEFO si el producto controla vencimiento y FIFO si no; nunca de lotes vencidos.
 - **Para las ventas (specs 003 y 005):** `consume()` debe llamarse dentro de la transacción de la venta; si no, lanza una excepción. Sin stock suficiente lanza `InsufficientStock`, que la API responde como 422 con `meta.available`.
 - **Saldos:** los movimientos son inmutables, y el saldo de cada lote es una caché de la suma de sus movimientos. Los errores se corrigen con ajustes o reversiones.
+- **Ventas con ticket:** `App\Services\TicketService` numera sin huecos (secuencia por empresa bloqueada en la transacción), copia precio y datos del catálogo, calcula importes con `Decimal::mul`/`round` y descuenta stock con el ticket como origen. La misma `idempotency_key` devuelve el ticket ya creado. Anular revierte sus ventas; revertirlas a mano está bloqueado. El ticket **no es comprobante de pago**: lleva siempre `legal_notice`.
 - **Decimales exactos:** toda la aritmética usa `bcmath` (requisito de plataforma `ext-bcmath`). `App\Support\Decimal` redondea lo que devuelve la base, porque en SQLite `SUM()` usa coma flotante.
 
 ## Pruebas

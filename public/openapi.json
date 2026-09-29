@@ -56,6 +56,9 @@
             "name": "products"
         },
         {
+            "name": "tickets"
+        },
+        {
             "name": "ubigeos"
         },
         {
@@ -1574,6 +1577,260 @@
                     },
                     "500": {
                         "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/tickets": {
+            "get": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "Ventas filtradas, de la más reciente a la más antigua, con totales por",
+                "operationId": "ticketIndex",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "description": "Debe ser posterior a `from`."
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment_method",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "seller_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "201 si se creó; 200 si la clave de idempotencia ya existía (RF-008).",
+                "operationId": "ticketStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "idempotency_key": {
+                                        "type": "string"
+                                    },
+                                    "payment_method": {
+                                        "type": "string"
+                                    },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 120
+                                    },
+                                    "customer_document": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 20
+                                    },
+                                    "lines": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "maxItems": 100,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer"
+                                                },
+                                                "quantity": {
+                                                    "type": "string",
+                                                    "format": "decimal"
+                                                },
+                                                "discount": {
+                                                    "type": "string",
+                                                    "format": "decimal",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "required": [
+                                                "product_id",
+                                                "quantity"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "idempotency_key",
+                                    "payment_method",
+                                    "lines"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/tickets/{ticket}": {
+            "get": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "Obtener tickets",
+                "operationId": "ticketShow",
+                "parameters": [
+                    {
+                        "name": "ticket",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/tickets/{ticket}/void": {
+            "post": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "Void tickets",
+                "operationId": "ticketVoid",
+                "parameters": [
+                    {
+                        "name": "ticket",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
                     }
                 },
                 "security": [
