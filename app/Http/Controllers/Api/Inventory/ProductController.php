@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Inventory;
 
 use App\Enums\CompanyRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\IndexProductRequest;
 use App\Http\Requests\Inventory\StoreProductRequest;
 use App\Http\Requests\Inventory\UpdateProductRequest;
 use App\Http\Resources\ApiCollection;
@@ -11,7 +12,6 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /** Catálogo de productos de la empresa (HU-1). */
 class ProductController extends Controller
@@ -22,14 +22,8 @@ class ProductController extends Controller
      * Por defecto solo activos. El administrador puede pedir status=inactive
      * o status=all; el vendedor siempre ve solo los activos (HU-1.3).
      */
-    public function index(Request $request): ApiCollection
+    public function index(IndexProductRequest $request): ApiCollection
     {
-        $request->validate([
-            'search' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'type' => ['sometimes', 'in:good,service'],
-            'status' => ['sometimes', 'in:active,inactive,all'],
-        ]);
-
         $status = $request->user()->hasCompanyRole(CompanyRole::CompanyAdmin) ? $request->input('status', 'active') : 'active';
         $search = mb_strtolower(trim((string) $request->input('search')));
 
