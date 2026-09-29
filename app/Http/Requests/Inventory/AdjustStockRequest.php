@@ -25,7 +25,7 @@ class AdjustStockRequest extends FormRequest
 
         return [
             'quantity' => ['required', 'numeric', 'not_in:0', 'decimal:0,3', 'between:-99999999999,99999999999',
-                new QuantityForUnit($lot->product->unit)],
+                new QuantityForUnit($lot->product?->unit)],
             'reason' => ['required', Rule::enum(AdjustmentReason::class)],
             'note' => ['nullable', 'string', 'max:255'],
         ];
