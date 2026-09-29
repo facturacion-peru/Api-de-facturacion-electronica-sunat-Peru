@@ -17,9 +17,9 @@ use Illuminate\Http\Request;
  * variantes: con costo (administrador) y sin costo (vendedor, RF-022).
  */
 
-function requestAs(CompanyRole $role): Request
+function requestAs(CompanyRole $role, ?Company $company = null): Request
 {
-    $user = User::factory()->forCompany(Company::factory()->create(), $role)->create()->load('membership');
+    $user = User::factory()->forCompany($company ?? Company::factory()->create(), $role)->create()->load('membership');
     $request = Request::create('/');
     $request->setUserResolver(fn () => $user);
 
@@ -33,7 +33,7 @@ it('ProductResource para el administrador incluye el costo', function () use ($p
     $product = Product::factory()->create();
     app(TenantContext::class)->set($product->company);
 
-    expect(array_keys(ProductResource::make($product)->resolve(requestAs(CompanyRole::CompanyAdmin))))
+    expect(array_keys(ProductResource::make($product)->resolve(requestAs(CompanyRole::CompanyAdmin, $product->company))))
         ->toBe([...$productKeys, 'last_unit_cost', 'created_at']);
 });
 
@@ -41,7 +41,7 @@ it('ProductResource para el vendedor omite el costo', function () use ($productK
     $product = Product::factory()->create();
     app(TenantContext::class)->set($product->company);
 
-    expect(array_keys(ProductResource::make($product)->resolve(requestAs(CompanyRole::Seller))))
+    expect(array_keys(ProductResource::make($product)->resolve(requestAs(CompanyRole::Seller, $product->company))))
         ->toBe([...$productKeys, 'created_at']);
 });
 
