@@ -45,6 +45,8 @@ return [
         'beta_user' => env('SUNAT_BETA_USER', '{ruc}MODDATOS'),
         'beta_password' => env('SUNAT_BETA_PASSWORD', 'moddatos'),
         'timeout' => (int) env('SUNAT_TIMEOUT', 10),
+        // Envío de comprobantes: más holgado que la comprobación de conexión.
+        'send_timeout' => (int) env('SUNAT_SEND_TIMEOUT', 15),
     ],
 
 ];
