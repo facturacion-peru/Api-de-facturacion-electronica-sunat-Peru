@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Api\Sales\TicketController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
         Route::get('/products/{product}/lots', [StockController::class, 'lots']);
+
+        Route::post('/tickets', [TicketController::class, 'store']);
+        Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
 
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);

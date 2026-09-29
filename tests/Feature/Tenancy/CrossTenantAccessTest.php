@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Invitation;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
@@ -42,11 +43,12 @@ beforeEach(function () {
 
     $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B', 'min_stock' => '100']);
     $this->lotB = ProductLot::factory()->for($this->productB)->create(['lot_number' => 'LOTE-DE-B']);
+    $this->ticketB = Ticket::factory()->create(['company_id' => $this->b->id, 'customer_name' => 'Cliente secreto de B']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;
 
     /** Rastros de B que nunca deben aparecer en una respuesta a A. */
-    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B'];
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B'];
 });
 
 function callAsA(string $method, string $uri, array $data = [])
@@ -71,6 +73,7 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'product' => $this->productB->id,
         'lot' => $this->lotB->id,
         'movement' => $this->lotB->movements()->withoutGlobalScopes()->value('id'),
+        'ticket' => $this->ticketB->id,
     };
     $payload = $method === 'PATCH'
         ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
@@ -118,6 +121,10 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'PATCH api/v1/company' => callAsA('PATCH', '/api/v1/company', ['company_id' => $this->b->id, 'id' => $this->b->id, 'nombre_comercial' => 'Hackeada']),
         'POST api/v1/company/logo' => callAsA('POST', '/api/v1/company/logo', ['company_id' => $this->b->id, 'logo' => UploadedFile::fake()->image('logo.png')]),
         'POST api/v1/invitations' => callAsA('POST', '/api/v1/invitations', ['company_id' => $this->b->id, 'email' => 'nuevo@example.com', 'role' => 'seller']),
+        'POST api/v1/tickets' => callAsA('POST', '/api/v1/tickets', [
+            'company_id' => $this->b->id, 'idempotency_key' => $this->ticketB->idempotency_key, 'payment_method' => 'cash',
+            'lines' => [['product_id' => $this->productB->id, 'quantity' => '1']],
+        ]),
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
         ]),
