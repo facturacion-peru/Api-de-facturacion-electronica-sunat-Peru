@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Invitation;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\Series;
 use App\Models\SunatSetting;
 use App\Models\Ticket;
 use App\Models\User;
@@ -45,12 +46,13 @@ beforeEach(function () {
     $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B', 'min_stock' => '100']);
     $this->lotB = ProductLot::factory()->for($this->productB)->create(['lot_number' => 'LOTE-DE-B']);
     $this->ticketB = Ticket::factory()->create(['company_id' => $this->b->id, 'customer_name' => 'Cliente secreto de B']);
+    $this->seriesB = Series::factory()->create(['company_id' => $this->b->id, 'code' => 'BZ99', 'last_number' => 42]);
     $this->sunatB = SunatSetting::create(['company_id' => $this->b->id, 'environment' => 'beta', 'status' => 'pending', 'sol_user' => 'USUARIOB', 'sol_password' => 'ClaveSolDeB']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;
 
     /** Rastros de B que nunca deben aparecer en una respuesta a A. */
-    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB'];
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB', 'BZ99'];
 });
 
 function callAsA(string $method, string $uri, array $data = [])
@@ -76,6 +78,7 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'lot' => $this->lotB->id,
         'movement' => $this->lotB->movements()->withoutGlobalScopes()->value('id'),
         'ticket' => $this->ticketB->id,
+        'series' => $this->seriesB->id,
     };
     $payload = $method === 'PATCH'
         ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
@@ -92,7 +95,8 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and($this->productB->fresh()->active)->toBeTrue()
         ->and(ProductLot::withoutTenancy()->where('product_id', $this->productB->id)->count())->toBe(1)
         ->and($this->lotB->fresh()->remaining_quantity)->toBe($this->lotB->initial_quantity)
-        ->and($this->ticketB->fresh()->status->value)->toBe('issued');
+        ->and($this->ticketB->fresh()->status->value)->toBe('issued')
+        ->and($this->seriesB->fresh()->active)->toBeTrue();
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
@@ -131,6 +135,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'PUT api/v1/sunat/credentials' => callAsA('PUT', '/api/v1/sunat/credentials', ['company_id' => $this->b->id, 'sol_user' => 'NUEVOA', 'sol_password' => 'otra']),
         'POST api/v1/sunat/certificate' => callAsA('POST', '/api/v1/sunat/certificate', ['company_id' => $this->b->id, 'password' => 'x']),
         'POST api/v1/sunat/validate' => callAsA('POST', '/api/v1/sunat/validate', ['company_id' => $this->b->id]),
+        'POST api/v1/series' => callAsA('POST', '/api/v1/series', ['company_id' => $this->b->id, 'document_type' => '03', 'code' => 'B777']),
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
         ]),
@@ -141,7 +146,8 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
     expect(Invitation::withoutTenancy()->where('company_id', $this->b->id)->pluck('email')->all())->toBe(['invitado-b@empresa-b.pe'])
         ->and(Product::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Producto secreto de B'])
         ->and($this->sunatB->fresh()->sol_password)->toBe('ClaveSolDeB')
-        ->and($this->sunatB->fresh()->status->value)->toBe('pending');
+        ->and($this->sunatB->fresh()->status->value)->toBe('pending')
+        ->and(Series::withoutTenancy()->where('company_id', $this->b->id)->pluck('code')->all())->toBe(['BZ99']);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
 
