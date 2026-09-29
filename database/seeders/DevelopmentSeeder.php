@@ -9,12 +9,15 @@ use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\Establishment;
 use App\Models\Product;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Rules\Ruc;
 use App\Services\InventoryService;
+use App\Services\TicketService;
 use App\Tenancy\TenantContext;
 use Database\Factories\EstablishmentFactory;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
  * Cuentas de prueba para desarrollo. Solo en APP_ENV=local: permite hacer
@@ -43,7 +46,7 @@ class DevelopmentSeeder extends Seeder
 
         $demo = $this->company('2060000001', 'Empresa Demo S.A.C.', 'Bodega Demo', 'contacto@demo.test');
         $demoAdmin = $this->member($demo, 'Ana Administradora', 'admin@demo.test', CompanyRole::CompanyAdmin);
-        $this->member($demo, 'Luis Vendedor', 'vendedor@demo.test', CompanyRole::Seller);
+        $demoSeller = $this->member($demo, 'Luis Vendedor', 'vendedor@demo.test', CompanyRole::Seller);
         $this->member($demo, 'Carla Desactivada', 'inactivo@demo.test', CompanyRole::Seller, active: false);
 
         // Segunda empresa para comprobar el aislamiento entre empresas.
@@ -60,6 +63,8 @@ class DevelopmentSeeder extends Seeder
         $this->products($otra, $otraAdmin, [
             ['OTR-001', 'Producto de otra empresa', 'good', 'NIU', '10.00', '10', null, false, [['5', 6.0, null]]],
         ]);
+
+        $this->tickets($demo, $demoAdmin, $demoSeller);
 
         $this->command?->info('Usuarios de prueba listos (contraseña: '.self::PASSWORD.').');
     }
@@ -138,6 +143,41 @@ class DevelopmentSeeder extends Seeder
                     ], $admin);
                 }
             }
+        });
+    }
+
+    /** Ventas demo por el servicio real (numeración, stock y auditoría); una anulada. */
+    private function tickets(Company $company, User $admin, User $seller): void
+    {
+        app(TenantContext::class)->run($company, function () use ($admin, $seller) {
+            if (Ticket::exists()) {
+                return;
+            }
+
+            $id = fn (string $code) => Product::where('code', $code)->value('id');
+            $service = app(TicketService::class);
+
+            $sales = [
+                [$seller, 'cash', null, [['ARZ-001', '2', null], ['LEC-001', '3', null]]],
+                [$seller, 'yape_plin', 'María Quispe', [['YOG-001', '4', '1.00'], ['DEL-001', '1', null]]],
+                [$admin, 'card', null, [['AZU-001', '2.500', null]]],
+            ];
+
+            foreach ($sales as [$by, $method, $customer, $lines]) {
+                $service->issue([
+                    'idempotency_key' => (string) Str::uuid(),
+                    'payment_method' => $method,
+                    'customer_name' => $customer,
+                    'lines' => array_map(fn ($l) => ['product_id' => $id($l[0]), 'quantity' => $l[1], 'discount' => $l[2]], $lines),
+                ], $by);
+            }
+
+            [$voided] = $service->issue([
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => 'cash',
+                'lines' => [['product_id' => $id('ARZ-001'), 'quantity' => '1', 'discount' => null]],
+            ], $seller);
+            $service->void($voided, 'Venta de demostración anulada', $admin);
         });
     }
 }
