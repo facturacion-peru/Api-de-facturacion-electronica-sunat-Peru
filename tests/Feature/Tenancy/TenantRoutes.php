@@ -41,6 +41,7 @@ return [
     'GET api/v1/tickets/{ticket}' => ['type' => 'resource', 'param' => 'ticket'],
     'POST api/v1/tickets/{ticket}/void' => ['type' => 'resource', 'param' => 'ticket'],
     'GET api/v1/sunat/settings' => ['type' => 'own'],
+    'GET api/v1/sunat/status' => ['type' => 'list'],
     'PUT api/v1/sunat/credentials' => ['type' => 'write'],
     'POST api/v1/sunat/certificate' => ['type' => 'write'],
     'POST api/v1/sunat/validate' => ['type' => 'write'],
