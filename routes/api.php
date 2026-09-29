@@ -60,6 +60,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
             Route::get('/products/{product}/movements', [StockController::class, 'movements']);
             Route::get('/inventory/alerts', [AlertController::class, 'index']);
+            Route::post('/tickets/{ticket}/void', [TicketController::class, 'void']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);

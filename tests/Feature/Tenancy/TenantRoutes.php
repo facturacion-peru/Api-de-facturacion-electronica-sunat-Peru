@@ -38,6 +38,7 @@ return [
     'GET api/v1/inventory/alerts' => ['type' => 'list'],
     'POST api/v1/tickets' => ['type' => 'write'],
     'GET api/v1/tickets/{ticket}' => ['type' => 'resource', 'param' => 'ticket'],
+    'POST api/v1/tickets/{ticket}/void' => ['type' => 'resource', 'param' => 'ticket'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],

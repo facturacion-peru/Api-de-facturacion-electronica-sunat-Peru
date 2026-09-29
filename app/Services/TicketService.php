@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Audit\AuditLogger;
+use App\Enums\AdjustmentReason;
+use App\Enums\MovementType;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Ticket;
 use App\Models\TicketLine;
@@ -13,6 +16,7 @@ use App\Models\User;
 use App\Support\Decimal;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /** Ventas con ticket interno (spec 003). */
 class TicketService
@@ -47,6 +51,46 @@ class TicketService
 
             throw $e;
         }
+    }
+
+    /**
+     * Anula el ticket (HU-3): revierte sus ventas para devolver el stock y
+     * conserva el número. Solo el administrador (lo controla la request).
+     */
+    public function void(Ticket $ticket, string $reason, User $actor): Ticket
+    {
+        return DB::transaction(function () use ($ticket, $reason, $actor) {
+            $ticket = Ticket::whereKey($ticket->id)->lockForUpdate()->firstOrFail();
+
+            if ($ticket->status === TicketStatus::Voided) {
+                throw ValidationException::withMessages(['ticket' => 'El ticket ya está anulado.']);
+            }
+
+            InventoryMovement::query()
+                ->where('source_type', $ticket->getMorphClass())
+                ->where('source_id', $ticket->id)
+                ->where('type', MovementType::Sale)
+                ->whereDoesntHave('reversal')
+                ->orderBy('id')
+                ->get()
+                ->each(fn (InventoryMovement $sale) => $this->inventory->reverse(
+                    $sale, AdjustmentReason::Error, "Anulación del ticket {$ticket->display_number}", $actor, fromSource: true,
+                ));
+
+            $ticket->update([
+                'status' => TicketStatus::Voided,
+                'voided_at' => now(),
+                'voided_by' => $actor->id,
+                'void_reason' => $reason,
+            ]);
+
+            $this->audit->record('ticket.voided', $ticket, [
+                'number' => $ticket->display_number,
+                'reason' => $reason,
+            ], actor: $actor);
+
+            return $ticket;
+        });
     }
 
     private function create(array $data, User $actor): Ticket

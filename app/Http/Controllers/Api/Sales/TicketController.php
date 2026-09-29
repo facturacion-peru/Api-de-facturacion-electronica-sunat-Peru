@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Sales;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreTicketRequest;
+use App\Http\Requests\Sales\VoidTicketRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Services\TicketService;
@@ -24,6 +25,13 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket): TicketResource
     {
+        return TicketResource::make($ticket->load(['lines', 'seller']));
+    }
+
+    public function void(VoidTicketRequest $request, Ticket $ticket): TicketResource
+    {
+        $ticket = $this->tickets->void($ticket, $request->validated('reason'), $request->user());
+
         return TicketResource::make($ticket->load(['lines', 'seller']));
     }
 }

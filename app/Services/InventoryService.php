@@ -9,6 +9,7 @@ use App\Inventory\Exceptions\InsufficientStock;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Support\Decimal;
 use Illuminate\Database\Eloquent\Model;
@@ -168,11 +169,23 @@ class InventoryService
      * Corrige un movimiento con otro inverso enlazado; el original nunca se
      * toca (HU-4.2, RF-016). Una sola vez por movimiento, y nunca sobre una
      * reversión.
+     *
+     * Las ventas de un ticket solo se revierten anulando el ticket
+     * ($fromSource = true desde TicketService), para que ticket y stock no
+     * queden desalineados (plan 003).
      */
-    public function reverse(InventoryMovement $movement, AdjustmentReason $reason, ?string $note, User $actor): InventoryMovement
+    public function reverse(InventoryMovement $movement, AdjustmentReason $reason, ?string $note, User $actor, bool $fromSource = false): InventoryMovement
     {
-        return DB::transaction(function () use ($movement, $reason, $note, $actor) {
+        return DB::transaction(function () use ($movement, $reason, $note, $actor, $fromSource) {
             $lot = $this->lockLot($movement->lot()->withoutGlobalScopes()->firstOrFail());
+
+            if (! $fromSource && $movement->source_type === (new Ticket)->getMorphClass()) {
+                $ticket = Ticket::withoutTenancy()->find($movement->source_id);
+
+                throw ValidationException::withMessages([
+                    'movement' => "Esta venta pertenece al ticket {$ticket?->display_number}: anúlalo para devolver el stock.",
+                ]);
+            }
 
             if ($movement->type === MovementType::Reversal) {
                 throw ValidationException::withMessages(['movement' => 'No se puede revertir una reversión.']);
