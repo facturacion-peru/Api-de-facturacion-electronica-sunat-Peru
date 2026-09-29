@@ -47,6 +47,31 @@ class AuditLogger
         ]);
     }
 
+    /**
+     * Cambios pendientes de un modelo como {campo: {from, to}}, para auditar
+     * antes de guardarlo. Los enums se registran por su valor.
+     *
+     * @return array<string, array{from: mixed, to: mixed}>
+     */
+    public static function diff(Model $model): array
+    {
+        $changes = [];
+
+        foreach (array_keys($model->getDirty()) as $field) {
+            $changes[$field] = [
+                'from' => self::scalar($model->getOriginal($field)),
+                'to' => self::scalar($model->getAttribute($field)),
+            ];
+        }
+
+        return $changes;
+    }
+
+    private static function scalar(mixed $value): mixed
+    {
+        return $value instanceof \BackedEnum ? $value->value : $value;
+    }
+
     private function companyOf(?Model $auditable): ?int
     {
         return match (true) {

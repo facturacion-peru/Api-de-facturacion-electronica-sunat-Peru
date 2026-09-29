@@ -9,7 +9,8 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | Spec | Qué cubre | Estado |
 |---|---|---|
 | [001](../docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
-| 002–005 | Inventario, tickets, configuración SUNAT, emisión en beta | En aclaración |
+| [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
+| 003–005 | Tickets, configuración SUNAT, emisión en beta | En aclaración |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -30,7 +31,7 @@ php artisan serve                   # http://127.0.0.1:8000
 
 ### Cuentas de prueba (solo `APP_ENV=local`)
 
-`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`; en cualquier otro entorno se omite. Todas usan la contraseña `Clave-demo-123`.
+`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes). En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
 
 | Correo | Rol | Empresa |
 |---|---|---|
@@ -79,9 +80,18 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Público | `POST auth/login`, `auth/forgot-password`, `auth/reset-password` · `GET invitations/{token}` · `POST invitations/{token}/accept` |
 | Sesión | `POST auth/logout` · `GET auth/me` |
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
+| Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
 
-Las rutas de gestión de la empresa exigen el rol `company_admin`.
+Las rutas de gestión de la empresa, las escrituras de inventario, el historial y las alertas exigen el rol `company_admin`. El costo de productos y lotes solo se incluye en las respuestas al administrador.
+
+## Inventario
+
+- **Un solo punto de escritura:** `App\Services\InventoryService`. Cada operación bloquea la fila del producto antes de tocar los lotes, lo que serializa las escrituras del mismo producto sin *deadlocks*.
+- **Salida de lotes:** FEFO si el producto controla vencimiento y FIFO si no; nunca de lotes vencidos.
+- **Para las ventas (specs 003 y 005):** `consume()` debe llamarse dentro de la transacción de la venta; si no, lanza una excepción. Sin stock suficiente lanza `InsufficientStock`, que la API responde como 422 con `meta.available`.
+- **Saldos:** los movimientos son inmutables, y el saldo de cada lote es una caché de la suma de sus movimientos. Los errores se corrigen con ajustes o reversiones.
+- **Decimales exactos:** toda la aritmética usa `bcmath` (requisito de plataforma `ext-bcmath`). `App\Support\Decimal` redondea lo que devuelve la base, porque en SQLite `SUM()` usa coma flotante.
 
 ## Pruebas
 
@@ -91,7 +101,12 @@ composer test:pgsql     # la misma suite contra PostgreSQL (base db_api_sunat_te
 vendor/bin/pint --test  # estilo
 ```
 
-Corre ambas: algunas diferencias entre SQLite y PostgreSQL (p. ej. `FOR UPDATE` con agregados) solo aparecen en PostgreSQL.
+Corre ambas: algunas diferencias entre SQLite y PostgreSQL (`FOR UPDATE` con agregados, restricciones CHECK, `SUM()` exacto) solo aparecen en una de ellas.
+
+Suites:
+- `tests/Unit`.
+- `tests/Feature`: cada prueba va dentro de una transacción (`RefreshDatabase`).
+- `tests/Integration`: sin transacción envolvente, para límites de transacción y concurrencia. La prueba de concurrencia usa `pcntl_fork` y solo corre en PostgreSQL.
 
 ## Origen
 

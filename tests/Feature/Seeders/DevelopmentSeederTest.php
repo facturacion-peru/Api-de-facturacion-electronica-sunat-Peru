@@ -3,7 +3,10 @@
 use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\Product;
+use App\Models\ProductLot;
 use App\Models\User;
+use App\Tenancy\TenantContext;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DevelopmentSeeder;
 use Illuminate\Support\Facades\Hash;
@@ -40,6 +43,9 @@ it('en local crea la plataforma, las empresas demo y sus usuarios', function () 
         ->and($roles['admin@otra.test'])->toBe([CompanyRole::CompanyAdmin, true])
         ->and(Hash::check(DevelopmentSeeder::PASSWORD, User::where('email', 'admin@demo.test')->value('password')))->toBeTrue();
 
+    $azucar = Product::withoutTenancy()->where('code', 'AZU-001')->first();
+    expect(app(TenantContext::class)->run($azucar->company, fn () => $azucar->stock()))->toBe('50.500');
+
     Company::with('mainEstablishment')->get()->each(
         fn (Company $company) => expect($company->mainEstablishment?->code)->toBe('0000')
     );
@@ -51,7 +57,10 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
     $this->seed(DevelopmentSeeder::class);
     $this->seed(DevelopmentSeeder::class);
 
-    expect(User::count())->toBe(5)->and(Company::count())->toBe(2);
+    expect(User::count())->toBe(5)
+        ->and(Company::count())->toBe(2)
+        ->and(Product::withoutTenancy()->count())->toBe(6)
+        ->and(ProductLot::withoutTenancy()->count())->toBe(7);
 });
 
 it('fuera de local no crea usuarios ni empresas', function (string $env) {
@@ -59,7 +68,7 @@ it('fuera de local no crea usuarios ni empresas', function (string $env) {
 
     seedForced(DatabaseSeeder::class);
 
-    expect(User::count())->toBe(0)->and(Company::count())->toBe(0);
+    expect(User::count())->toBe(0)->and(Company::count())->toBe(0)->and(Product::withoutTenancy()->count())->toBe(0);
 })->with(['production', 'staging', 'testing']);
 
 it('DevelopmentSeeder se niega a correr fuera de local aunque se llame directo', function () {

@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\Company\AuditLogController;
 use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
+use App\Http\Controllers\Api\Inventory\AlertController;
+use App\Http\Controllers\Api\Inventory\CatalogController;
+use App\Http\Controllers\Api\Inventory\ProductController;
+use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
@@ -38,8 +42,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::get('/company', [CompanyController::class, 'show']);
 
+        Route::get('/catalogs/inventory', [CatalogController::class, 'inventory']);
+        Route::get('/products', [ProductController::class, 'index']);
+        Route::get('/products/{product}', [ProductController::class, 'show']);
+        Route::get('/products/{product}/lots', [StockController::class, 'lots']);
+
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);
+            Route::post('/products', [ProductController::class, 'store']);
+            Route::patch('/products/{product}', [ProductController::class, 'update']);
+            Route::post('/products/{product}/entries', [StockController::class, 'storeEntry']);
+            Route::post('/lots/{lot}/adjustments', [StockController::class, 'adjust']);
+            Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
+            Route::get('/products/{product}/movements', [StockController::class, 'movements']);
+            Route::get('/inventory/alerts', [AlertController::class, 'index']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);

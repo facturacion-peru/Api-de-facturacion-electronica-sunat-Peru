@@ -23,6 +23,7 @@ class UpdateCompanyRequest extends FormRequest
             'nombre_comercial' => ['sometimes', 'nullable', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', 'max:255'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'expiry_warning_days' => ['sometimes', 'integer', 'between:1,365'],
             ...array_fill_keys(self::PLATFORM_ONLY, ['prohibited']),
         ];
     }

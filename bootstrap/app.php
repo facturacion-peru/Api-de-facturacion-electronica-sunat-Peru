@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureCompanyRole;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\ResolveTenant;
+use App\Inventory\Exceptions\InsufficientStock;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -49,6 +50,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $e, Request $request) {
             if (! $request->is('api/*')) {
                 return null;
+            }
+
+            if ($e instanceof InsufficientStock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => ['quantity' => ["Solo hay {$e->available} disponible de {$e->product->name}."]],
+                    'meta' => ['available' => $e->available, 'product_id' => $e->product->id],
+                ], 422);
             }
 
             [$status, $message, $errors] = match (true) {

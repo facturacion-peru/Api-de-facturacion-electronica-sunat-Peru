@@ -21,7 +21,8 @@ class EstablishmentFactory extends Factory
 
         return [
             'company_id' => Company::factory(),
-            'code' => fake()->unique()->numerify('0###'),
+            // Nunca 0000: ese código es del establecimiento principal.
+            'code' => fake()->unique()->numerify('1###'),
             'name' => 'Local '.fake()->citySuffix(),
             'address' => fake()->streetAddress(),
             'ubigeo' => self::LIMA,

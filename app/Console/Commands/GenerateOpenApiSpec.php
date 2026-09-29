@@ -188,7 +188,7 @@ class GenerateOpenApiSpec extends Command
             }
 
             try {
-                $rules = (new $class)->rules();
+                $rules = $this->instantiateRequest($class, $route, $reflection)->rules();
                 $this->rulesFromFormRequest++;
 
                 return $this->normalizeRules($rules);
@@ -205,6 +205,31 @@ class GenerateOpenApiSpec extends Command
         }
 
         return $this->inlineValidationRules($reflection);
+    }
+
+    /**
+     * Instancia el FormRequest con una ruta simulada: los parámetros tipados
+     * con un modelo (Product $product…) se resuelven a un modelo vacío, para
+     * que las reglas que leen `$this->route(...)` puedan construirse.
+     */
+    private function instantiateRequest(string $class, RoutingRoute $route, ReflectionMethod $reflection): FormRequest
+    {
+        $fakeRoute = clone $route;
+        $fakeRoute->bind(\Illuminate\Http\Request::create('/'.$route->uri()));
+
+        foreach ($reflection->getParameters() as $parameter) {
+            $type = $parameter->getType();
+
+            if ($type instanceof \ReflectionNamedType && is_subclass_of($type->getName(), \Illuminate\Database\Eloquent\Model::class)) {
+                $fakeRoute->setParameter($parameter->getName(), new ($type->getName()));
+            }
+        }
+
+        /** @var FormRequest $request */
+        $request = $class::create('/'.$route->uri());
+        $request->setRouteResolver(fn () => $fakeRoute);
+
+        return $request;
     }
 
     /**
@@ -377,7 +402,8 @@ class GenerateOpenApiSpec extends Command
 
             match ($name) {
                 'integer' => $schema['type'] = 'integer',
-                'numeric', 'decimal' => $schema['type'] = 'number',
+                // Decimales como cadena: el frontend los envía así para no perder exactitud.
+                'numeric', 'decimal' => $schema = ['type' => 'string', 'format' => 'decimal'] + $schema,
                 'boolean' => $schema['type'] = 'boolean',
                 'array' => $schema['type'] = 'array',
                 'date' => $schema = ['type' => 'string', 'format' => 'date'] + $schema,
@@ -418,7 +444,8 @@ class GenerateOpenApiSpec extends Command
         foreach ($tokens as $token) {
             [$name, $argument] = array_pad(explode(':', $token, 2), 2, null);
 
-            if (! in_array($name, ['max', 'min'], true) || ! is_numeric($argument)) {
+            // En decimales (cadena) min/max son valores, no longitudes: no se documentan.
+            if (! in_array($name, ['max', 'min'], true) || ! is_numeric($argument) || ($schema['format'] ?? null) === 'decimal') {
                 continue;
             }
 
@@ -446,9 +473,12 @@ class GenerateOpenApiSpec extends Command
         return $schema;
     }
 
+    /** `sometimes|required` es obligatorio solo si se envía: no es requerido. */
     private function isRequired(string $rule): bool
     {
-        return in_array('required', explode('|', $rule), true);
+        $tokens = explode('|', $rule);
+
+        return in_array('required', $tokens, true) && ! in_array('sometimes', $tokens, true);
     }
 
     /**
