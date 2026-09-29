@@ -4,6 +4,8 @@ use App\Audit\AuditLogger;
 use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\Invitation;
+use App\Models\Product;
+use App\Models\ProductLot;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
@@ -38,10 +40,13 @@ beforeEach(function () {
 
     app(TenantContext::class)->run($this->b, fn () => app(AuditLogger::class)->record('b.accion_secreta', $this->sellerB, actor: $this->adminB));
 
+    $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B']);
+    $this->lotB = ProductLot::factory()->for($this->productB)->create(['lot_number' => 'LOTE-DE-B']);
+
     $this->token = $this->adminA->createToken('t')->plainTextToken;
 
     /** Rastros de B que nunca deben aparecer en una respuesta a A. */
-    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta'];
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B'];
 });
 
 function callAsA(string $method, string $uri, array $data = [])
@@ -63,8 +68,9 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
     $idOfB = match ($case['param']) {
         'user' => $this->sellerB->id,
         'invitation' => $this->invitationB->id,
+        'product' => $this->productB->id,
     };
-    $payload = $method === 'PATCH' ? ['active' => false, 'role' => 'seller'] : [];
+    $payload = $method === 'PATCH' ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado'] : [];
 
     $ofB = callAsA($method, '/'.str_replace('{'.$case['param'].'}', (string) $idOfB, $uri), $payload);
     $missing = callAsA($method, '/'.str_replace('{'.$case['param'].'}', '999999', $uri), $payload);
@@ -72,6 +78,9 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
     $ofB->assertNotFound();
     expect($ofB->json())->toBe($missing->json());
     expectNoTraceOfB($ofB);
+
+    expect($this->productB->fresh()->name)->toBe('Producto secreto de B')
+        ->and($this->productB->fresh()->active)->toBeTrue();
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
@@ -103,11 +112,15 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'PATCH api/v1/company' => callAsA('PATCH', '/api/v1/company', ['company_id' => $this->b->id, 'id' => $this->b->id, 'nombre_comercial' => 'Hackeada']),
         'POST api/v1/company/logo' => callAsA('POST', '/api/v1/company/logo', ['company_id' => $this->b->id, 'logo' => UploadedFile::fake()->image('logo.png')]),
         'POST api/v1/invitations' => callAsA('POST', '/api/v1/invitations', ['company_id' => $this->b->id, 'email' => 'nuevo@example.com', 'role' => 'seller']),
+        'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
+            'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
+        ]),
     };
 
     expect($response->status())->toBeLessThan(500);
     expect($this->b->fresh()->toArray())->toBe($bBefore);
-    expect(Invitation::withoutTenancy()->where('company_id', $this->b->id)->pluck('email')->all())->toBe(['invitado-b@empresa-b.pe']);
+    expect(Invitation::withoutTenancy()->where('company_id', $this->b->id)->pluck('email')->all())->toBe(['invitado-b@empresa-b.pe'])
+        ->and(Product::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Producto secreto de B']);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
 

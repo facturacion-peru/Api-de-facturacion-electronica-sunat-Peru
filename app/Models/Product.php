@@ -7,6 +7,7 @@ use App\Enums\ProductType;
 use App\Enums\UnitOfMeasure;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,19 @@ class Product extends Model
         ];
     }
 
+    /**
+     * Añade `stock_sum` y `available_sum` en la misma consulta, para que los
+     * listados no hagan una consulta por producto.
+     *
+     * @param  Builder<Product>  $query
+     */
+    public function scopeWithStock(Builder $query): void
+    {
+        $query->withSum('lots as stock_sum', 'remaining_quantity')
+            ->withSum(['lots as available_sum' => fn ($lots) => $lots
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', today()))], 'remaining_quantity');
+    }
+
     public function lots(): HasMany
     {
         return $this->hasMany(ProductLot::class);
@@ -56,12 +70,18 @@ class Product extends Model
     /** Stock físico: suma de los saldos de todos sus lotes. */
     public function stock(): string
     {
-        return $this->formatQuantity($this->lots()->sum('remaining_quantity'));
+        return $this->formatQuantity(
+            array_key_exists('stock_sum', $this->attributes) ? $this->attributes['stock_sum'] : $this->lots()->sum('remaining_quantity')
+        );
     }
 
     /** Disponible para vender: excluye los lotes vencidos (HU-3.5). */
     public function availableStock(): string
     {
+        if (array_key_exists('available_sum', $this->attributes)) {
+            return $this->formatQuantity($this->attributes['available_sum']);
+        }
+
         return $this->formatQuantity(
             $this->lots()
                 ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>=', today()))

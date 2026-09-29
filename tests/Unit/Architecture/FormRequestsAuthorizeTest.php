@@ -48,7 +48,14 @@ it('todo FormRequest fuera de Auth declara authorize()', function () {
             continue;
         }
 
-        if (! preg_match('/function\s+authorize\s*\(/', file_get_contents($file->getPathname()))) {
+        $code = file_get_contents($file->getPathname());
+
+        // Solo clases FormRequest (los traits de reglas compartidas no aplican).
+        if (! str_contains($code, 'extends FormRequest')) {
+            continue;
+        }
+
+        if (! preg_match('/function\s+authorize\s*\(/', $code)) {
             $offenders[] = $relative;
         }
     }

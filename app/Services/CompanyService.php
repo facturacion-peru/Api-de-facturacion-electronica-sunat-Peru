@@ -76,11 +76,7 @@ class CompanyService
             $company->person_type = Ruc::personType($company->ruc);
         }
 
-        $changes = [];
-
-        foreach ($company->getDirty() as $field => $value) {
-            $changes[$field] = ['from' => $company->getOriginal($field), 'to' => $value];
-        }
+        $changes = AuditLogger::diff($company);
 
         if ($changes !== []) {
             $company->save();
