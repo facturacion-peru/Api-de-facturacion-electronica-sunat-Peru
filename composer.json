@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ext-bcmath": "*",
         "dompdf/dompdf": "^3.1",
         "endroid/qr-code": "*",
         "greenter/consulta-cpe": "*",
