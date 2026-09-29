@@ -60,6 +60,9 @@ final class UblBuilder
     {
         $address = (new Address)
             ->setUbigueo($document->issuer_ubigeo)
+            ->setDepartamento(mb_strtoupper((string) $document->issuer_department))
+            ->setProvincia(mb_strtoupper((string) $document->issuer_province))
+            ->setDistrito(mb_strtoupper((string) $document->issuer_district))
             ->setDireccion($document->issuer_address)
             ->setCodigoPais('PE')
             ->setCodLocal($establishmentCode);

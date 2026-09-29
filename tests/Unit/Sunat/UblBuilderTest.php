@@ -36,6 +36,7 @@ function documentWith(DocumentType $type, array $lines, array $customer = ['0', 
         'issued_at' => '2026-09-29 10:30:00', 'currency' => 'PEN',
         'issuer_ruc' => '20131312955', 'issuer_name' => 'BODEGA ANA S.A.C.', 'issuer_trade_name' => 'Bodega Ana',
         'issuer_address' => 'AV. UNO 123', 'issuer_ubigeo' => '150101',
+        'issuer_department' => 'Lima', 'issuer_province' => 'Lima', 'issuer_district' => 'Miraflores',
         'customer_document_type' => $customer[0], 'customer_document_number' => $customer[1], 'customer_name' => $customer[2], 'customer_address' => $customer[3],
         'op_gravadas' => $t->opGravadas, 'op_exoneradas' => $t->opExoneradas, 'op_inafectas' => $t->opInafectas,
         'igv' => $t->igv, 'discount_total' => $t->discountTotal, 'total' => $t->total,
@@ -69,6 +70,9 @@ it('boleta a Cliente varios con gravado, exonerado e inafecto', function () use 
         ->and($first($xml, '/*/cbc:DocumentCurrencyCode'))->toBe('PEN')
         ->and($first($xml, '//cac:AccountingSupplierParty//cbc:ID'))->toBe('20131312955')
         ->and($first($xml, '//cac:AccountingSupplierParty//cac:RegistrationAddress/cbc:AddressTypeCode'))->toBe('0000')
+        ->and($first($xml, '//cac:RegistrationAddress/cbc:CountrySubentity'))->toBe('LIMA')
+        ->and($first($xml, '//cac:RegistrationAddress/cbc:CityName'))->toBe('LIMA')
+        ->and($first($xml, '//cac:RegistrationAddress/cbc:District'))->toBe('MIRAFLORES')
         ->and($first($xml, '//cac:AccountingCustomerParty//cac:PartyIdentification/cbc:ID/@schemeID'))->toBe('0')
         ->and($first($xml, '//cac:AccountingCustomerParty//cbc:RegistrationName'))->toBe('CLIENTES VARIOS')
         ->and($first($xml, '/*/cac:TaxTotal/cbc:TaxAmount'))->toBe('7.90')

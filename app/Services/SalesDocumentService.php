@@ -104,6 +104,7 @@ class SalesDocumentService
             : self::ANONYMOUS_CUSTOMER;
 
         $establishment = $series->establishment ?? $company->mainEstablishment;
+        $district = $establishment->district()->with(['provincia', 'region'])->first();
 
         $document = new SalesDocument([
             'company_id' => $company->id,
@@ -121,6 +122,9 @@ class SalesDocumentService
             'issuer_trade_name' => $company->nombre_comercial,
             'issuer_address' => $establishment->address,
             'issuer_ubigeo' => $establishment->ubigeo,
+            'issuer_department' => $district?->region?->nombre,
+            'issuer_province' => $district?->provincia?->nombre,
+            'issuer_district' => $district?->nombre,
             'customer_id' => $customer?->id,
             'customer_document_type' => $customerType,
             'customer_document_number' => $customerNumber,

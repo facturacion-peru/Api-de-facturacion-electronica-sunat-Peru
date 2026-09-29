@@ -27,6 +27,10 @@ return new class extends Migration
             $table->string('issuer_trade_name')->nullable();
             $table->string('issuer_address');
             $table->char('issuer_ubigeo', 6);
+            // Nombres del ubigeo: SUNAT los observa si faltan (4096–4098).
+            $table->string('issuer_department', 60)->nullable();
+            $table->string('issuer_province', 60)->nullable();
+            $table->string('issuer_district', 60)->nullable();
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->string('customer_document_type', 1);
             $table->string('customer_document_number', 15);

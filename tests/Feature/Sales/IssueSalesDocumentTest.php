@@ -144,6 +144,7 @@ it('RF-006 copia los datos del emisor, del cliente y de los productos', function
 
     $document = SalesDocument::with('lines')->sole();
     expect($document->issuer_ruc)->toBe($this->company->ruc)
+        ->and([$document->issuer_department, $document->issuer_province, $document->issuer_district])->toBe(['Lima', 'Lima', 'Lima'])
         ->and($document->customer_name)->not->toBe('NOMBRE NUEVO')
         ->and($document->lines[0]->product_name)->toBe('Arroz 5 kg')
         ->and($document->lines[0]->unit_price)->toBe('25.90');

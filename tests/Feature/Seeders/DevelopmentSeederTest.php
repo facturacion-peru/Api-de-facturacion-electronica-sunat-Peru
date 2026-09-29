@@ -4,12 +4,16 @@ use App\Enums\CompanyRole;
 use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\SalesDocument;
 use App\Models\Series;
 use App\Models\SunatSetting;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Sunat\Sending\FakeSunatSender;
+use App\Sunat\Sending\SunatSender;
 use App\Tenancy\TenantContext;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DevelopmentSeeder;
@@ -28,7 +32,11 @@ function asEnvironment(string $env): void
 
 // El seeder intenta validar la configuración demo contra SUNAT beta: en
 // pruebas se simula, para no depender de la red.
-beforeEach(fn () => Http::fake(['*' => Http::response('<wsdl:definitions/>', 200)]));
+// Lo mismo con el envío de los comprobantes demo (spec 005).
+beforeEach(function () {
+    Http::fake(['*' => Http::response('<wsdl:definitions/>', 200)]);
+    app()->instance(SunatSender::class, new FakeSunatSender);
+});
 
 /** --force: en production db:seed pide confirmación interactiva. */
 function seedForced(string $class): void
@@ -74,7 +82,10 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
         ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1)
         ->and(Certificate::withoutTenancy()->count())->toBe(1)
         ->and(Series::withoutTenancy()->orderBy('code')->pluck('code')->all())->toBe(['B001', 'F001'])
-        ->and(SunatSetting::withoutTenancy()->value('status')->value)->toBe('validated'); // SUNAT simulado responde
+        ->and(SunatSetting::withoutTenancy()->value('status')->value)->toBe('validated') // SUNAT simulado responde
+        ->and(Customer::withoutTenancy()->count())->toBe(2)
+        ->and(SalesDocument::withoutTenancy()->orderBy('series_code')->get()->map(fn ($d) => $d->display_number.' '.$d->status->value)->all())
+        ->toBe(['B001-00000001 accepted', 'F001-00000001 accepted']);
 });
 
 it('fuera de local no crea usuarios ni empresas', function (string $env) {
