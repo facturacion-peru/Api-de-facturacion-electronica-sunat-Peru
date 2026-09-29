@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\Sales\TicketController;
+use App\Http\Controllers\Api\Sunat\SunatController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +63,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/products/{product}/movements', [StockController::class, 'movements']);
             Route::get('/inventory/alerts', [AlertController::class, 'index']);
             Route::post('/tickets/{ticket}/void', [TicketController::class, 'void']);
+            Route::get('/sunat/settings', [SunatController::class, 'settings']);
+            Route::put('/sunat/credentials', [SunatController::class, 'updateCredentials']);
+            Route::post('/sunat/certificate', [SunatController::class, 'uploadCertificate']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);
