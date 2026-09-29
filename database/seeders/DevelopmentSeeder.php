@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\CompanyRole;
+use App\Enums\DocumentType;
 use App\Enums\PersonType;
 use App\Enums\TaxRegime;
+use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\Establishment;
@@ -13,6 +15,8 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Rules\Ruc;
 use App\Services\InventoryService;
+use App\Services\SeriesService;
+use App\Services\SunatConfigService;
 use App\Services\TicketService;
 use App\Tenancy\TenantContext;
 use Database\Factories\EstablishmentFactory;
@@ -65,6 +69,7 @@ class DevelopmentSeeder extends Seeder
         ]);
 
         $this->tickets($demo, $demoAdmin, $demoSeller);
+        $this->sunat($demo, $demoAdmin);
 
         $this->command?->info('Usuarios de prueba listos (contraseña: '.self::PASSWORD.').');
     }
@@ -179,5 +184,44 @@ class DevelopmentSeeder extends Seeder
             ], $seller);
             $service->void($voided, 'Venta de demostración anulada', $admin);
         });
+    }
+
+    /**
+     * Configuración SUNAT demo: credenciales genéricas de beta, un certificado
+     * autofirmado de prueba y las series F001 y B001. Intenta validar contra
+     * SUNAT beta; si no responde, queda pendiente de validación.
+     */
+    private function sunat(Company $company, User $admin): void
+    {
+        app(TenantContext::class)->run($company, function () use ($company, $admin) {
+            if (Certificate::exists()) {
+                return;
+            }
+
+            $config = app(SunatConfigService::class);
+            $config->updateCredentials($company, 'MODDATOS', 'moddatos', $admin);
+            $config->uploadCertificate($company, $this->selfSignedPfx($company->ruc, 'demo-cert-123'), 'demo-cert-123', $admin);
+
+            $series = app(SeriesService::class);
+            $series->create($company, DocumentType::Invoice, 'F001', 0, $admin);
+            $series->create($company, DocumentType::Receipt, 'B001', 0, $admin);
+
+            try {
+                $config->validate($company, $admin);
+            } catch (\Throwable) {
+                $this->command?->warn('SUNAT beta no respondió: la configuración demo queda pendiente de validación.');
+            }
+        });
+    }
+
+    /** Certificado autofirmado, válido un año, con el RUC en serialNumber. */
+    private function selfSignedPfx(string $ruc, string $password): string
+    {
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $csr = openssl_csr_new(['countryName' => 'PE', 'commonName' => 'EMPRESA DEMO (PRUEBAS)', 'serialNumber' => $ruc], $key, ['digest_alg' => 'sha256']);
+        $cert = openssl_csr_sign($csr, null, $key, 365, ['digest_alg' => 'sha256']);
+        openssl_pkcs12_export($cert, $pfx, $key, $password);
+
+        return $pfx;
     }
 }

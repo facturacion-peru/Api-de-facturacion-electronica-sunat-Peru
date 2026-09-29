@@ -56,6 +56,12 @@
             "name": "products"
         },
         {
+            "name": "series"
+        },
+        {
+            "name": "sunat"
+        },
+        {
             "name": "tickets"
         },
         {
@@ -1571,6 +1577,333 @@
                 "responses": {
                     "200": {
                         "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/series": {
+            "get": {
+                "tags": [
+                    "series"
+                ],
+                "summary": "Listar series",
+                "operationId": "seriesIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "series"
+                ],
+                "summary": "Crear series",
+                "operationId": "seriesStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "document_type": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "minLength": 4,
+                                        "maxLength": 4
+                                    },
+                                    "last_number": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 99999999
+                                    }
+                                },
+                                "required": [
+                                    "document_type",
+                                    "code"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/series/{series}": {
+            "patch": {
+                "tags": [
+                    "series"
+                ],
+                "summary": "Actualizar series",
+                "operationId": "seriesUpdate",
+                "parameters": [
+                    {
+                        "name": "series",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "active": {
+                                        "type": "boolean"
+                                    },
+                                    "last_number": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "document_type": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "active"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sunat/certificate": {
+            "post": {
+                "tags": [
+                    "sunat"
+                ],
+                "summary": "Upload certificate sunat",
+                "operationId": "sunatUploadCertificate",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "certificate": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "maxLength": 1024
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 100
+                                    }
+                                },
+                                "required": [
+                                    "certificate"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sunat/credentials": {
+            "put": {
+                "tags": [
+                    "sunat"
+                ],
+                "summary": "Update credentials sunat",
+                "operationId": "sunatUpdateCredentials",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "sol_user": {
+                                        "type": "string"
+                                    },
+                                    "sol_password": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    }
+                                },
+                                "required": [
+                                    "sol_user",
+                                    "sol_password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sunat/settings": {
+            "get": {
+                "tags": [
+                    "sunat"
+                ],
+                "summary": "Settings sunat",
+                "operationId": "sunatSettings",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sunat/status": {
+            "get": {
+                "tags": [
+                    "sunat"
+                ],
+                "summary": "Para cualquier rol: ¿se puede emitir?, ¿qué falta?, ¿vence el certificado?",
+                "operationId": "sunatStatus",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sunat/validate": {
+            "post": {
+                "tags": [
+                    "sunat"
+                ],
+                "summary": "Validate sunat",
+                "operationId": "sunatValidate",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     },
                     "401": {
                         "description": "No autenticado"

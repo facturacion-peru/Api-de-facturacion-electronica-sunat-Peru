@@ -61,6 +61,14 @@ En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitació
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*` |
 | `SANCTUM_EXPIRATION` | Minutos de vida del token (1440 = 24 h) |
 
+## Secretos de SUNAT y `APP_KEY`
+
+La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña se guardan **cifrados en la base de datos** con el cast `encrypted` de Laravel, que usa `APP_KEY`. Ninguna respuesta, log ni registro de auditoría los incluye.
+
+- **No pierdas `APP_KEY`.** Sin ella no se pueden descifrar: habría que volver a subir el certificado y la clave SOL de cada empresa.
+- **Para rotarla**, pon la clave anterior en `APP_PREVIOUS_KEYS` (separadas por comas) antes de cambiar `APP_KEY`. Laravel descifra con cualquiera de ellas y cifra con la nueva.
+- En beta, los envíos usan las credenciales genéricas de prueba de SUNAT (`config/services.php`, `SUNAT_BETA_*`); la clave SOL real se guarda para producción (A-31).
+
 ## Seguridad y aislamiento
 
 - **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
