@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
+use App\Inventory\Exceptions\MovementImmutable;
 use App\Tenancy\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +47,12 @@ class InventoryMovement extends Model
             'product_balance_after' => 'decimal:3',
             'created_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new MovementImmutable);
+        static::deleting(fn () => throw new MovementImmutable);
     }
 
     public function product(): BelongsTo
