@@ -1,6 +1,6 @@
 # API de facturación electrónica SUNAT (SaaS)
 
-API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT. La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
+API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT (en el ambiente beta). La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
 
 El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones viven en [`../docs`](../docs), empezando por la [constitución](../docs/constitution.md) y el [índice de specs](../docs/specs/README.md).
 
@@ -12,13 +12,13 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
 | [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
 | [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
-| 005 | Emisión en beta | En aclaración |
+| [005](../docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
 
-El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
+El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
 ## Stack
 
-Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1, DomPDF y QR están instalados para la emisión (spec 005). La API no usa toolchain JavaScript.
+Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1 (XML UBL, firma y envío), DomPDF y endroid/qr-code para los comprobantes. Requisitos de plataforma: `ext-bcmath`, `ext-openssl` y `ext-gd`. La API no usa toolchain JavaScript.
 
 ## Puesta en marcha
 
@@ -29,6 +29,7 @@ php artisan key:generate
 # Configura DB_* (PostgreSQL) y FRONTEND_URL en .env
 php artisan migrate --seed          # tablas + ubigeos (+ cuentas de prueba si APP_ENV=local)
 php artisan serve                   # http://127.0.0.1:8000
+php artisan schedule:work           # en otra terminal: reintentos de envío a SUNAT
 ```
 
 ### Cuentas de prueba (solo `APP_ENV=local`)
