@@ -8,8 +8,11 @@ use App\Enums\TaxRegime;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\Establishment;
+use App\Models\Product;
 use App\Models\User;
 use App\Rules\Ruc;
+use App\Services\InventoryService;
+use App\Tenancy\TenantContext;
 use Database\Factories\EstablishmentFactory;
 use Illuminate\Database\Seeder;
 
@@ -39,13 +42,24 @@ class DevelopmentSeeder extends Seeder
         $this->user('Administrador Plataforma', self::PLATFORM_ADMIN, platformAdmin: true);
 
         $demo = $this->company('2060000001', 'Empresa Demo S.A.C.', 'Bodega Demo', 'contacto@demo.test');
-        $this->member($demo, 'Ana Administradora', 'admin@demo.test', CompanyRole::CompanyAdmin);
+        $demoAdmin = $this->member($demo, 'Ana Administradora', 'admin@demo.test', CompanyRole::CompanyAdmin);
         $this->member($demo, 'Luis Vendedor', 'vendedor@demo.test', CompanyRole::Seller);
         $this->member($demo, 'Carla Desactivada', 'inactivo@demo.test', CompanyRole::Seller, active: false);
 
         // Segunda empresa para comprobar el aislamiento entre empresas.
         $otra = $this->company('2060000002', 'Otra Empresa S.A.C.', 'Otra Tienda', 'contacto@otra.test');
-        $this->member($otra, 'Olga Administradora', 'admin@otra.test', CompanyRole::CompanyAdmin);
+        $otraAdmin = $this->member($otra, 'Olga Administradora', 'admin@otra.test', CompanyRole::CompanyAdmin);
+
+        $this->products($demo, $demoAdmin, [
+            ['ARZ-001', 'Arroz extra 5 kg', 'good', 'NIU', '25.90', '10', '5', false, [['24', 18.5, null], ['12', 19.0, null]]],
+            ['YOG-001', 'Yogur de fresa 1 L', 'good', 'NIU', '7.50', '10', '6', true, [['10', 4.2, 10], ['15', 4.3, 60]]],
+            ['AZU-001', 'Azúcar rubia', 'good', 'KGM', '4.20', '20', '10', false, [['50.500', 3.1, null]]],
+            ['LEC-001', 'Leche evaporada 400 g', 'good', 'NIU', '4.50', '10', '12', false, [['8', 3.4, null]]],
+            ['DEL-001', 'Delivery en el distrito', 'service', 'ZZ', '5.00', '10', null, false, []],
+        ]);
+        $this->products($otra, $otraAdmin, [
+            ['OTR-001', 'Producto de otra empresa', 'good', 'NIU', '10.00', '10', null, false, [['5', 6.0, null]]],
+        ]);
 
         $this->command?->info('Usuarios de prueba listos (contraseña: '.self::PASSWORD.').');
     }
@@ -82,7 +96,7 @@ class DevelopmentSeeder extends Seeder
         return $company;
     }
 
-    private function member(Company $company, string $name, string $email, CompanyRole $role, bool $active = true): void
+    private function member(Company $company, string $name, string $email, CompanyRole $role, bool $active = true): User
     {
         $user = $this->user($name, $email);
 
@@ -90,5 +104,40 @@ class DevelopmentSeeder extends Seeder
             ['user_id' => $user->id],
             ['company_id' => $company->id, 'role' => $role, 'active' => $active],
         );
+
+        return $user;
+    }
+
+    /**
+     * Productos demo con entradas por el servicio real (lotes, movimientos y
+     * auditoría). Solo se cargan si el producto aún no existe.
+     *
+     * @param  list<array{string, string, string, string, string, string, ?string, bool, list<array{string, float, ?int}>}>  $rows
+     *                                                                                                                              código, nombre, tipo, unidad, precio, afectación, mínimo, controla vencimiento, [cantidad, costo, días para vencer]
+     */
+    private function products(Company $company, User $admin, array $rows): void
+    {
+        app(TenantContext::class)->run($company, function () use ($company, $admin, $rows) {
+            foreach ($rows as [$code, $name, $type, $unit, $price, $igv, $min, $tracksExpiry, $entries]) {
+                if (Product::where('code', $code)->exists()) {
+                    continue;
+                }
+
+                $product = Product::create([
+                    'company_id' => $company->id, 'code' => $code, 'name' => $name, 'type' => $type, 'unit' => $unit,
+                    'sale_price' => $price, 'igv_affectation' => $igv, 'min_stock' => $min, 'tracks_expiry' => $tracksExpiry,
+                ]);
+
+                foreach ($entries as $i => [$quantity, $cost, $expiresInDays]) {
+                    app(InventoryService::class)->registerEntry($product, [
+                        'quantity' => $quantity,
+                        'received_at' => today()->subDays(10 - $i)->toDateString(),
+                        'unit_cost' => (string) $cost,
+                        'expires_at' => $expiresInDays !== null ? today()->addDays($expiresInDays)->toDateString() : null,
+                        'reference' => 'Carga inicial de demostración',
+                    ], $admin);
+                }
+            }
+        });
     }
 }

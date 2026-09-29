@@ -32,13 +32,28 @@
             "name": "auth"
         },
         {
+            "name": "catalogs"
+        },
+        {
             "name": "company"
+        },
+        {
+            "name": "inventory"
         },
         {
             "name": "invitations"
         },
         {
+            "name": "lots"
+        },
+        {
+            "name": "movements"
+        },
+        {
             "name": "platform"
+        },
+        {
+            "name": "products"
         },
         {
             "name": "ubigeos"
@@ -301,6 +316,31 @@
                 }
             }
         },
+        "/api/v1/catalogs/inventory": {
+            "get": {
+                "tags": [
+                    "catalogs"
+                ],
+                "summary": "Inventory catalogs",
+                "operationId": "catalogInventory",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/company": {
             "get": {
                 "tags": [
@@ -366,6 +406,9 @@
                                         "type": "string",
                                         "nullable": true,
                                         "maxLength": 32
+                                    },
+                                    "expiry_warning_days": {
+                                        "type": "integer"
                                     },
                                     "ruc": {
                                         "type": "string"
@@ -436,6 +479,31 @@
                                 ]
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/inventory/alerts": {
+            "get": {
+                "tags": [
+                    "inventory"
+                ],
+                "summary": "Listar inventory",
+                "operationId": "alertIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
                     }
                 },
                 "security": [
@@ -671,6 +739,105 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/lots/{lot}/adjustments": {
+            "post": {
+                "tags": [
+                    "lots"
+                ],
+                "summary": "Adjust lots",
+                "operationId": "stockAdjust",
+                "parameters": [
+                    {
+                        "name": "lot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/movements/{movement}/reverse": {
+            "post": {
+                "tags": [
+                    "movements"
+                ],
+                "summary": "Reverse movements",
+                "operationId": "stockReverse",
+                "parameters": [
+                    {
+                        "name": "movement",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string"
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/v1/platform/companies": {
@@ -962,6 +1129,286 @@
                     },
                     "422": {
                         "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products": {
+            "get": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Por defecto solo activos. El administrador puede pedir status=inactive",
+                "operationId": "productIndex",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Crear products",
+                "operationId": "productStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 32
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "type": {
+                                        "type": "string"
+                                    },
+                                    "unit": {
+                                        "type": "string"
+                                    },
+                                    "sale_price": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 9999999999.99
+                                    },
+                                    "igv_affectation": {
+                                        "type": "string"
+                                    },
+                                    "min_stock": {
+                                        "type": "number",
+                                        "nullable": true,
+                                        "minimum": 0
+                                    },
+                                    "tracks_expiry": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "type",
+                                    "unit",
+                                    "sale_price",
+                                    "igv_affectation"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products/{product}": {
+            "get": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Obtener products",
+                "operationId": "productShow",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Desactivar con stock se permite, pero se avisa (caso límite de la spec).",
+                "operationId": "productUpdate",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products/{product}/entries": {
+            "post": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Store entry products",
+                "operationId": "stockStoreEntry",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products/{product}/lots": {
+            "get": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Lotes en orden de salida (FEFO/FIFO); por defecto solo los que tienen saldo.",
+                "operationId": "stockLots",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products/{product}/movements": {
+            "get": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Historial del producto, del más reciente al más antiguo (HU-5.1).",
+                "operationId": "stockMovements",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
                     },
                     "401": {
                         "description": "No autenticado"
