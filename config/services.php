@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    /*
+    | SUNAT (spec 004). En beta los envíos usan las credenciales genéricas de
+    | prueba de SUNAT (A-31); la clave SOL real de la empresa se guarda para
+    | producción. {ruc} se reemplaza por el RUC de la empresa.
+    */
+    'sunat' => [
+        'beta_wsdl' => env('SUNAT_BETA_WSDL', \Greenter\Ws\Services\SunatEndpoints::FE_BETA.'?wsdl'),
+        'beta_user' => env('SUNAT_BETA_USER', '{ruc}MODDATOS'),
+        'beta_password' => env('SUNAT_BETA_PASSWORD', 'moddatos'),
+        'timeout' => (int) env('SUNAT_TIMEOUT', 10),
+    ],
+
 ];

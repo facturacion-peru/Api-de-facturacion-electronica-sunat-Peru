@@ -1,16 +1,20 @@
 <?php
 
 use App\Enums\CompanyRole;
+use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\Series;
+use App\Models\SunatSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DevelopmentSeeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 /*
  * Usuarios de prueba solo en APP_ENV=local, para poder hacer
@@ -21,6 +25,10 @@ function asEnvironment(string $env): void
 {
     app()->detectEnvironment(fn () => $env);
 }
+
+// El seeder intenta validar la configuración demo contra SUNAT beta: en
+// pruebas se simula, para no depender de la red.
+beforeEach(fn () => Http::fake(['*' => Http::response('<wsdl:definitions/>', 200)]));
 
 /** --force: en production db:seed pide confirmación interactiva. */
 function seedForced(string $class): void
@@ -63,7 +71,10 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
         ->and(Product::withoutTenancy()->count())->toBe(6)
         ->and(ProductLot::withoutTenancy()->count())->toBe(7)
         ->and(Ticket::withoutTenancy()->count())->toBe(4)
-        ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1);
+        ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1)
+        ->and(Certificate::withoutTenancy()->count())->toBe(1)
+        ->and(Series::withoutTenancy()->orderBy('code')->pluck('code')->all())->toBe(['B001', 'F001'])
+        ->and(SunatSetting::withoutTenancy()->value('status')->value)->toBe('validated'); // SUNAT simulado responde
 });
 
 it('fuera de local no crea usuarios ni empresas', function (string $env) {

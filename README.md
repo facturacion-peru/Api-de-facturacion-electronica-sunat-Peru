@@ -11,7 +11,8 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [001](../docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
 | [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
 | [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
-| 004–005 | Configuración SUNAT, emisión en beta | En aclaración |
+| [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
+| 005 | Emisión en beta | En aclaración |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -32,7 +33,7 @@ php artisan serve                   # http://127.0.0.1:8000
 
 ### Cuentas de prueba (solo `APP_ENV=local`)
 
-`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes) y ventas demo (una anulada). En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
+`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes), ventas demo (una anulada) y la configuración SUNAT de la empresa demo: credenciales de beta, un certificado autofirmado y las series F001 y B001. El seeder intenta validarla contra SUNAT beta; si no hay red, queda pendiente. En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
 
 | Correo | Rol | Empresa |
 |---|---|---|
@@ -61,6 +62,16 @@ En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitació
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*` |
 | `SANCTUM_EXPIRATION` | Minutos de vida del token (1440 = 24 h) |
 
+## Secretos de SUNAT y `APP_KEY`
+
+La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña se guardan **cifrados en la base de datos** con el cast `encrypted` de Laravel, que usa `APP_KEY`. Ninguna respuesta, log ni registro de auditoría los incluye.
+
+- **No pierdas `APP_KEY`.** Sin ella no se pueden descifrar: habría que volver a subir el certificado y la clave SOL de cada empresa.
+- **Para rotarla**, pon la clave anterior en `APP_PREVIOUS_KEYS` (separadas por comas) antes de cambiar `APP_KEY`. Laravel descifra con cualquiera de ellas y cifra con la nueva.
+- En beta, los envíos usan las credenciales genéricas de prueba de SUNAT (`config/services.php`, `SUNAT_BETA_*`); la clave SOL real se guarda para producción (A-31).
+- **Validar** comprueba el certificado vigente y lee el WSDL de SUNAT beta. Si SUNAT no responde devuelve 503 y la configuración no pasa a error.
+- **Series:** `App\Services\SeriesService::nextNumber()` exige una transacción abierta y bloquea la fila de la serie; lo usará la emisión (spec 005). El correlativo no se edita por la API.
+
 ## Seguridad y aislamiento
 
 - **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
@@ -83,6 +94,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
+| SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
 | Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
 
 Las rutas de gestión de la empresa, las escrituras de inventario, el historial y las alertas exigen el rol `company_admin`. El costo de productos y lotes solo se incluye en las respuestas al administrador.

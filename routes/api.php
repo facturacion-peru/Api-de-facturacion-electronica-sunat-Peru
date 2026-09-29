@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\Sales\TicketController;
+use App\Http\Controllers\Api\Sunat\SeriesController;
+use App\Http\Controllers\Api\Sunat\SunatController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +50,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/products/{product}', [ProductController::class, 'show']);
         Route::get('/products/{product}/lots', [StockController::class, 'lots']);
 
+        Route::get('/sunat/status', [SunatController::class, 'status']);
+        Route::get('/series', [SeriesController::class, 'index']);
         Route::get('/tickets', [TicketController::class, 'index']);
         Route::post('/tickets', [TicketController::class, 'store']);
         Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
@@ -62,6 +66,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/products/{product}/movements', [StockController::class, 'movements']);
             Route::get('/inventory/alerts', [AlertController::class, 'index']);
             Route::post('/tickets/{ticket}/void', [TicketController::class, 'void']);
+            Route::get('/sunat/settings', [SunatController::class, 'settings']);
+            Route::put('/sunat/credentials', [SunatController::class, 'updateCredentials']);
+            Route::post('/sunat/certificate', [SunatController::class, 'uploadCertificate']);
+            Route::post('/sunat/validate', [SunatController::class, 'validate']);
+            Route::post('/series', [SeriesController::class, 'store']);
+            Route::patch('/series/{series}', [SeriesController::class, 'update']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);
