@@ -61,6 +61,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
         Route::post('/sales-documents', [SalesDocumentController::class, 'store']);
+        Route::post('/sales-documents/{salesDocument}/retry', [SalesDocumentController::class, 'retry']);
 
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);

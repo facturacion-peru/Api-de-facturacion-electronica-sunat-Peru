@@ -50,6 +50,7 @@ beforeEach(function () {
     $this->ticketB = Ticket::factory()->create(['company_id' => $this->b->id, 'customer_name' => 'Cliente secreto de B']);
     $this->seriesB = Series::factory()->create(['company_id' => $this->b->id, 'code' => 'BZ99', 'last_number' => 42]);
     $this->customerB = Customer::factory()->create(['company_id' => $this->b->id, 'document_number' => '87654321', 'name' => 'Comprador secreto de B']);
+    $this->documentB = SalesDocument::factory()->status(App\Enums\SalesDocumentStatus::Pending)->create(['series_id' => $this->seriesB->id, 'customer_name' => 'Comprador secreto de B']);
     $this->sunatB = SunatSetting::create(['company_id' => $this->b->id, 'environment' => 'beta', 'status' => 'pending', 'sol_user' => 'USUARIOB', 'sol_password' => 'ClaveSolDeB']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;
@@ -83,6 +84,7 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'ticket' => $this->ticketB->id,
         'series' => $this->seriesB->id,
         'customer' => $this->customerB->id,
+        'salesDocument' => $this->documentB->id,
     };
     $payload = $method === 'PATCH'
         ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
@@ -101,7 +103,8 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and($this->lotB->fresh()->remaining_quantity)->toBe($this->lotB->initial_quantity)
         ->and($this->ticketB->fresh()->status->value)->toBe('issued')
         ->and($this->seriesB->fresh()->active)->toBeTrue()
-        ->and($this->customerB->fresh()->name)->toBe('Comprador secreto de B');
+        ->and($this->customerB->fresh()->name)->toBe('Comprador secreto de B')
+        ->and($this->documentB->fresh()->attempts)->toBe(0);
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
@@ -160,7 +163,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ->and($this->sunatB->fresh()->status->value)->toBe('pending')
         ->and(Series::withoutTenancy()->where('company_id', $this->b->id)->pluck('code')->all())->toBe(['BZ99'])
         ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B'])
-        ->and(SalesDocument::withoutTenancy()->count())->toBe(0)
+        ->and(SalesDocument::withoutTenancy()->pluck('id')->all())->toBe([$this->documentB->id])
         ->and($this->seriesB->fresh()->last_number)->toBe(42);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
