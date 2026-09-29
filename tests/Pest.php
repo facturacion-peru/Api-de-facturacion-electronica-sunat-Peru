@@ -15,6 +15,12 @@ pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
+// Pruebas que necesitan transacciones reales (límites de transacción,
+// concurrencia): sin la transacción envolvente de RefreshDatabase.
+pest()->extend(Tests\TestCase::class)
+    ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Integration');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
