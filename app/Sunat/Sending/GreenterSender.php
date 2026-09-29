@@ -3,7 +3,6 @@
 namespace App\Sunat\Sending;
 
 use Greenter\See;
-use Greenter\Ws\Services\SunatEndpoints;
 use Throwable;
 
 /**
@@ -17,7 +16,7 @@ final class GreenterSender implements SunatSender
     public function send(string $signedXml, string $issuerRuc): SunatResponse
     {
         $see = new See;
-        $see->setService(SunatEndpoints::FE_BETA);
+        $see->setService((string) config('services.sunat.beta_endpoint'));
         $see->setCredentials(
             str_replace('{ruc}', $issuerRuc, (string) config('services.sunat.beta_user')),
             (string) config('services.sunat.beta_password'),
