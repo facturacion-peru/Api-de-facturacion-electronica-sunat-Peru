@@ -130,6 +130,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ]),
         'PUT api/v1/sunat/credentials' => callAsA('PUT', '/api/v1/sunat/credentials', ['company_id' => $this->b->id, 'sol_user' => 'NUEVOA', 'sol_password' => 'otra']),
         'POST api/v1/sunat/certificate' => callAsA('POST', '/api/v1/sunat/certificate', ['company_id' => $this->b->id, 'password' => 'x']),
+        'POST api/v1/sunat/validate' => callAsA('POST', '/api/v1/sunat/validate', ['company_id' => $this->b->id]),
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
         ]),
@@ -139,7 +140,8 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
     expect($this->b->fresh()->toArray())->toBe($bBefore);
     expect(Invitation::withoutTenancy()->where('company_id', $this->b->id)->pluck('email')->all())->toBe(['invitado-b@empresa-b.pe'])
         ->and(Product::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Producto secreto de B'])
-        ->and($this->sunatB->fresh()->sol_password)->toBe('ClaveSolDeB');
+        ->and($this->sunatB->fresh()->sol_password)->toBe('ClaveSolDeB')
+        ->and($this->sunatB->fresh()->status->value)->toBe('pending');
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Sunat;
 
+use App\Enums\CompanyRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sunat\UpdateSunatCredentialsRequest;
 use App\Http\Requests\Sunat\UploadCertificateRequest;
@@ -10,6 +11,7 @@ use App\Models\Certificate;
 use App\Models\Company;
 use App\Services\SunatConfigService;
 use App\Tenancy\TenantContext;
+use Illuminate\Http\Request;
 
 /** Configuración SUNAT de la propia empresa (spec 004). Solo el administrador. */
 class SunatController extends Controller
@@ -40,11 +42,21 @@ class SunatController extends Controller
         return $this->resource($company);
     }
 
+    public function validate(Request $request): SunatSettingsResource
+    {
+        $company = $this->tenant->company();
+        abort_unless($request->user()->hasCompanyRole(CompanyRole::CompanyAdmin), 403);
+        $this->config->validate($company, $request->user());
+
+        return $this->resource($company);
+    }
+
     private function resource(Company $company): SunatSettingsResource
     {
         return new SunatSettingsResource(
             $this->config->settingFor($company),
             Certificate::with('uploader')->where('company_id', $company->id)->latest('id')->get(),
+            $this->config->effectiveStatus($company),
         );
     }
 }

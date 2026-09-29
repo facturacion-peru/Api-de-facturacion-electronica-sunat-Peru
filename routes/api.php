@@ -66,6 +66,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/sunat/settings', [SunatController::class, 'settings']);
             Route::put('/sunat/credentials', [SunatController::class, 'updateCredentials']);
             Route::post('/sunat/certificate', [SunatController::class, 'uploadCertificate']);
+            Route::post('/sunat/validate', [SunatController::class, 'validate']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);

@@ -12,8 +12,10 @@ use App\Models\SunatSetting;
 use App\Models\User;
 use App\Sunat\CertificateInspector;
 use App\Sunat\Exceptions\InvalidCertificate;
+use App\Sunat\SunatConnectionChecker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Configuración SUNAT de la empresa (spec 004). Todo cambio de credencial o
@@ -25,7 +27,90 @@ class SunatConfigService
     public function __construct(
         private AuditLogger $audit,
         private CertificateInspector $inspector,
+        private SunatConnectionChecker $connection,
     ) {}
+
+    public const EXPIRED_CERTIFICATE = 'El certificado está vencido. Sube uno vigente.';
+
+    /**
+     * Lo que falta para poder validar (HU-2.2).
+     *
+     * @return list<string>
+     */
+    public function missing(Company $company): array
+    {
+        $setting = $this->settingFor($company);
+        $missing = [];
+
+        if ($setting->sol_user === null || $setting->sol_password === null) {
+            $missing[] = 'Registra el usuario y la clave SOL.';
+        }
+
+        if ($this->currentCertificate($company) === null) {
+            $missing[] = 'Sube el certificado digital.';
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Valida la configuración (HU-2): completa, certificado vigente y SUNAT
+     * beta respondiendo. En beta la clave SOL real no se verifica (A-31).
+     */
+    public function validate(Company $company, User $actor): SunatSetting
+    {
+        if ($missing = $this->missing($company)) {
+            throw ValidationException::withMessages(['configuration' => $missing]);
+        }
+
+        $setting = $this->settingFor($company);
+
+        if ($this->currentCertificate($company)->isExpired()) {
+            $setting->fill(['status' => SunatStatus::Error, 'last_validation_error' => self::EXPIRED_CERTIFICATE])->save();
+            $this->audit->record('sunat.validated', $setting, ['result' => 'error'], actor: $actor);
+
+            return $setting;
+        }
+
+        // SUNAT caída no es un error de la configuración (HU-2.3).
+        if (! $this->connection->isAvailable()) {
+            throw new HttpException(503, 'SUNAT no responde en este momento. Inténtalo más tarde.');
+        }
+
+        $setting->fill([
+            'status' => SunatStatus::Validated,
+            'last_validated_at' => now(),
+            'last_validation_error' => null,
+            'validated_by' => $actor->id,
+        ])->save();
+
+        $this->audit->record('sunat.validated', $setting, ['result' => 'validated'], actor: $actor);
+
+        return $setting;
+    }
+
+    /**
+     * Estado real en este momento: una configuración validada con el
+     * certificado ya vencido está con error; una empresa desactivada, inactiva.
+     *
+     * @return array{SunatStatus, ?string}
+     */
+    public function effectiveStatus(Company $company): array
+    {
+        $setting = $this->settingFor($company);
+
+        if (! $company->active) {
+            return [SunatStatus::Inactive, 'La empresa está desactivada.'];
+        }
+
+        $certificate = $this->currentCertificate($company);
+
+        if ($setting->status === SunatStatus::Validated && $certificate?->isExpired()) {
+            return [SunatStatus::Error, self::EXPIRED_CERTIFICATE];
+        }
+
+        return [$setting->status, $setting->last_validation_error];
+    }
 
     /** La configuración de la empresa, o una sin guardar «no configurada». */
     public function settingFor(Company $company): SunatSetting

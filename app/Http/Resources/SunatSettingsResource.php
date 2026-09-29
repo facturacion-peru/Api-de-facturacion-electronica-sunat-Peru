@@ -16,8 +16,11 @@ use Illuminate\Support\Collection;
  */
 class SunatSettingsResource extends ApiResource
 {
-    /** @param  Collection<int, Certificate>  $certificates */
-    public function __construct(SunatSetting $setting, private Collection $certificates)
+    /**
+     * @param  Collection<int, Certificate>  $certificates
+     * @param  array{\App\Enums\SunatStatus, ?string}  $effective  estado calculado ahora
+     */
+    public function __construct(SunatSetting $setting, private Collection $certificates, private array $effective)
     {
         parent::__construct($setting);
     }
@@ -31,8 +34,8 @@ class SunatSettingsResource extends ApiResource
             'company_id' => $this->company_id,
             'environment' => $this->environment->value,
             'environment_label' => $this->environment->label(),
-            'status' => $this->status->value,
-            'status_label' => $this->status->label(),
+            'status' => $this->effective[0]->value,
+            'status_label' => $this->effective[0]->label(),
             'sol_user_masked' => SunatConfigService::mask($this->sol_user),
             'has_sol_password' => $this->sol_password !== null,
             // En beta la clave real no se verifica contra SUNAT (A-31).
@@ -44,7 +47,7 @@ class SunatSettingsResource extends ApiResource
                 'replaced_at' => $c->replaced_at?->toIso8601String(),
             ])->values()->all(),
             'last_validated_at' => $this->last_validated_at?->toIso8601String(),
-            'last_validation_error' => $this->last_validation_error,
+            'last_validation_error' => $this->effective[1],
         ];
     }
 

@@ -43,6 +43,7 @@ return [
     'GET api/v1/sunat/settings' => ['type' => 'own'],
     'PUT api/v1/sunat/credentials' => ['type' => 'write'],
     'POST api/v1/sunat/certificate' => ['type' => 'write'],
+    'POST api/v1/sunat/validate' => ['type' => 'write'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
