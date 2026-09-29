@@ -32,6 +32,8 @@ return [
     'PATCH api/v1/products/{product}' => ['type' => 'resource', 'param' => 'product'],
     'GET api/v1/products/{product}/lots' => ['type' => 'resource', 'param' => 'product'],
     'POST api/v1/products/{product}/entries' => ['type' => 'resource', 'param' => 'product'],
+    'POST api/v1/lots/{lot}/adjustments' => ['type' => 'resource', 'param' => 'lot'],
+    'POST api/v1/movements/{movement}/reverse' => ['type' => 'resource', 'param' => 'movement'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],

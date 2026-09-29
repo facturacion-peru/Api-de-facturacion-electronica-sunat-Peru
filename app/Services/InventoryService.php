@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Audit\AuditLogger;
+use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
 use App\Inventory\Exceptions\InsufficientStock;
 use App\Models\InventoryMovement;
@@ -130,6 +131,85 @@ class InventoryService
         return $movements;
     }
 
+    /** Ajuste por conteo, merma, daño… Nunca deja el lote en negativo (HU-4.1, HU-4.3). */
+    public function adjust(ProductLot $lot, string $quantity, AdjustmentReason $reason, ?string $note, User $actor): InventoryMovement
+    {
+        return DB::transaction(function () use ($lot, $quantity, $reason, $note, $actor) {
+            $lot = $this->lockLot($lot);
+            $quantity = $this->normalize($quantity);
+            $newBalance = bcadd($lot->remaining_quantity, $quantity, self::SCALE);
+
+            if (bccomp($newBalance, '0', self::SCALE) < 0) {
+                throw ValidationException::withMessages([
+                    'quantity' => "El lote quedaría en negativo: su saldo es {$lot->remaining_quantity}.",
+                ]);
+            }
+
+            $lot->remaining_quantity = $newBalance;
+            $lot->save();
+
+            $movement = $this->recordMovement($lot, MovementType::Adjustment, $quantity, $actor, [
+                'reason' => $reason,
+                'note' => $note,
+            ]);
+
+            $this->audit->record('inventory.adjustment', $movement, [
+                'lot_number' => $lot->lot_number,
+                'quantity' => $quantity,
+                'reason' => $reason->value,
+            ], actor: $actor);
+
+            return $movement;
+        });
+    }
+
+    /**
+     * Corrige un movimiento con otro inverso enlazado; el original nunca se
+     * toca (HU-4.2, RF-016). Una sola vez por movimiento, y nunca sobre una
+     * reversión.
+     */
+    public function reverse(InventoryMovement $movement, AdjustmentReason $reason, ?string $note, User $actor): InventoryMovement
+    {
+        return DB::transaction(function () use ($movement, $reason, $note, $actor) {
+            $lot = $this->lockLot($movement->lot()->withoutGlobalScopes()->firstOrFail());
+
+            if ($movement->type === MovementType::Reversal) {
+                throw ValidationException::withMessages(['movement' => 'No se puede revertir una reversión.']);
+            }
+
+            if (InventoryMovement::withoutTenancy()->where('reverses_id', $movement->id)->exists()) {
+                throw ValidationException::withMessages(['movement' => 'Este movimiento ya fue revertido.']);
+            }
+
+            $inverse = bcmul($movement->quantity, '-1', self::SCALE);
+            $newBalance = bcadd($lot->remaining_quantity, $inverse, self::SCALE);
+
+            if (bccomp($newBalance, '0', self::SCALE) < 0) {
+                throw ValidationException::withMessages([
+                    'movement' => "No se puede revertir: el lote ya no tiene el saldo de este movimiento (saldo {$lot->remaining_quantity}).",
+                ]);
+            }
+
+            $lot->remaining_quantity = $newBalance;
+            $lot->save();
+
+            $reversal = $this->recordMovement($lot, MovementType::Reversal, $inverse, $actor, [
+                'reason' => $reason,
+                'note' => $note,
+                'reverses_id' => $movement->id,
+            ]);
+
+            $this->audit->record('inventory.reversal', $reversal, [
+                'reverses' => $movement->id,
+                'type' => $movement->type->value,
+                'quantity' => $inverse,
+                'reason' => $reason->value,
+            ], actor: $actor);
+
+            return $reversal;
+        });
+    }
+
     /** Stock físico del producto (suma de saldos de sus lotes). */
     public function balance(Product $product): string
     {
@@ -153,6 +233,14 @@ class InventoryService
             ->orderBy('id')
             ->lockForUpdate()
             ->get();
+    }
+
+    /** Bloquea el producto del lote y devuelve el lote releído y bloqueado. */
+    private function lockLot(ProductLot $lot): ProductLot
+    {
+        Product::withoutTenancy()->whereKey($lot->product_id)->lockForUpdate()->first();
+
+        return ProductLot::withoutTenancy()->whereKey($lot->id)->lockForUpdate()->firstOrFail();
     }
 
     /** Bloquea la fila del producto hasta el final de la transacción. */

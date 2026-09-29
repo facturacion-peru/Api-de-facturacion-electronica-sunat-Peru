@@ -69,8 +69,12 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'user' => $this->sellerB->id,
         'invitation' => $this->invitationB->id,
         'product' => $this->productB->id,
+        'lot' => $this->lotB->id,
+        'movement' => $this->lotB->movements()->withoutGlobalScopes()->value('id'),
     };
-    $payload = $method === 'PATCH' ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado'] : [];
+    $payload = $method === 'PATCH'
+        ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
+        : ['quantity' => '-1', 'reason' => 'error'];
 
     $ofB = callAsA($method, '/'.str_replace('{'.$case['param'].'}', (string) $idOfB, $uri), $payload);
     $missing = callAsA($method, '/'.str_replace('{'.$case['param'].'}', '999999', $uri), $payload);
@@ -81,7 +85,8 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
 
     expect($this->productB->fresh()->name)->toBe('Producto secreto de B')
         ->and($this->productB->fresh()->active)->toBeTrue()
-        ->and(ProductLot::withoutTenancy()->where('product_id', $this->productB->id)->count())->toBe(1);
+        ->and(ProductLot::withoutTenancy()->where('product_id', $this->productB->id)->count())->toBe(1)
+        ->and($this->lotB->fresh()->remaining_quantity)->toBe($this->lotB->initial_quantity);
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();

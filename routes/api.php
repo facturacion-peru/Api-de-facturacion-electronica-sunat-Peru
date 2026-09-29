@@ -51,6 +51,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
             Route::patch('/products/{product}', [ProductController::class, 'update']);
             Route::post('/products/{product}/entries', [StockController::class, 'storeEntry']);
+            Route::post('/lots/{lot}/adjustments', [StockController::class, 'adjust']);
+            Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);

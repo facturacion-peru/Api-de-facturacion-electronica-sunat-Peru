@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Enums\AdjustmentReason;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\AdjustStockRequest;
+use App\Http\Requests\Inventory\ReverseMovementRequest;
 use App\Http\Requests\Inventory\StoreStockEntryRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\LotResource;
+use App\Http\Resources\MovementResource;
+use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Models\ProductLot;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,5 +45,30 @@ class StockController extends Controller
             ->additional(['product_stock' => $this->inventory->balance($product)])
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function adjust(AdjustStockRequest $request, ProductLot $lot): JsonResponse
+    {
+        $movement = $this->inventory->adjust(
+            $lot,
+            (string) $request->validated('quantity'),
+            AdjustmentReason::from($request->validated('reason')),
+            $request->validated('note'),
+            $request->user(),
+        );
+
+        return MovementResource::make($movement->load(['lot', 'creator']))->response()->setStatusCode(201);
+    }
+
+    public function reverse(ReverseMovementRequest $request, InventoryMovement $movement): JsonResponse
+    {
+        $reversal = $this->inventory->reverse(
+            $movement,
+            AdjustmentReason::from($request->validated('reason')),
+            $request->validated('note'),
+            $request->user(),
+        );
+
+        return MovementResource::make($reversal->load(['lot', 'creator']))->response()->setStatusCode(201);
     }
 }
