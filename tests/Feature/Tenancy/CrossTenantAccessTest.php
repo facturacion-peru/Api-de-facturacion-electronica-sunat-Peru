@@ -40,7 +40,7 @@ beforeEach(function () {
 
     app(TenantContext::class)->run($this->b, fn () => app(AuditLogger::class)->record('b.accion_secreta', $this->sellerB, actor: $this->adminB));
 
-    $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B']);
+    $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B', 'min_stock' => '100']);
     $this->lotB = ProductLot::factory()->for($this->productB)->create(['lot_number' => 'LOTE-DE-B']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;

@@ -37,6 +37,18 @@ class StockController extends Controller
         return LotResource::collection($lots);
     }
 
+    /** Historial del producto, del más reciente al más antiguo (HU-5.1). */
+    public function movements(Product $product): ApiCollection
+    {
+        return MovementResource::collection(
+            $product->movements()
+                ->with(['lot', 'creator', 'reversal'])
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->paginate(25)
+        );
+    }
+
     public function storeEntry(StoreStockEntryRequest $request, Product $product): JsonResponse
     {
         $lot = $this->inventory->registerEntry($product, $request->validated(), $request->user());

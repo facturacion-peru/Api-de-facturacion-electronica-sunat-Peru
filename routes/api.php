@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Company\AuditLogController;
 use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
+use App\Http\Controllers\Api\Inventory\AlertController;
 use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
@@ -53,6 +54,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/products/{product}/entries', [StockController::class, 'storeEntry']);
             Route::post('/lots/{lot}/adjustments', [StockController::class, 'adjust']);
             Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
+            Route::get('/products/{product}/movements', [StockController::class, 'movements']);
+            Route::get('/inventory/alerts', [AlertController::class, 'index']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);

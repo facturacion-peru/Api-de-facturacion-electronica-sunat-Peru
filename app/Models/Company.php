@@ -28,6 +28,7 @@ class Company extends Model
         'email',
         'phone',
         'logo_path',
+        'expiry_warning_days',
         'active',
     ];
 
@@ -37,6 +38,7 @@ class Company extends Model
             'person_type' => PersonType::class,
             'tax_regime' => TaxRegime::class,
             'active' => 'boolean',
+            'expiry_warning_days' => 'integer',
         ];
     }
 

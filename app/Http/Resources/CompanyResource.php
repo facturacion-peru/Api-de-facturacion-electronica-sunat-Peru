@@ -29,6 +29,7 @@ class CompanyResource extends ApiResource
             'phone' => $this->phone,
             'logo_url' => $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null,
             'active' => $this->active,
+            'expiry_warning_days' => $this->expiry_warning_days,
             'fiscal_address' => $main ? [
                 'address' => $main->address,
                 'ubigeo' => $main->ubigeo,
