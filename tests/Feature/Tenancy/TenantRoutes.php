@@ -36,6 +36,7 @@ return [
     'POST api/v1/movements/{movement}/reverse' => ['type' => 'resource', 'param' => 'movement'],
     'GET api/v1/products/{product}/movements' => ['type' => 'resource', 'param' => 'product'],
     'GET api/v1/inventory/alerts' => ['type' => 'list'],
+    'GET api/v1/tickets' => ['type' => 'list'],
     'POST api/v1/tickets' => ['type' => 'write'],
     'GET api/v1/tickets/{ticket}' => ['type' => 'resource', 'param' => 'ticket'],
     'POST api/v1/tickets/{ticket}/void' => ['type' => 'resource', 'param' => 'ticket'],
