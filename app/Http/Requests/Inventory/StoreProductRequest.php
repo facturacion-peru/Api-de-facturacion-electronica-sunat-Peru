@@ -4,6 +4,7 @@ namespace App\Http\Requests\Inventory;
 
 use App\Enums\CompanyRole;
 use App\Enums\ProductType;
+use App\Enums\UnitOfMeasure;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProductRequest extends FormRequest
@@ -24,5 +25,10 @@ class StoreProductRequest extends FormRequest
     protected function effectiveType(): ?ProductType
     {
         return ProductType::tryFrom((string) $this->input('type'));
+    }
+
+    protected function effectiveUnit(): ?UnitOfMeasure
+    {
+        return UnitOfMeasure::tryFrom((string) $this->input('unit'));
     }
 }

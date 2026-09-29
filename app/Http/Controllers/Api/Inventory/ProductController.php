@@ -59,8 +59,17 @@ class ProductController extends Controller
         return ProductResource::make($product);
     }
 
+    /** Desactivar con stock se permite, pero se avisa (caso límite de la spec). */
     public function update(UpdateProductRequest $request, Product $product): ProductResource
     {
-        return ProductResource::make($this->products->update($product, $request->validated(), $request->user()));
+        $wasActive = $product->active;
+        $product = $this->products->update($product, $request->validated(), $request->user());
+        $resource = ProductResource::make($product);
+
+        if ($wasActive && ! $product->active && $product->type->tracksStock() && bccomp($product->stock(), '0', 3) > 0) {
+            $resource->additional(['warning' => "El producto queda desactivado con {$product->stock()} en stock."]);
+        }
+
+        return $resource;
     }
 }
