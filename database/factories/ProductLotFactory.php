@@ -6,6 +6,7 @@ use App\Enums\MovementType;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Support\Decimal;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -45,7 +46,7 @@ class ProductLotFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (ProductLot $lot) {
-            $productBalance = ProductLot::withoutTenancy()->where('product_id', $lot->product_id)->sum('remaining_quantity');
+            $productBalance = Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $lot->product_id)->pluck('remaining_quantity'));
 
             InventoryMovement::create([
                 'company_id' => $lot->company_id,
@@ -54,7 +55,7 @@ class ProductLotFactory extends Factory
                 'type' => MovementType::Entry,
                 'quantity' => $lot->initial_quantity,
                 'lot_balance_after' => $lot->remaining_quantity,
-                'product_balance_after' => bcadd((string) $productBalance, '0', 3),
+                'product_balance_after' => $productBalance,
             ]);
         });
     }

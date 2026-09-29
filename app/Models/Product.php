@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\IgvAffectation;
 use App\Enums\ProductType;
 use App\Enums\UnitOfMeasure;
+use App\Support\Decimal;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,6 +92,6 @@ class Product extends Model
 
     private function formatQuantity(mixed $value): string
     {
-        return bcadd((string) ($value ?? '0'), '0', 3);
+        return Decimal::fromDb($value);
     }
 }

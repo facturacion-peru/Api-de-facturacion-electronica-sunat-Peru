@@ -10,6 +10,7 @@ use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
 use App\Models\User;
+use App\Support\Decimal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -104,7 +105,7 @@ class InventoryService
         $this->lock($product);
         $pending = $this->normalize($quantity);
         $lots = $this->sellableLots($product);
-        $available = $this->normalize((string) $lots->reduce(fn (string $sum, ProductLot $lot) => bcadd($sum, $lot->remaining_quantity, self::SCALE), '0'));
+        $available = Decimal::sum($lots->pluck('remaining_quantity'));
 
         if (bccomp($available, $pending, self::SCALE) < 0) {
             throw new InsufficientStock($product, $pending, $available);
@@ -213,7 +214,8 @@ class InventoryService
     /** Stock físico del producto (suma de saldos de sus lotes). */
     public function balance(Product $product): string
     {
-        return $this->normalize((string) ProductLot::withoutTenancy()->where('product_id', $product->id)->sum('remaining_quantity'));
+        // Suma en PHP con bcmath: exacta también en SQLite, donde SUM() usa flotantes.
+        return Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $product->id)->pluck('remaining_quantity'));
     }
 
     /**
@@ -275,6 +277,6 @@ class InventoryService
 
     private function normalize(string $quantity): string
     {
-        return bcadd($quantity, '0', self::SCALE);
+        return Decimal::fromDb($quantity, self::SCALE);
     }
 }
