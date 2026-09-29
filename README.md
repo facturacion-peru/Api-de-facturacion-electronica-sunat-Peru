@@ -1,6 +1,6 @@
 # API de facturación electrónica SUNAT (SaaS)
 
-API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT. La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
+API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT (en el ambiente beta). La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
 
 El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones viven en [`../docs`](../docs), empezando por la [constitución](../docs/constitution.md) y el [índice de specs](../docs/specs/README.md).
 
@@ -12,13 +12,13 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
 | [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
 | [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
-| 005 | Emisión en beta | En aclaración |
+| [005](../docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
 
-El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. Se reincorpora con pruebas en la spec 005; ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
+El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
 ## Stack
 
-Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1, DomPDF y QR están instalados para la emisión (spec 005). La API no usa toolchain JavaScript.
+Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1 (XML UBL, firma y envío), DomPDF y endroid/qr-code para los comprobantes. Requisitos de plataforma: `ext-bcmath`, `ext-openssl` y `ext-gd`. La API no usa toolchain JavaScript.
 
 ## Puesta en marcha
 
@@ -29,11 +29,12 @@ php artisan key:generate
 # Configura DB_* (PostgreSQL) y FRONTEND_URL en .env
 php artisan migrate --seed          # tablas + ubigeos (+ cuentas de prueba si APP_ENV=local)
 php artisan serve                   # http://127.0.0.1:8000
+php artisan schedule:work           # en otra terminal: reintentos de envío a SUNAT
 ```
 
 ### Cuentas de prueba (solo `APP_ENV=local`)
 
-`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes), ventas demo (una anulada) y la configuración SUNAT de la empresa demo: credenciales de beta, un certificado autofirmado y las series F001 y B001. El seeder intenta validarla contra SUNAT beta; si no hay red, queda pendiente. En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
+`DevelopmentSeeder` las crea en cada `migrate:fresh --seed`, junto con productos demo (por unidad, por peso, con vencimiento y un servicio, con sus lotes), ventas demo (una anulada), la configuración SUNAT de la empresa demo (credenciales de beta, un certificado autofirmado y las series F001 y B001), dos clientes y una boleta y una factura. El seeder valida la configuración y emite los comprobantes contra SUNAT beta; sin red, la configuración queda pendiente y no se emite nada. En cualquier otro entorno se omite. Todas las cuentas usan la contraseña `Clave-demo-123`.
 
 | Correo | Rol | Empresa |
 |---|---|---|
@@ -72,6 +73,16 @@ La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña
 - **Validar** comprueba el certificado vigente y lee el WSDL de SUNAT beta. Si SUNAT no responde devuelve 503 y la configuración no pasa a error.
 - **Series:** `App\Services\SeriesService::nextNumber()` exige una transacción abierta y bloquea la fila de la serie; lo usará la emisión (spec 005). El correlativo no se edita por la API.
 
+## Emisión de comprobantes (spec 005, solo beta)
+
+- **Emitir:** `App\Services\SalesDocumentService::issue()` hace todo en una transacción: comprueba la configuración SUNAT validada, la serie y el cliente, toma el correlativo bloqueado, calcula con `App\Sunat\TaxCalculator` (precio con IGV → base e IGV, con `bcmath`), firma el XML (`UblBuilder` + `DocumentSigner`) y descuenta el stock. Si algo falla no queda nada, ni el número. La boleta de más de S/ 700 exige el documento del comprador y la factura, un cliente con RUC.
+- **Enviar:** `App\Sunat\SunatDispatcher` envía el XML ya firmado después del commit. Un *lease* en la fila (`locked_until`) impide dos envíos a la vez.
+- **Estados:** `pending` (sin respuesta definitiva) → `sent` (envío en curso) → `accepted`, `observed` o `rejected` (definitivos). Si SUNAT no responde, se reintenta a los 1, 2, 5, 10 y 30 min y luego cada hora durante 24 h; después solo queda el botón «Reintentar».
+- **Reintentos automáticos:** el comando `sunat:send-pending` corre cada minuto en el *scheduler*. En el servidor hace falta el cron de Laravel (`* * * * * php artisan schedule:run`); en desarrollo, `php artisan schedule:work` en otra terminal. Sin él, los pendientes solo se envían con «Reintentar».
+- **SUNAT beta limita la frecuencia:** si se envía un documento a los pocos segundos de otro, responde `HTTP 401`. Al emitir se reintenta una vez tras `SUNAT_RATE_LIMIT_PAUSE` segundos (5 por defecto).
+- **PDF:** A4 y 80 mm con QR y la marca «PRUEBAS — SIN VALOR LEGAL», generados al descargar (`App\Sales\DocumentPdf`). El XML firmado y el CDR se guardan en la base de datos. Requisito de plataforma `ext-gd` para el QR.
+- **Pruebas:** en la suite se usa `FakeSunatSender`; `tests/Beta/` guarda el *spike* y las pruebas contra SUNAT beta real, que no corren por defecto.
+
 ## Seguridad y aislamiento
 
 - **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
@@ -94,6 +105,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
+| Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
 | Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
 

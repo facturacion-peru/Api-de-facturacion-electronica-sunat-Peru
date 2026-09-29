@@ -2,7 +2,12 @@
 
 use App\Enums\CompanyRole;
 use App\Models\Company;
+use App\Models\Product;
+use App\Models\ProductLot;
 use App\Models\User;
+use App\Sunat\Sending\FakeSunatSender;
+use App\Sunat\Sending\SunatSender;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +19,9 @@ use Tests\Support\TestCertificates;
  * T050 · CE-002 y RF-002: tras un recorrido completo de configuración, la
  * clave SOL, la contraseña del certificado y la clave privada no aparecen en
  * respuestas, logs, auditoría ni, en claro, en la base de datos.
+ *
+ * Spec 005 (T071): el recorrido sigue con la emisión, un envío fallido, el
+ * reintento y las descargas; el XML firmado tampoco lleva la clave privada.
  */
 
 it('ningún secreto de SUNAT sale en respuestas, logs, auditoría ni base de datos', function () {
@@ -55,6 +63,27 @@ it('ningún secreto de SUNAT sale en respuestas, logs, auditoría ni base de dat
     $call($admin, 'GET', '/api/v1/sunat/settings')->assertOk();
     $call($seller, 'GET', '/api/v1/sunat/status')->assertOk();
     $call($seller, 'GET', '/api/v1/series')->assertOk();
+
+    // Emisión (spec 005): SUNAT no responde, luego acepta al reintentar.
+    app()->instance(SunatSender::class, new FakeSunatSender(FakeSunatSender::unreachable(), FakeSunatSender::accepted()));
+    $product = app(TenantContext::class)->run($company, function () use ($company) {
+        $product = Product::factory()->create(['company_id' => $company->id, 'sale_price' => '10.00']);
+        ProductLot::factory()->for($product)->quantity('5')->create();
+
+        return $product;
+    });
+    $id = $call($seller, 'POST', '/api/v1/sales-documents', [
+        'idempotency_key' => (string) Illuminate\Support\Str::uuid(), 'document_type' => '03', 'payment_method' => 'cash',
+        'lines' => [['product_id' => $product->id, 'quantity' => '1']],
+    ])->assertCreated()->json('data.id');
+    $call($seller, 'POST', "/api/v1/sales-documents/{$id}/retry")->assertOk();
+    $call($seller, 'GET', '/api/v1/sales-documents')->assertOk();
+    $call($seller, 'GET', "/api/v1/sales-documents/{$id}")->assertOk();
+    foreach (['xml', 'cdr', 'pdf?format=80mm'] as $download) {
+        app('auth')->forgetGuards();
+        $responses[] = test()->withToken($seller->createToken('t')->plainTextToken)->get("/api/v1/sales-documents/{$id}/{$download}")->assertOk()->getContent();
+    }
+
     $call($admin, 'GET', '/api/v1/audit-logs')->assertOk();
 
     $database = collect(DB::connection()->getSchemaBuilder()->getTableListing())
@@ -62,7 +91,7 @@ it('ningún secreto de SUNAT sale en respuestas, logs, auditoría ni base de dat
         ->implode("\n");
 
     $haystacks = ['respuestas' => implode("\n", $responses), 'logs' => implode("\n", $logged), 'base de datos' => $database];
-    $secrets = ['clave SOL' => $solPassword, 'contraseña del certificado' => $certPassword, 'clave privada' => $keyFragment];
+    $secrets = ['clave SOL' => $solPassword, 'contraseña del certificado' => $certPassword, 'clave privada' => $keyFragment, 'cabecera de clave privada' => 'PRIVATE KEY'];
 
     foreach ($haystacks as $where => $haystack) {
         foreach ($secrets as $name => $secret) {

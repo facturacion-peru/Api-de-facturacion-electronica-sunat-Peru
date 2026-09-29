@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Sunat\Sending\GreenterSender;
+use App\Sunat\Sending\SunatSender;
 use App\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Una instancia por petición o trabajo de cola.
         $this->app->scoped(TenantContext::class);
+
+        $this->app->bind(SunatSender::class, GreenterSender::class);
     }
 
     /**

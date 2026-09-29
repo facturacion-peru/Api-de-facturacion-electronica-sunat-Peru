@@ -8,6 +8,17 @@ namespace Tests\Support;
  */
 final class TestCertificates
 {
+    private static ?string $signingPem = null;
+
+    /**
+     * PEM (certificado + clave) para firmar en pruebas de emisión. Se genera
+     * una vez por proceso: firmar no depende del RUC del titular.
+     */
+    public static function signingPem(): string
+    {
+        return self::$signingPem ??= self::make()['pem'];
+    }
+
     /**
      * @param  'serialNumber'|'organizationalUnitName'|'commonName'  $rucField
      * @return array{pfx: string, pem: string, cert_only: string}

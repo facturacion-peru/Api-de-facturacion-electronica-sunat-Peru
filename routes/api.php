@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Api\Sales\CustomerController;
+use App\Http\Controllers\Api\Sales\SalesDocumentController;
 use App\Http\Controllers\Api\Sales\TicketController;
 use App\Http\Controllers\Api\Sunat\SeriesController;
 use App\Http\Controllers\Api\Sunat\SunatController;
@@ -55,6 +57,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/tickets', [TicketController::class, 'index']);
         Route::post('/tickets', [TicketController::class, 'store']);
         Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
+        Route::get('/customers', [CustomerController::class, 'index']);
+        Route::post('/customers', [CustomerController::class, 'store']);
+        Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+        Route::get('/sales-documents', [SalesDocumentController::class, 'index']);
+        Route::post('/sales-documents', [SalesDocumentController::class, 'store']);
+        Route::get('/sales-documents/{salesDocument}', [SalesDocumentController::class, 'show']);
+        Route::post('/sales-documents/{salesDocument}/retry', [SalesDocumentController::class, 'retry']);
+        Route::get('/sales-documents/{salesDocument}/pdf', [SalesDocumentController::class, 'pdf']);
+        Route::get('/sales-documents/{salesDocument}/xml', [SalesDocumentController::class, 'xml']);
+        Route::get('/sales-documents/{salesDocument}/cdr', [SalesDocumentController::class, 'cdr']);
 
         Route::middleware('role:company_admin')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);

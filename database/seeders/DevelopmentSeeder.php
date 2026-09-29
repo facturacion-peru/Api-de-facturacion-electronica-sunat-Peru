@@ -3,18 +3,22 @@
 namespace Database\Seeders;
 
 use App\Enums\CompanyRole;
+use App\Enums\CustomerDocumentType;
 use App\Enums\DocumentType;
 use App\Enums\PersonType;
 use App\Enums\TaxRegime;
 use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\Customer;
 use App\Models\Establishment;
 use App\Models\Product;
+use App\Models\SalesDocument;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Rules\Ruc;
 use App\Services\InventoryService;
+use App\Services\SalesDocumentService;
 use App\Services\SeriesService;
 use App\Services\SunatConfigService;
 use App\Services\TicketService;
@@ -70,6 +74,7 @@ class DevelopmentSeeder extends Seeder
 
         $this->tickets($demo, $demoAdmin, $demoSeller);
         $this->sunat($demo, $demoAdmin);
+        $this->salesDocuments($demo, $demoSeller);
 
         $this->command?->info('Usuarios de prueba listos (contraseña: '.self::PASSWORD.').');
     }
@@ -211,6 +216,45 @@ class DevelopmentSeeder extends Seeder
             } catch (\Throwable) {
                 $this->command?->warn('SUNAT beta no respondió: la configuración demo queda pendiente de validación.');
             }
+        });
+    }
+
+    /**
+     * Clientes demo y, si la configuración quedó validada (SUNAT beta
+     * respondió), una boleta a «Cliente varios» y una factura emitidas de
+     * verdad en beta. Sin red, los comprobantes quedan pendientes y el
+     * scheduler los reenvía.
+     */
+    private function salesDocuments(Company $company, User $seller): void
+    {
+        app(TenantContext::class)->run($company, function () use ($company, $seller) {
+            $rucBase = '2010007097';
+            $customers = [
+                [CustomerDocumentType::Dni, '46027897', 'MARÍA QUISPE HUAMÁN', null],
+                [CustomerDocumentType::Ruc, $rucBase.Ruc::checkDigit($rucBase), 'FERRETERÍA EL SOL S.A.C.', 'Av. Los Pinos 456, Lima'],
+            ];
+            foreach ($customers as [$type, $number, $name, $address]) {
+                Customer::firstOrCreate(
+                    ['company_id' => $company->id, 'document_type' => $type, 'document_number' => $number],
+                    ['name' => $name, 'address' => $address, 'created_by' => $seller->id],
+                );
+            }
+
+            if (SalesDocument::exists() || app(SunatConfigService::class)->effectiveStatus($company)[0]->value !== 'validated') {
+                return;
+            }
+
+            $id = fn (string $code) => Product::where('code', $code)->value('id');
+            $service = app(SalesDocumentService::class);
+            $service->issue([
+                'idempotency_key' => (string) Str::uuid(), 'document_type' => '03', 'payment_method' => 'cash',
+                'lines' => [['product_id' => $id('ARZ-001'), 'quantity' => '1'], ['product_id' => $id('LEC-001'), 'quantity' => '2']],
+            ], $seller);
+            $service->issue([
+                'idempotency_key' => (string) Str::uuid(), 'document_type' => '01', 'payment_method' => 'transfer',
+                'customer_id' => Customer::where('document_type', CustomerDocumentType::Ruc)->value('id'),
+                'lines' => [['product_id' => $id('YOG-001'), 'quantity' => '2', 'discount' => '0.50']],
+            ], $seller);
         });
     }
 
