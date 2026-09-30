@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Api\Platform\EmissionSupportController;
+use App\Http\Controllers\Api\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\Sales\CustomerController;
 use App\Http\Controllers\Api\Sales\SalesDocumentController;
 use App\Http\Controllers\Api\Sales\TicketController;
@@ -117,5 +119,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/companies/{company}/admin-invitation/resend', [PlatformCompanyController::class, 'resendAdminInvitation']);
         // Mismo catálogo que el de empresa, que exige contexto de empresa (spec 006).
         Route::get('/ubigeos/search', [UbigeoController::class, 'searchUbigeo']);
+        Route::get('/sales-documents', [EmissionSupportController::class, 'index']);
+        Route::get('/audit-logs', [PlatformAuditController::class, 'index']);
+        Route::post('/sales-documents/{platformDocument}/retry', [EmissionSupportController::class, 'retry']);
     });
 });
