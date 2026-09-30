@@ -14,7 +14,6 @@
  */
 
 return [
-    'GET api/v1/auth/me' => ['type' => 'own'],
     'GET api/v1/company' => ['type' => 'own'],
     'PATCH api/v1/company' => ['type' => 'write'],
     'POST api/v1/company/logo' => ['type' => 'write'],

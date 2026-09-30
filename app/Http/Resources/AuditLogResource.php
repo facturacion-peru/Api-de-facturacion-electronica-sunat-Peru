@@ -23,6 +23,8 @@ class AuditLogResource extends ApiResource
             'ip' => $this->ip,
             'user_agent' => $this->user_agent,
             'created_at' => $this->created_at->toIso8601String(),
+            // Solo en la auditoría de la plataforma (spec 006): empresa afectada.
+            'company' => $this->when(array_key_exists('company_summary', $this->resource->getAttributes()), fn () => $this->company_summary),
         ];
     }
 }

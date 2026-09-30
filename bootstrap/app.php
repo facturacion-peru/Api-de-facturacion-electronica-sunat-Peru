@@ -32,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // El contexto de empresa debe existir antes del route model binding:
         // así un {modelo} de otra empresa da 404 y nunca se consulta sin scope.
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ResolveTenant::class);
+        // El rol de plataforma se comprueba antes del binding: si no, un usuario
+        // de empresa distinguiría ids existentes (404) de inexistentes (403).
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsurePlatformAdmin::class);
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,

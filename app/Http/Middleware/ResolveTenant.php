@@ -21,13 +21,27 @@ class ResolveTenant
 {
     public function __construct(private TenantContext $tenant) {}
 
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * @param  string|null  $mode  'allow-platform': deja pasar al administrador de la
+     *                             plataforma sin contexto de empresa (solo /auth/me, spec 006)
+     */
+    public function handle(Request $request, Closure $next, ?string $mode = null): Response
     {
         /** @var User $user */
         $user = $request->user();
 
         if ($user->isPlatformAdmin()) {
-            throw new AuthorizationException('El administrador de la plataforma no opera empresas.');
+            if ($mode !== 'allow-platform') {
+                throw new AuthorizationException('El administrador de la plataforma no opera empresas.');
+            }
+
+            if (! $user->active) {
+                $user->tokens()->delete();
+
+                throw new AuthenticationException;
+            }
+
+            return $next($request);
         }
 
         $membership = $user->membership()->with('company')->first();

@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Api\Platform\EmissionSupportController;
+use App\Http\Controllers\Api\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\Sales\CustomerController;
 use App\Http\Controllers\Api\Sales\SalesDocumentController;
 use App\Http\Controllers\Api\Sales\TicketController;
@@ -39,12 +41,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept']);
     });
 
-    // Cualquier usuario autenticado: cerrar su propia sesión.
-    Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+    // Cualquier usuario autenticado, también el de la plataforma (sin empresa):
+    // su propia sesión. /auth/me recupera la sesión al recargar (spec 006).
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        // Mismas comprobaciones de cuenta y empresa activas que el grupo de empresa.
+        Route::get('/auth/me', [AuthController::class, 'me'])->middleware('tenant:allow-platform');
+    });
 
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
-        Route::get('/auth/me', [AuthController::class, 'me']);
         Route::get('/company', [CompanyController::class, 'show']);
 
         Route::get('/catalogs/inventory', [CatalogController::class, 'inventory']);
@@ -114,5 +120,11 @@ Route::prefix('v1')->group(function () {
         Route::patch('/companies/{company}', [PlatformCompanyController::class, 'update']);
         Route::post('/companies/{company}/activate', [PlatformCompanyController::class, 'activate']);
         Route::post('/companies/{company}/deactivate', [PlatformCompanyController::class, 'deactivate']);
+        Route::post('/companies/{company}/admin-invitation/resend', [PlatformCompanyController::class, 'resendAdminInvitation']);
+        // Mismo catálogo que el de empresa, que exige contexto de empresa (spec 006).
+        Route::get('/ubigeos/search', [UbigeoController::class, 'searchUbigeo']);
+        Route::get('/sales-documents', [EmissionSupportController::class, 'index']);
+        Route::get('/audit-logs', [PlatformAuditController::class, 'index']);
+        Route::post('/sales-documents/{platformDocument}/retry', [EmissionSupportController::class, 'retry']);
     });
 });

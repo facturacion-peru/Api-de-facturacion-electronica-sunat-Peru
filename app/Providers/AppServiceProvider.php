@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\SalesDocument;
 use App\Models\User;
 use App\Sunat\Sending\GreenterSender;
 use App\Sunat\Sending\SunatSender;
@@ -46,6 +47,10 @@ class AppServiceProvider extends ServiceProvider
             ->whereHas('membership', fn ($query) => $query->where('company_id', app(TenantContext::class)->id()))
             ->with('membership')
             ->firstOrFail());
+
+        // Soporte de la plataforma (spec 006): sin contexto de empresa, el
+        // comprobante se busca entre todas; la ruta ya exige platform.admin.
+        Route::bind('platformDocument', fn (string $value) => SalesDocument::withoutTenancy()->with('company')->findOrFail($value));
 
         // Política de contraseñas para administradores, invitaciones y recuperación.
         Password::defaults(fn () => Password::min(10)->letters()->numbers());

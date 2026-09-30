@@ -32,6 +32,8 @@ class SunatConfigService
 
     public const EXPIRED_CERTIFICATE = 'El certificado está vencido. Sube uno vigente.';
 
+    public const RUC_CHANGED = 'El RUC de la empresa cambió: sube un certificado del nuevo RUC y vuelve a validar.';
+
     /**
      * Lo que falta para poder validar (HU-2.2).
      *
@@ -67,6 +69,15 @@ class SunatConfigService
 
         if ($this->currentCertificate($company)->isExpired()) {
             $setting->fill(['status' => SunatStatus::Error, 'last_validation_error' => self::EXPIRED_CERTIFICATE])->save();
+            $this->audit->record('sunat.validated', $setting, ['result' => 'error'], actor: $actor);
+
+            return $setting;
+        }
+
+        // Tras corregir el RUC (spec 006), el certificado puede ser del anterior.
+        $certificate = $this->currentCertificate($company);
+        if ($certificate->ruc !== $company->ruc) {
+            $setting->fill(['status' => SunatStatus::Error, 'last_validation_error' => "El certificado es del RUC {$certificate->ruc}; sube uno del RUC actual."])->save();
             $this->audit->record('sunat.validated', $setting, ['result' => 'error'], actor: $actor);
 
             return $setting;
@@ -189,5 +200,15 @@ class SunatConfigService
         $length = mb_strlen($value);
 
         return $length <= 4 ? str_repeat('*', $length) : mb_substr($value, 0, 2).str_repeat('*', $length - 4).mb_substr($value, -2);
+    }
+
+    /** La plataforma corrigió el RUC: la configuración vuelve a validarse (spec 006, HU-3). */
+    public function rucChanged(Company $company): void
+    {
+        $setting = $this->settingFor($company);
+
+        if ($setting->exists && $setting->status !== SunatStatus::NotConfigured) {
+            $setting->fill(['status' => SunatStatus::Pending, 'last_validation_error' => self::RUC_CHANGED])->save();
+        }
     }
 }
