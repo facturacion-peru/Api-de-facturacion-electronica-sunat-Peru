@@ -93,7 +93,7 @@ it('RF-040 cada acción sensible deja su registro', function () {
         'email' => 'nueva@example.com', 'address' => 'Jr. Uno 1', 'ubigeo' => '150101', 'admin_email' => 'jefe@example.com',
     ])->assertCreated();
     $asRoot()->patchJson("/api/v1/platform/companies/{$this->company->id}", ['razon_social' => 'Cambiada S.A.C.'])->assertOk();
-    $asRoot()->postJson("/api/v1/platform/companies/{$this->company->id}/deactivate")->assertOk();
+    $asRoot()->postJson("/api/v1/platform/companies/{$this->company->id}/deactivate", ['reason' => 'Prueba de auditoría'])->assertOk();
     $asRoot()->postJson("/api/v1/platform/companies/{$this->company->id}/activate")->assertOk();
     $fresh();
 

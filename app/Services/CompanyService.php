@@ -143,13 +143,13 @@ class CompanyService
      * Activa o desactiva la empresa (HU-7). Al desactivar se revocan las
      * sesiones de todos sus usuarios; los datos se conservan.
      */
-    public function setActive(Company $company, bool $active, User $actor): Company
+    public function setActive(Company $company, bool $active, User $actor, ?string $reason = null): Company
     {
         if ($company->active === $active) {
             return $company;
         }
 
-        DB::transaction(function () use ($company, $active, $actor) {
+        DB::transaction(function () use ($company, $active, $actor, $reason) {
             $company->update(['active' => $active]);
 
             if (! $active) {
@@ -157,7 +157,8 @@ class CompanyService
                     ->each(fn (User $user) => $user->tokens()->delete());
             }
 
-            $this->audit->record($active ? 'company.activated' : 'company.deactivated', $company, actor: $actor);
+            $this->audit->record($active ? 'company.activated' : 'company.deactivated', $company,
+                $reason !== null ? ['reason' => $reason] : [], actor: $actor);
         });
 
         return $company;

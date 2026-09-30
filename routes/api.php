@@ -114,6 +114,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/companies/{company}', [PlatformCompanyController::class, 'update']);
         Route::post('/companies/{company}/activate', [PlatformCompanyController::class, 'activate']);
         Route::post('/companies/{company}/deactivate', [PlatformCompanyController::class, 'deactivate']);
+        Route::post('/companies/{company}/admin-invitation/resend', [PlatformCompanyController::class, 'resendAdminInvitation']);
         // Mismo catálogo que el de empresa, que exige contexto de empresa (spec 006).
         Route::get('/ubigeos/search', [UbigeoController::class, 'searchUbigeo']);
     });

@@ -58,13 +58,20 @@ it('HU-7.1 al desactivar corta el acceso de sus usuarios y conserva los datos', 
     $user = User::factory()->forCompany($this->company, CompanyRole::CompanyAdmin)->create();
     $user->createToken('celular');
 
-    ($this->asRoot)()->postJson("/api/v1/platform/companies/{$this->company->id}/deactivate")
+    ($this->asRoot)()->postJson("/api/v1/platform/companies/{$this->company->id}/deactivate", ['reason' => 'Falta de pago del servicio'])
         ->assertOk()
         ->assertJsonPath('data.active', false);
 
     expect($user->tokens()->count())->toBe(0)
         ->and(User::find($user->id))->not->toBeNull()
-        ->and(AuditLog::withoutTenancy()->where('action', 'company.deactivated')->count())->toBe(1);
+        ->and(AuditLog::withoutTenancy()->where('action', 'company.deactivated')->sole()->changes)->toBe(['reason' => 'Falta de pago del servicio']);
+});
+
+it('006 HU-4.1 suspender exige un motivo', function () {
+    ($this->asRoot)()->postJson("/api/v1/platform/companies/{$this->company->id}/deactivate", ['reason' => ''])
+        ->assertStatus(422)->assertJsonValidationErrors(['reason']);
+
+    expect($this->company->fresh()->active)->toBeTrue();
 });
 
 it('HU-7.2 reactiva una empresa', function () {
