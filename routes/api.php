@@ -41,12 +41,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept']);
     });
 
-    // Cualquier usuario autenticado: cerrar su propia sesión.
-    Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+    // Cualquier usuario autenticado, también el de la plataforma (sin empresa):
+    // su propia sesión. /auth/me recupera la sesión al recargar (spec 006).
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        // Mismas comprobaciones de cuenta y empresa activas que el grupo de empresa.
+        Route::get('/auth/me', [AuthController::class, 'me'])->middleware('tenant:allow-platform');
+    });
 
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
-        Route::get('/auth/me', [AuthController::class, 'me']);
         Route::get('/company', [CompanyController::class, 'show']);
 
         Route::get('/catalogs/inventory', [CatalogController::class, 'inventory']);

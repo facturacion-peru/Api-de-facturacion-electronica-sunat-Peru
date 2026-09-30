@@ -47,3 +47,21 @@ it('audita el inicio de sesión de la plataforma, con IP y sin empresa', functio
         ->and($log->company_id)->toBeNull()
         ->and($log->ip)->toBe('127.0.0.1');
 });
+
+it('recupera la sesión de la plataforma al recargar (/auth/me)', function () {
+    $root = User::factory()->platformAdmin()->create();
+    $token = loginAs($root);
+
+    app('auth')->forgetGuards();
+    $this->withToken($token)->getJson('/api/v1/auth/me')->assertOk()->assertJsonPath('data.platform_admin', true)->assertJsonPath('data.company', null);
+});
+
+it('un administrador de la plataforma desactivado pierde la sesión', function () {
+    $root = User::factory()->platformAdmin()->create();
+    $token = loginAs($root);
+    $root->update(['active' => false]);
+
+    app('auth')->forgetGuards();
+    $this->withToken($token)->getJson('/api/v1/auth/me')->assertUnauthorized();
+    expect($root->tokens()->count())->toBe(0);
+});
