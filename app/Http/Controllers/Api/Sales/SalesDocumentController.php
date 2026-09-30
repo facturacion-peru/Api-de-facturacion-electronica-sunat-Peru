@@ -8,11 +8,13 @@ use App\Enums\SubmissionTrigger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\IndexSalesDocumentRequest;
 use App\Http\Requests\Sales\SalesDocumentPdfRequest;
+use App\Http\Requests\Sales\StoreCreditNoteRequest;
 use App\Http\Requests\Sales\StoreSalesDocumentRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\SalesDocumentResource;
 use App\Models\SalesDocument;
 use App\Sales\DocumentPdf;
+use App\Services\CreditNoteService;
 use App\Services\SalesDocumentService;
 use App\Sunat\SunatDispatcher;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +26,9 @@ use Illuminate\Validation\ValidationException;
 /** Boletas y facturas electrónicas (spec 005). */
 class SalesDocumentController extends Controller
 {
+    /** Relaciones del detalle: líneas, intentos y, desde la 007, notas y documento modificado. */
+    private const DETAIL = ['lines', 'seller', 'submissions', 'creditNotes', 'reference'];
+
     public function __construct(private SalesDocumentService $documents) {}
 
     /**
@@ -59,7 +64,15 @@ class SalesDocumentController extends Controller
 
     public function show(SalesDocument $salesDocument): SalesDocumentResource
     {
-        return SalesDocumentResource::make($salesDocument->load(['lines', 'seller', 'submissions']));
+        return SalesDocumentResource::make($salesDocument->load(self::DETAIL));
+    }
+
+    /** Spec 007: nota de crédito sobre este comprobante. 201 si se creó; 200 si la clave ya existía. */
+    public function storeCreditNote(StoreCreditNoteRequest $request, SalesDocument $salesDocument, CreditNoteService $notes): JsonResponse
+    {
+        [$note, $created] = $notes->issue($salesDocument, $request->validated(), $request->user());
+
+        return SalesDocumentResource::make($note->load(self::DETAIL))->response()->setStatusCode($created ? 201 : 200);
     }
 
     /** 201 si se creó; 200 si la clave de idempotencia ya existía. */
@@ -67,7 +80,7 @@ class SalesDocumentController extends Controller
     {
         [$document, $created] = $this->documents->issue($request->validated(), $request->user());
 
-        return SalesDocumentResource::make($document->load(['lines', 'seller', 'submissions']))
+        return SalesDocumentResource::make($document->load(self::DETAIL))
             ->response()->setStatusCode($created ? 201 : 200);
     }
 
@@ -87,7 +100,7 @@ class SalesDocumentController extends Controller
 
         abort_unless($dispatcher->send($salesDocument, SubmissionTrigger::Manual, $request->user()), 409, 'Este comprobante ya se está enviando a SUNAT.');
 
-        return SalesDocumentResource::make($salesDocument->refresh()->load(['lines', 'seller', 'submissions']));
+        return SalesDocumentResource::make($salesDocument->refresh()->load(self::DETAIL));
     }
 
     public function pdf(SalesDocumentPdfRequest $request, SalesDocument $salesDocument, DocumentPdf $pdf): Response

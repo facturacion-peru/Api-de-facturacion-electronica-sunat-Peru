@@ -33,10 +33,13 @@ it('el comprobante, sus líneas e intentos exponen exactamente los campos declar
         'id', 'document_type', 'document_type_label', 'series_code', 'number', 'display_number', 'environment', 'environment_notice',
         'issued_at', 'seller', 'payment_method', 'currency', 'customer', 'op_gravadas', 'op_exoneradas', 'op_inafectas', 'igv',
         'discount_total', 'total', 'status', 'status_label', 'sunat_code', 'sunat_message', 'sunat_notes', 'hash', 'has_cdr',
-        'attempts', 'next_attempt_at', 'can_retry', 'lines', 'submissions',
+        'attempts', 'next_attempt_at', 'can_retry',
+        // Spec 007
+        'correction_status', 'correction_status_label', 'can_credit', 'note_reason_code', 'note_reason_label', 'note_reason', 'restock',
+        'discard_reason', 'reference', 'credit_notes', 'lines', 'submissions',
     ])->and(array_keys($data['customer']))->toBe(['id', 'document_type', 'document_number', 'name', 'address'])
         ->and(array_keys($data['lines'][0]))->toBe([
-            'position', 'product_code', 'product_name', 'unit', 'igv_affectation', 'quantity', 'unit_price', 'discount', 'base_amount', 'igv', 'amount',
+            'position', 'product_code', 'product_name', 'unit', 'igv_affectation', 'quantity', 'unit_price', 'discount', 'base_amount', 'igv', 'amount', 'remaining',
         ])
         ->and(array_keys($data['submissions'][0]))->toBe(['trigger', 'started_at', 'duration_ms', 'result', 'code', 'message']);
 });
