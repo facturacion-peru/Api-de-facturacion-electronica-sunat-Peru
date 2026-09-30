@@ -17,7 +17,7 @@ use Tests\Support\SalesFixture;
 beforeEach(function () {
     // A: emisión validada, un pendiente y un rechazado, dos usuarios.
     ['company' => $this->a, 'admin' => $this->adminA, 'receipt' => $receipt] = SalesFixture::issuable();
-    $this->a->update(['razon_social' => 'Bodega Alfa S.A.C.']);
+    $this->a->update(['razon_social' => 'Bodega Alfa S.A.C.', 'nombre_comercial' => 'Alfa']);
     SalesDocument::factory()->status(SalesDocumentStatus::Pending)->create(['series_id' => $receipt->id, 'issued_at' => '2026-09-20 10:00:00']);
     SalesDocument::factory()->status(SalesDocumentStatus::Rejected)->create(['series_id' => $receipt->id, 'issued_at' => '2026-09-21 10:00:00']);
     SalesDocument::factory()->status(SalesDocumentStatus::Accepted)->create(['series_id' => $receipt->id, 'issued_at' => '2026-09-22 10:00:00']);
@@ -25,13 +25,13 @@ beforeEach(function () {
 
     // B: sin configurar SUNAT, administrador invitado que aún no acepta.
     app(TenantContext::class)->clear();
-    $this->b = Company::factory()->withMainEstablishment()->create(['razon_social' => 'Ferretería Beta E.I.R.L.']);
+    $this->b = Company::factory()->withMainEstablishment()->create(['razon_social' => 'Ferretería Beta E.I.R.L.', 'nombre_comercial' => 'Beta']);
     Invitation::factory()->create(['company_id' => $this->b->id, 'email' => 'jefe@beta.pe', 'role' => CompanyRole::CompanyAdmin]);
 
     // C: suspendida, sin problemas de emisión conocidos.
     app(TenantContext::class)->clear();
     ['company' => $this->c] = SalesFixture::issuable();
-    $this->c->update(['razon_social' => 'Comercial Gamma S.A.', 'active' => false]);
+    $this->c->update(['razon_social' => 'Comercial Gamma S.A.', 'nombre_comercial' => 'Gamma', 'active' => false]);
     app(TenantContext::class)->clear();
 
     $root = User::factory()->platformAdmin()->create();

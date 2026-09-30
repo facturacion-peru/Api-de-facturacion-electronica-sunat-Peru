@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Establishment;
 use App\Models\User;
 use App\Rules\Ruc;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +19,8 @@ class CompanyService
     public function __construct(
         private AuditLogger $audit,
         private InvitationService $invitations,
+        private SunatConfigService $sunat,
+        private TenantContext $tenant,
     ) {}
 
     /**
@@ -70,20 +73,53 @@ class CompanyService
      */
     public function update(Company $company, array $data, User $actor): Company
     {
-        $company->fill($data);
+        $fiscalAddress = $data['fiscal_address'] ?? null;
+        unset($data['fiscal_address']);
 
-        if ($company->isDirty('ruc')) {
+        $company->fill($data);
+        $rucChanged = $company->isDirty('ruc');
+
+        if ($rucChanged) {
             $company->person_type = Ruc::personType($company->ruc);
         }
 
         $changes = AuditLogger::diff($company);
 
-        if ($changes !== []) {
+        DB::transaction(function () use ($company, $fiscalAddress, $rucChanged, &$changes) {
             $company->save();
+
+            if ($fiscalAddress !== null) {
+                $changes += $this->updateFiscalAddress($company, $fiscalAddress);
+            }
+
+            // El certificado y la validación eran del RUC anterior (spec 006, HU-3).
+            if ($rucChanged) {
+                $this->tenant->run($company, fn () => $this->sunat->rucChanged($company));
+            }
+        });
+
+        if ($changes !== []) {
             $this->audit->record('company.updated', $company, $changes, actor: $actor);
         }
 
         return $company;
+    }
+
+    /**
+     * @param  array{address: string, ubigeo: string}  $address
+     * @return array<string, array{from: mixed, to: mixed}>
+     */
+    private function updateFiscalAddress(Company $company, array $address): array
+    {
+        $main = Establishment::withoutTenancy()->where('company_id', $company->id)->where('is_main', true)->firstOrFail();
+        $main->fill($address);
+        $changes = collect(AuditLogger::diff($main))->mapWithKeys(fn ($change, $field) => ["fiscal_address.{$field}" => $change])->all();
+
+        if ($changes !== []) {
+            $this->tenant->run($company, fn () => $main->save());
+        }
+
+        return $changes;
     }
 
     /** Guarda el logo en el disco público y borra el anterior. */

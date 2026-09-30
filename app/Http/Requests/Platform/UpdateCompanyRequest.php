@@ -25,6 +25,10 @@ class UpdateCompanyRequest extends FormRequest
             'tax_regime' => ['sometimes', 'required', Rule::enum(TaxRegime::class)],
             'email' => ['sometimes', 'required', 'email', 'max:255'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
+            // Domicilio fiscal: dirección y ubigeo del establecimiento principal (spec 006, HU-3).
+            'fiscal_address' => ['sometimes', 'array'],
+            'fiscal_address.address' => ['required_with:fiscal_address', 'string', 'max:255'],
+            'fiscal_address.ubigeo' => ['required_with:fiscal_address', 'string', Rule::exists('ubi_distritos', 'id')],
         ];
     }
 
