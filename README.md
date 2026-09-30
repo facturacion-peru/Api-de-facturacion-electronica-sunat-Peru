@@ -49,7 +49,7 @@ php artisan schedule:work           # en otra terminal: reintentos de envío a S
 ### Fuera de desarrollo
 
 ```bash
-php artisan platform:create-admin   # primer administrador de la plataforma (interactivo)
+php artisan platform:create-admin   # administradores de la plataforma (interactivo; no se crean desde el panel)
 php artisan company:create          # alta de una empresa e invitación a su administrador
 ```
 
@@ -84,6 +84,8 @@ La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña
 - **Pruebas:** en la suite se usa `FakeSunatSender`; `tests/Beta/` guarda el *spike* y las pruebas contra SUNAT beta real, que no corren por defecto.
 
 ## Seguridad y aislamiento
+
+- **Plataforma (spec 006, A-38):** la sesión del administrador de la plataforma vence a las 8 h y cada inicio de sesión se audita (`auth.login`). **Antes de producción** hace falta un segundo factor (TOTP) para estas cuentas (A-24).
 
 - **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
 - **Rutas por grupo** (`routes/api.php`):

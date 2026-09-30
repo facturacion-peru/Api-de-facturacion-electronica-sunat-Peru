@@ -21,6 +21,9 @@ class AuthService
 
     public const LOCKOUT_SECONDS = 15 * 60;
 
+    /** Sesión del administrador de la plataforma (A-38). */
+    public const PLATFORM_SESSION_HOURS = 8;
+
     public function __construct(private AuditLogger $audit) {}
 
     public function attempt(string $email, string $password, string $ip): User
@@ -66,5 +69,21 @@ class AuthService
         $membership = $user->membership;
 
         return $membership !== null && $membership->active && $membership->company->active;
+    }
+
+    /**
+     * Token de la sesión. El de la plataforma vence a las 8 h y su inicio de
+     * sesión se audita (A-38); el de empresa usa la expiración global.
+     */
+    public function issueToken(User $user): string
+    {
+        if (! $user->is_platform_admin) {
+            return $user->createToken('app')->plainTextToken;
+        }
+
+        $token = $user->createToken('app', ['*'], now()->addHours(self::PLATFORM_SESSION_HOURS))->plainTextToken;
+        $this->audit->record('auth.login', $user, actor: $user);
+
+        return $token;
     }
 }

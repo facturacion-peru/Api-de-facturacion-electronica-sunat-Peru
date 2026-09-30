@@ -17,7 +17,7 @@ class AuthController extends Controller
     {
         $user = $this->auth->attempt($request->validated('email'), $request->validated('password'), (string) $request->ip());
 
-        return new SessionResource($user, $user->createToken('app')->plainTextToken);
+        return new SessionResource($user, $this->auth->issueToken($user));
     }
 
     public function me(Request $request): SessionResource
