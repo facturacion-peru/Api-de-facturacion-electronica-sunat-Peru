@@ -20,3 +20,16 @@ it('documenta objetos anidados como objeto y listas como lista', function () {
         ->and($body('/api/v1/sales-documents', 'post')['lines']['type'])->toBe('array')
         ->and($body('/api/v1/sales-documents', 'post')['lines']['items']['properties'])->toHaveKey('product_id');
 });
+
+it('un campo con regla condicional no es obligatorio aunque sus hijos lo sean', function () {
+    $target = tempnam(sys_get_temp_dir(), 'openapi-');
+    $this->artisan('openapi:generate', ['--output' => $target])->assertSuccessful();
+    $spec = json_decode(file_get_contents($target), true);
+    unlink($target);
+
+    $schema = $spec['paths']['/api/v1/sales-documents/{salesDocument}/credit-notes']['post']['requestBody']['content']['application/json']['schema'];
+    $issue = $spec['paths']['/api/v1/sales-documents']['post']['requestBody']['content']['application/json']['schema'];
+
+    expect($schema['required'])->toContain('reason_code')->not->toContain('lines')
+        ->and($issue['required'])->toContain('lines');
+});

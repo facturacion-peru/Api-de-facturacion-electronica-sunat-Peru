@@ -2408,8 +2408,7 @@
                                 "required": [
                                     "idempotency_key",
                                     "reason_code",
-                                    "reason",
-                                    "lines"
+                                    "reason"
                                 ]
                             }
                         }
