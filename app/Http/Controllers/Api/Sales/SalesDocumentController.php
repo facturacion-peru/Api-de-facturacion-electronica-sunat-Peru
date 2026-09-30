@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionTrigger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sales\DiscardSalesDocumentRequest;
 use App\Http\Requests\Sales\IndexSalesDocumentRequest;
 use App\Http\Requests\Sales\SalesDocumentPdfRequest;
 use App\Http\Requests\Sales\StoreCreditNoteRequest;
@@ -65,6 +66,12 @@ class SalesDocumentController extends Controller
     public function show(SalesDocument $salesDocument): SalesDocumentResource
     {
         return SalesDocumentResource::make($salesDocument->load(self::DETAIL));
+    }
+
+    /** Spec 007, HU-3: el administrador descarta un comprobante rechazado. */
+    public function discard(DiscardSalesDocumentRequest $request, SalesDocument $salesDocument): SalesDocumentResource
+    {
+        return SalesDocumentResource::make($this->documents->discard($salesDocument, $request->validated('reason'), $request->user())->load(self::DETAIL));
     }
 
     /** Spec 007: nota de crédito sobre este comprobante. 201 si se creó; 200 si la clave ya existía. */

@@ -85,6 +85,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/products/{product}/movements', [StockController::class, 'movements']);
             Route::get('/inventory/alerts', [AlertController::class, 'index']);
             Route::post('/tickets/{ticket}/void', [TicketController::class, 'void']);
+            Route::post('/sales-documents/{salesDocument}/discard', [SalesDocumentController::class, 'discard']);
             Route::get('/sunat/settings', [SunatController::class, 'settings']);
             Route::put('/sunat/credentials', [SunatController::class, 'updateCredentials']);
             Route::post('/sunat/certificate', [SunatController::class, 'uploadCertificate']);

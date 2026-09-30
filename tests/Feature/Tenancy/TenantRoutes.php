@@ -55,6 +55,7 @@ return [
     'GET api/v1/sales-documents/{salesDocument}' => ['type' => 'resource', 'param' => 'salesDocument'],
     'POST api/v1/sales-documents/{salesDocument}/retry' => ['type' => 'resource', 'param' => 'salesDocument'],
     'POST api/v1/sales-documents/{salesDocument}/credit-notes' => ['type' => 'resource', 'param' => 'salesDocument'],
+    'POST api/v1/sales-documents/{salesDocument}/discard' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/pdf' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/xml' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/cdr' => ['type' => 'resource', 'param' => 'salesDocument'],
