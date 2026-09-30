@@ -100,3 +100,19 @@ it('el vendedor no crea ni desactiva series', function () {
     ($this->call)('POST', '/api/v1/series', ['document_type' => '03', 'code' => 'B002'], $this->seller)->assertForbidden();
     ($this->call)('PATCH', "/api/v1/series/{$id}", ['active' => false], $this->seller)->assertForbidden();
 });
+
+it('007 crea series de nota de crédito con la letra del comprobante que modifican', function () {
+    ($this->call)('POST', '/api/v1/series', ['document_type' => '07', 'code' => 'fc01'])
+        ->assertCreated()->assertJsonPath('data.code', 'FC01')->assertJsonPath('data.document_type_label', 'Nota de crédito');
+    ($this->call)('POST', '/api/v1/series', ['document_type' => '07', 'code' => 'BC01'])->assertCreated();
+    ($this->call)('POST', '/api/v1/series', ['document_type' => '07', 'code' => 'NC01'])
+        ->assertUnprocessable()->assertJsonPath('errors.code.0', 'La serie de Nota de crédito debe empezar por F (notas de facturas) o B (notas de boletas) y tener 4 caracteres (p. ej. FC01 o BC01).');
+});
+
+it('007 el Nuevo RUS no crea series de nota de crédito de factura', function () {
+    $this->company->update(['tax_regime' => TaxRegime::Nrus]);
+
+    ($this->call)('POST', '/api/v1/series', ['document_type' => '07', 'code' => 'FC01'])
+        ->assertUnprocessable()->assertJsonPath('errors.document_type.0', 'Las empresas del Nuevo RUS no emiten facturas ni sus notas de crédito.');
+    ($this->call)('POST', '/api/v1/series', ['document_type' => '07', 'code' => 'BC01'])->assertCreated();
+});

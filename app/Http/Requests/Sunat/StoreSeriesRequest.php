@@ -47,7 +47,9 @@ class StoreSeriesRequest extends FormRequest
             $type = DocumentType::tryFrom((string) $this->input('document_type'));
 
             if ($type && ! $validator->errors()->has('code') && ! preg_match($type->seriesPattern(), (string) $this->input('code'))) {
-                $validator->errors()->add('code', "La serie de {$type->label()} debe empezar por {$type->seriesPrefix()} y tener 4 caracteres (p. ej. {$type->seriesPrefix()}001).");
+                $validator->errors()->add('code', $type === DocumentType::CreditNote
+                    ? 'La serie de Nota de crédito debe empezar por F (notas de facturas) o B (notas de boletas) y tener 4 caracteres (p. ej. FC01 o BC01).'
+                    : "La serie de {$type->label()} debe empezar por {$type->seriesPrefix()} y tener 4 caracteres (p. ej. {$type->seriesPrefix()}001).");
             }
         }];
     }
