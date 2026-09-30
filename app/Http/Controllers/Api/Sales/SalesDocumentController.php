@@ -114,7 +114,7 @@ class SalesDocumentController extends Controller
     {
         $format = $request->validated('format', 'a4');
 
-        return response($pdf->render($salesDocument->load(['lines', 'company']), $format), 200, [
+        return response($pdf->render($salesDocument->load(['lines', 'company', 'reference']), $format), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$salesDocument->display_number}-{$format}.pdf\"",
         ]);

@@ -14,6 +14,7 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
 | [005](../docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
 | [006](../docs/specs/006-panel-plataforma/spec.md) | Panel de la plataforma: empresas, soporte de la emisión y auditoría | Implementada |
+| [007](../docs/specs/007-notas-credito/spec.md) | Notas de crédito (anulación y devoluciones) y descarte de rechazados | Implementada |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -81,6 +82,8 @@ La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña
 - **Estados:** `pending` (sin respuesta definitiva) → `sent` (envío en curso) → `accepted`, `observed` o `rejected` (definitivos). Si SUNAT no responde, se reintenta a los 1, 2, 5, 10 y 30 min y luego cada hora durante 24 h; después solo queda el botón «Reintentar».
 - **Reintentos automáticos:** el comando `sunat:send-pending` corre cada minuto en el *scheduler*. En el servidor hace falta el cron de Laravel (`* * * * * php artisan schedule:run`); en desarrollo, `php artisan schedule:work` en otra terminal. Sin él, los pendientes solo se envían con «Reintentar».
 - **SUNAT beta limita la frecuencia:** si se envía un documento a los pocos segundos de otro, responde `HTTP 401`. Al emitir se reintenta una vez tras `SUNAT_RATE_LIMIT_PAUSE` segundos (5 por defecto).
+- **Notas de crédito (spec 007):** `App\Services\CreditNoteService` emite notas (tipo 07) sobre facturas y boletas aceptadas, con los motivos 01 (anulación), 06 (devolución total) y 07 (devolución por ítem). Usan series propias con la letra del comprobante (`FC01`, `BC01`) y el mismo envío que los comprobantes. La fila del comprobante se bloquea mientras se emite, para no devolver más de lo emitido; el descuento se prorratea y la última devolución de una línea toma el resto exacto. El stock vuelve a los lotes de la venta (`InventoryService::restock`) y se revierte si SUNAT rechaza la nota. Las líneas de la nota van por sus valores netos: la plantilla de Greenter no admite descuentos de línea en notas.
+- **Rechazados:** el administrador los descarta (`discarded`): se revierten sus ventas y el número queda usado. Las ventas de un comprobante no se revierten a mano desde el inventario.
 - **PDF:** A4 y 80 mm con QR y la marca «PRUEBAS — SIN VALOR LEGAL», generados al descargar (`App\Sales\DocumentPdf`). El XML firmado y el CDR se guardan en la base de datos. Requisito de plataforma `ext-gd` para el QR.
 - **Pruebas:** en la suite se usa `FakeSunatSender`; `tests/Beta/` guarda el *spike* y las pruebas contra SUNAT beta real, que no corren por defecto.
 
@@ -109,7 +112,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
-| Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
+| Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
 | Plataforma | `GET/POST platform/companies` (con resumen, búsqueda y filtro `issues`) · `GET/PATCH platform/companies/{id}` (incluido el domicilio fiscal) · `POST platform/companies/{id}/activate` y `/deactivate` (con motivo) · `POST platform/companies/{id}/admin-invitation/resend` · `GET platform/sales-documents` · `POST platform/sales-documents/{id}/retry` · `GET platform/audit-logs` · `GET platform/ubigeos/search` |
 

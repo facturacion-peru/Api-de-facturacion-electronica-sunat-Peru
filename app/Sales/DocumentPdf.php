@@ -48,7 +48,11 @@ final class DocumentPdf
         return view('pdf.sales-document', [
             'document' => $document,
             'format' => $format,
-            'title' => $document->document_type === DocumentType::Invoice ? 'FACTURA ELECTRÓNICA' : 'BOLETA DE VENTA ELECTRÓNICA',
+            'title' => match ($document->document_type) {
+                DocumentType::Invoice => 'FACTURA ELECTRÓNICA',
+                DocumentType::Receipt => 'BOLETA DE VENTA ELECTRÓNICA',
+                DocumentType::CreditNote => 'NOTA DE CRÉDITO ELECTRÓNICA',
+            },
             'amountInWords' => AmountInWords::soles($document->total),
             'qr' => $qr->getDataUri(),
             'logo' => $logoPath && Storage::disk('public')->exists($logoPath)

@@ -81,7 +81,7 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
         ->and(Ticket::withoutTenancy()->count())->toBe(4)
         ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1)
         ->and(Certificate::withoutTenancy()->count())->toBe(1)
-        ->and(Series::withoutTenancy()->orderBy('code')->pluck('code')->all())->toBe(['B001', 'F001'])
+        ->and(Series::withoutTenancy()->orderBy('code')->pluck('code')->all())->toBe(['B001', 'BC01', 'F001', 'FC01'])
         ->and(SunatSetting::withoutTenancy()->value('status')->value)->toBe('validated') // SUNAT simulado responde
         ->and(Customer::withoutTenancy()->count())->toBe(2)
         ->and(SalesDocument::withoutTenancy()->orderBy('series_code')->get()->map(fn ($d) => $d->display_number.' '.$d->status->value)->all())

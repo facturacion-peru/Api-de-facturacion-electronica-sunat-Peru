@@ -93,3 +93,17 @@ it('descarga el CDR, o 404 si SUNAT aún no lo devolvió', function () {
         ->getJson("/api/v1/sales-documents/{$this->document->id}/cdr")
         ->assertNotFound()->assertJsonPath('message', 'SUNAT aún no devolvió el CDR de este comprobante.');
 });
+
+it('007 el PDF de la nota de crédito muestra el documento que modifica y el motivo', function () {
+    [$note] = app(App\Services\CreditNoteService::class)->issue($this->document, [
+        'idempotency_key' => (string) Str::uuid(), 'reason_code' => '07', 'reason' => 'Producto dañado', 'lines' => [['line_position' => 1, 'quantity' => '1']],
+    ], $this->seller);
+
+    $html = app(DocumentPdf::class)->html($note->load(['lines', 'reference']), 'a4');
+
+    expect($html)->toContain('NOTA DE CRÉDITO ELECTRÓNICA')
+        ->toContain('BC01-00000001')
+        ->toContain('Boleta de venta B001-00000151')
+        ->toContain('07 · Devolución por ítem: Producto dañado')
+        ->toContain('Representación impresa de la nota de crédito electrónica');
+});
