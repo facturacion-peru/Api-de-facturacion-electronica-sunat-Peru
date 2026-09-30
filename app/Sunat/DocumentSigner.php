@@ -3,7 +3,7 @@
 namespace App\Sunat;
 
 use App\Sunat\Exceptions\SigningFailed;
-use Greenter\Model\Sale\Invoice;
+use Greenter\Model\DocumentInterface;
 use Greenter\See;
 use Throwable;
 
@@ -14,7 +14,7 @@ use Throwable;
  */
 final class DocumentSigner
 {
-    public function sign(Invoice $invoice, string $pem): SignedXml
+    public function sign(DocumentInterface $invoice, string $pem): SignedXml
     {
         try {
             $see = new See;

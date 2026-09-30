@@ -109,3 +109,39 @@ it('falla con un certificado ilegible, sin XML a medias', function () {
     expect(fn () => (new DocumentSigner)->sign((new UblBuilder)->build(documentWith(DocumentType::Receipt, [['1', '1.18', '0', IgvAffectation::Gravado]]), '0000'), 'no es un PEM'))
         ->toThrow(App\Sunat\Exceptions\SigningFailed::class);
 });
+
+it('007 nota de crédito: documento afectado, motivo, líneas y totales', function () use ($first) {
+    $boleta = documentWith(DocumentType::Receipt, [['4', '7.50', '1.00', IgvAffectation::Gravado]]);
+    $calc = new App\Sunat\CreditNoteCalculator(new TaxCalculator);
+    $c = $calc->line('4', '7.50', '1.00', IgvAffectation::Gravado, '1', App\Sunat\ReturnedSoFar::none());
+    $totals = (new TaxCalculator)->totals([$c]);
+    $note = new SalesDocument([
+        'document_type' => DocumentType::CreditNote, 'series_code' => 'BC01', 'number' => 7, 'issued_at' => '2026-09-30 10:00:00', 'currency' => 'PEN',
+        'note_reason_code' => '07', 'note_reason' => 'Devolución de 1 unidad',
+        'issuer_ruc' => '20131312955', 'issuer_name' => 'BODEGA ANA S.A.C.', 'issuer_address' => 'AV. UNO 123', 'issuer_ubigeo' => '150101',
+        'customer_document_type' => '0', 'customer_document_number' => '-', 'customer_name' => 'CLIENTES VARIOS',
+        'op_gravadas' => $totals->opGravadas, 'op_exoneradas' => $totals->opExoneradas, 'op_inafectas' => $totals->opInafectas,
+        'igv' => $totals->igv, 'discount_total' => $totals->discountTotal, 'total' => $totals->total,
+    ]);
+    $note->setRelation('reference', $boleta);
+    $note->setRelation('lines', collect([new SalesDocumentLine([
+        'position' => 1, 'product_code' => 'P1', 'product_name' => 'Producto 1', 'unit' => 'NIU', 'igv_affectation' => '10',
+        'quantity' => '1', 'unit_price' => '7.50', 'unit_value' => $c->unitValue, 'gross_amount' => $c->grossAmount, 'discount' => $c->discount,
+        'base_amount' => $c->baseAmount, 'igv' => $c->igv, 'amount' => $c->amount,
+    ])]));
+
+    [, $xml] = signed($note);
+
+    expect($xml->getName())->toBe('CreditNote')
+        ->and($first($xml, '/*/cbc:ID'))->toBe('BC01-7')
+        ->and($first($xml, '//cac:DiscrepancyResponse/cbc:ReferenceID'))->toBe('B001-123')
+        ->and($first($xml, '//cac:DiscrepancyResponse/cbc:ResponseCode'))->toBe('07')
+        ->and($first($xml, '//cac:DiscrepancyResponse/cbc:Description'))->toBe('DEVOLUCIÓN DE 1 UNIDAD')
+        ->and($first($xml, '//cac:BillingReference//cbc:DocumentTypeCode'))->toBe('03')
+        ->and($first($xml, '/*/cac:LegalMonetaryTotal/cbc:PayableAmount'))->toBe('7.25')
+        // Sin descuento aparte: la línea va por sus valores netos (la plantilla de nota no los admite).
+        ->and($xml->xpath('//cac:CreditNoteLine/cac:AllowanceCharge'))->toBe([])
+        ->and($first($xml, '//cac:CreditNoteLine/cbc:LineExtensionAmount'))->toBe('6.14')
+        ->and($first($xml, '//cac:CreditNoteLine/cac:Price/cbc:PriceAmount'))->toBe('6.14')
+        ->and($first($xml, "//cac:CreditNoteLine//cbc:PriceTypeCode[.='01']/../cbc:PriceAmount"))->toBe('7.25');
+});

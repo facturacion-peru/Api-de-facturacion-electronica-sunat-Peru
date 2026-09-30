@@ -22,7 +22,15 @@ final class TaxCalculator
 
     public function line(string $quantity, string $unitPrice, string $discount, IgvAffectation $affectation): CalculatedLine
     {
-        $gross = Decimal::mul($quantity, $unitPrice);
+        return $this->lineFromGross($unitPrice, Decimal::mul($quantity, $unitPrice), $discount, $affectation);
+    }
+
+    /**
+     * Igual que line(), con el bruto ya dado: las notas de crédito lo usan
+     * para que la última devolución tome el resto exacto (spec 007).
+     */
+    public function lineFromGross(string $unitPrice, string $gross, string $discount, IgvAffectation $affectation): CalculatedLine
+    {
         $discount = Decimal::round($discount !== '' ? $discount : '0');
         $amount = bcsub($gross, $discount, 2);
 
