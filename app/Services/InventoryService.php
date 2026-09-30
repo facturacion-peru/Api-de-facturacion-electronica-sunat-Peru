@@ -9,6 +9,7 @@ use App\Inventory\Exceptions\InsufficientStock;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
+use App\Models\SalesDocument;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\Decimal;
@@ -187,6 +188,16 @@ class InventoryService
                 ]);
             }
 
+            // Ventas y reposiciones de comprobantes: solo con una nota de crédito o
+            // descartando el rechazado (spec 007), para no descuadrar stock y comprobante.
+            if (! $fromSource && $movement->source_type === (new SalesDocument)->getMorphClass()) {
+                $document = SalesDocument::withoutTenancy()->find($movement->source_id);
+
+                throw ValidationException::withMessages([
+                    'movement' => "Este movimiento pertenece al comprobante {$document?->display_number}: corrígelo con una nota de crédito.",
+                ]);
+            }
+
             if ($movement->type === MovementType::Reversal) {
                 throw ValidationException::withMessages(['movement' => 'No se puede revertir una reversión.']);
             }
@@ -222,6 +233,73 @@ class InventoryService
 
             return $reversal;
         });
+    }
+
+    /**
+     * Repone stock por una nota de crédito (spec 007, A-40): en los lotes de
+     * los que salió la venta del comprobante original, en orden inverso, sin
+     * superar en cada lote lo que salió menos lo ya repuesto por sus notas.
+     * Debe llamarse dentro de la transacción de la nota.
+     *
+     * @return Collection<int, InventoryMovement>
+     */
+    public function restock(Product $product, string $quantity, SalesDocument $original, SalesDocument $note, User $actor): Collection
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new LogicException('restock() debe ejecutarse dentro de la transacción de la nota.');
+        }
+
+        if (! $product->type->tracksStock()) {
+            return collect();
+        }
+
+        $this->lock($product);
+        $morph = $original->getMorphClass();
+        $noteIds = SalesDocument::withoutTenancy()->where('reference_document_id', $original->id)->pluck('id');
+
+        $sold = InventoryMovement::withoutTenancy()
+            ->where('product_id', $product->id)->where('type', MovementType::Sale)
+            ->where('source_type', $morph)->where('source_id', $original->id)
+            ->whereDoesntHave('reversal')
+            ->orderByDesc('id')->get()
+            ->groupBy('lot_id')->map(fn ($m) => Decimal::sum($m->map(fn ($x) => bcmul($x->quantity, '-1', self::SCALE))));
+
+        $returned = InventoryMovement::withoutTenancy()
+            ->where('product_id', $product->id)->where('type', MovementType::Return)
+            ->where('source_type', $morph)->whereIn('source_id', $noteIds)
+            ->whereDoesntHave('reversal')
+            ->get()->groupBy('lot_id')->map(fn ($m) => Decimal::sum($m->pluck('quantity')));
+
+        $pending = $this->normalize($quantity);
+        $movements = collect();
+
+        foreach ($sold as $lotId => $soldFromLot) {
+            if (bccomp($pending, '0', self::SCALE) === 0) {
+                break;
+            }
+
+            $room = bcsub($soldFromLot, $returned[$lotId] ?? '0', self::SCALE);
+            if (bccomp($room, '0', self::SCALE) <= 0) {
+                continue;
+            }
+
+            $take = bccomp($room, $pending, self::SCALE) < 0 ? $room : $pending;
+            $lot = $this->lockLot(ProductLot::withoutTenancy()->findOrFail($lotId));
+            $lot->remaining_quantity = bcadd($lot->remaining_quantity, $take, self::SCALE);
+            $lot->save();
+            $pending = bcsub($pending, $take, self::SCALE);
+
+            $movements->push($this->recordMovement($lot, MovementType::Return, $take, $actor, [
+                'source_type' => $note->getMorphClass(),
+                'source_id' => $note->getKey(),
+            ]));
+        }
+
+        if (bccomp($pending, '0', self::SCALE) > 0) {
+            throw new InvalidArgumentException('No se puede reponer más de lo que salió con el comprobante.');
+        }
+
+        return $movements;
     }
 
     /** Stock físico del producto (suma de saldos de sus lotes). */
