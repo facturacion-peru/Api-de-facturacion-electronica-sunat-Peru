@@ -2,14 +2,19 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CorrectionStatus;
+use App\Enums\SalesDocumentStatus;
 use App\Models\SalesDocument;
 use App\Models\SalesDocumentLine;
 use App\Models\SunatSubmission;
+use App\Services\CreditNoteService;
+use App\Sunat\ReturnedSoFar;
 use Illuminate\Http\Request;
 
 /**
- * Comprobante electrónico (spec 005). En beta viaja siempre
- * `environment_notice` (RF-020). El XML y el CDR van por sus descargas.
+ * Comprobante electrónico (spec 005) o nota de crédito (spec 007). En beta
+ * viaja siempre `environment_notice` (RF-020). El XML y el CDR van por sus
+ * descargas.
  *
  * @mixin SalesDocument
  */
@@ -56,19 +61,30 @@ class SalesDocumentResource extends ApiResource
             'attempts' => $this->attempts,
             'next_attempt_at' => $this->next_attempt_at?->toIso8601String(),
             'can_retry' => ! $this->status->isFinal(),
-            'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(fn (SalesDocumentLine $line) => [
-                'position' => $line->position,
-                'product_code' => $line->product_code,
-                'product_name' => $line->product_name,
-                'unit' => $line->unit,
-                'igv_affectation' => $line->igv_affectation,
-                'quantity' => $line->quantity,
-                'unit_price' => $line->unit_price,
-                'discount' => $line->discount,
-                'base_amount' => $line->base_amount,
-                'igv' => $line->igv,
-                'amount' => $line->amount,
+            // Spec 007: corrección con notas de crédito y descarte de rechazados.
+            'correction_status' => $this->correction_status->value,
+            'correction_status_label' => $this->correction_status->label(),
+            'can_credit' => $this->canCredit(),
+            'note_reason_code' => $this->note_reason_code?->value,
+            'note_reason_label' => $this->note_reason_code?->label(),
+            'note_reason' => $this->note_reason,
+            'restock' => $this->restock,
+            'discard_reason' => $this->discard_reason,
+            'reference' => $this->whenLoaded('reference', fn () => $this->reference ? [
+                'id' => $this->reference->id,
+                'document_type' => $this->reference->document_type->value,
+                'display_number' => $this->reference->display_number,
+            ] : null),
+            'credit_notes' => $this->whenLoaded('creditNotes', fn () => $this->creditNotes->map(fn (SalesDocument $note) => [
+                'id' => $note->id,
+                'display_number' => $note->display_number,
+                'note_reason_label' => $note->note_reason_code?->label(),
+                'status' => $note->status->value,
+                'status_label' => $note->status->label(),
+                'total' => $note->total,
+                'issued_at' => $note->issued_at->toIso8601String(),
             ])->all()),
+            'lines' => $this->whenLoaded('lines', fn () => $this->linesWithRemaining()),
             'submissions' => $this->whenLoaded('submissions', fn () => $this->submissions->map(fn (SunatSubmission $s) => [
                 'trigger' => $s->trigger->value,
                 'started_at' => $s->started_at->toIso8601String(),
@@ -78,5 +94,35 @@ class SalesDocumentResource extends ApiResource
                 'message' => $s->message,
             ])->all()),
         ];
+    }
+
+    private function canCredit(): bool
+    {
+        return $this->document_type->isSale()
+            && in_array($this->status, [SalesDocumentStatus::Accepted, SalesDocumentStatus::Observed], true)
+            && ! in_array($this->correction_status, [CorrectionStatus::Voided, CorrectionStatus::FullyReturned], true);
+    }
+
+    /** Líneas con lo que queda por devolver (solo en facturas y boletas). */
+    private function linesWithRemaining(): array
+    {
+        $returned = $this->document_type->isSale() ? CreditNoteService::returnedByLine($this->resource) : collect();
+
+        return $this->lines->map(fn (SalesDocumentLine $line) => [
+            'position' => $line->position,
+            'product_code' => $line->product_code,
+            'product_name' => $line->product_name,
+            'unit' => $line->unit,
+            'igv_affectation' => $line->igv_affectation,
+            'quantity' => $line->quantity,
+            'unit_price' => $line->unit_price,
+            'discount' => $line->discount,
+            'base_amount' => $line->base_amount,
+            'igv' => $line->igv,
+            'amount' => $line->amount,
+            'remaining' => $this->document_type->isSale()
+                ? bcsub($line->quantity, ($returned[$line->id] ?? ReturnedSoFar::none())->quantity, 3)
+                : null,
+        ])->all();
     }
 }

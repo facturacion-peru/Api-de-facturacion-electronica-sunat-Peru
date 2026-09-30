@@ -71,6 +71,11 @@
             <tr><td class="muted">Dirección</td><td>{{ $document->customer_address }}</td></tr>
         @endif
         <tr><td class="muted">Moneda</td><td>Soles · al contado ({{ $document->payment_method->label() }})</td></tr>
+        @if ($document->reference)
+            {{-- Nota de crédito (spec 007): documento que modifica y motivo. --}}
+            <tr><td class="muted">Documento que modifica</td><td>{{ $document->reference->document_type->label() }} {{ $document->reference->display_number }}</td></tr>
+            <tr><td class="muted">Motivo</td><td>{{ $document->note_reason_code->value }} · {{ $document->note_reason_code->label() }}: {{ $document->note_reason }}</td></tr>
+        @endif
     </table>
 
     <table class="items section">
@@ -131,7 +136,7 @@
     @endif
 
     <div class="dashed"></div>
-    <div class="center muted">Representación impresa de la {{ $document->document_type->value === '01' ? 'factura' : 'boleta de venta' }} electrónica emitida en el ambiente de pruebas de SUNAT.</div>
+    <div class="center muted">Representación impresa de la {{ ['01' => 'factura', '03' => 'boleta de venta', '07' => 'nota de crédito'][$document->document_type->value] }} electrónica emitida en el ambiente de pruebas de SUNAT.</div>
     <div class="center" style="font-weight: bold; margin-top: 4pt;">PRUEBAS — SIN VALOR LEGAL</div>
 </body>
 </html>

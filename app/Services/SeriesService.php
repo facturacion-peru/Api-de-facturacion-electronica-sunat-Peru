@@ -24,6 +24,11 @@ class SeriesService
             throw ValidationException::withMessages(['document_type' => 'Las empresas del Nuevo RUS no emiten facturas.']);
         }
 
+        // Una serie de nota F… corrige facturas (spec 007).
+        if ($type === DocumentType::CreditNote && str_starts_with($code, 'F') && ! $company->tax_regime->canIssueInvoices()) {
+            throw ValidationException::withMessages(['document_type' => 'Las empresas del Nuevo RUS no emiten facturas ni sus notas de crédito.']);
+        }
+
         $series = Series::create([
             'company_id' => $company->id,
             'establishment_id' => Establishment::where('is_main', true)->value('id'),

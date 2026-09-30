@@ -210,6 +210,9 @@ class DevelopmentSeeder extends Seeder
             $series = app(SeriesService::class);
             $series->create($company, DocumentType::Invoice, 'F001', 0, $admin);
             $series->create($company, DocumentType::Receipt, 'B001', 0, $admin);
+            // Series de nota de crédito (spec 007).
+            $series->create($company, DocumentType::CreditNote, 'FC01', 0, $admin);
+            $series->create($company, DocumentType::CreditNote, 'BC01', 0, $admin);
 
             try {
                 $config->validate($company, $admin);

@@ -323,6 +323,17 @@ class GenerateOpenApiSpec extends Command
             $this->insertIntoSchema($schema, explode('.', $field), $rule);
         }
 
+        // Un campo con regla propia manda sobre sus hijos: 'lines' con
+        // required_if no es obligatorio aunque 'lines.*.x' sea required.
+        foreach ($rules as $field => $rule) {
+            if (! str_contains($field, '.') && ! $this->isRequired($rule)) {
+                $schema['required'] = array_values(array_diff($schema['required'] ?? [], [$field]));
+            }
+        }
+        if (($schema['required'] ?? null) === []) {
+            unset($schema['required']);
+        }
+
         return $this->pruneSchema($schema);
     }
 

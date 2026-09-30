@@ -77,6 +77,13 @@ it('ningún secreto de SUNAT sale en respuestas, logs, auditoría ni base de dat
         'lines' => [['product_id' => $product->id, 'quantity' => '1']],
     ])->assertCreated()->json('data.id');
     $call($seller, 'POST', "/api/v1/sales-documents/{$id}/retry")->assertOk();
+    // Spec 007: una nota de crédito sobre el comprobante, con su XML firmado.
+    $call($admin, 'POST', '/api/v1/series', ['document_type' => '07', 'code' => 'BC01'])->assertCreated();
+    $noteId = $call($seller, 'POST', "/api/v1/sales-documents/{$id}/credit-notes", [
+        'idempotency_key' => (string) Illuminate\Support\Str::uuid(), 'reason_code' => '01', 'reason' => 'Anulación de prueba',
+    ])->assertCreated()->json('data.id');
+    app('auth')->forgetGuards();
+    $responses[] = test()->withToken($seller->createToken('t')->plainTextToken)->get("/api/v1/sales-documents/{$noteId}/xml")->assertOk()->getContent();
     $call($seller, 'GET', '/api/v1/sales-documents')->assertOk();
     $call($seller, 'GET', "/api/v1/sales-documents/{$id}")->assertOk();
     foreach (['xml', 'cdr', 'pdf?format=80mm'] as $download) {

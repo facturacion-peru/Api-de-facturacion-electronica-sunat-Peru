@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Audit\AuditLogger;
+use App\Enums\AdjustmentReason;
 use App\Enums\CustomerDocumentType;
 use App\Enums\DocumentType;
+use App\Enums\MovementType;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionTrigger;
@@ -13,6 +15,7 @@ use App\Enums\SunatStatus;
 use App\Enums\TaxRegime;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\SalesDocument;
 use App\Models\SalesDocumentLine;
@@ -246,5 +249,43 @@ class SalesDocumentService
     private function findByKey(string $key): ?SalesDocument
     {
         return SalesDocument::where('idempotency_key', $key)->first();
+    }
+
+    /**
+     * Spec 007, HU-3 (A-42): un comprobante rechazado no existe para SUNAT,
+     * pero su venta descontó stock. Se descarta: se revierten sus ventas y
+     * su número queda usado (no se reutiliza).
+     */
+    public function discard(SalesDocument $document, string $reason, User $actor): SalesDocument
+    {
+        return DB::transaction(function () use ($document, $reason, $actor) {
+            $document = SalesDocument::whereKey($document->id)->lockForUpdate()->firstOrFail();
+
+            if ($document->status !== SalesDocumentStatus::Rejected) {
+                throw ValidationException::withMessages(['sales_document' => 'Solo se descartan comprobantes rechazados por SUNAT.']);
+            }
+
+            InventoryMovement::where('type', MovementType::Sale)
+                ->where('source_type', $document->getMorphClass())->where('source_id', $document->id)
+                ->whereDoesntHave('reversal')->orderBy('id')->get()
+                ->each(fn (InventoryMovement $sale) => $this->inventory->reverse(
+                    $sale, AdjustmentReason::Error, "Comprobante {$document->display_number} descartado", $actor, fromSource: true,
+                ));
+
+            $document->update([
+                'status' => SalesDocumentStatus::Discarded,
+                'discarded_at' => now(),
+                'discarded_by' => $actor->id,
+                'discard_reason' => $reason,
+                'next_attempt_at' => null,
+            ]);
+
+            $this->audit->record('sales_document.discarded', $document, [
+                'number' => $document->display_number,
+                'reason' => $reason,
+            ], actor: $actor);
+
+            return $document;
+        });
     }
 }

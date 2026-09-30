@@ -104,7 +104,9 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and($this->ticketB->fresh()->status->value)->toBe('issued')
         ->and($this->seriesB->fresh()->active)->toBeTrue()
         ->and($this->customerB->fresh()->name)->toBe('Comprador secreto de B')
-        ->and($this->documentB->fresh()->attempts)->toBe(0);
+        ->and($this->documentB->fresh()->attempts)->toBe(0)
+        ->and($this->documentB->fresh()->status->value)->toBe('pending')
+        ->and(SalesDocument::withoutTenancy()->where('reference_document_id', $this->documentB->id)->count())->toBe(0);
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();

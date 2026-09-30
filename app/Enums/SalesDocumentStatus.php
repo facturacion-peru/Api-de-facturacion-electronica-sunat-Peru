@@ -10,6 +10,8 @@ enum SalesDocumentStatus: string
     case Accepted = 'accepted';
     case Observed = 'observed';
     case Rejected = 'rejected';
+    /** Rechazado y dado de baja internamente por el administrador (spec 007, A-42). */
+    case Discarded = 'discarded';
 
     public function label(): string
     {
@@ -19,12 +21,13 @@ enum SalesDocumentStatus: string
             self::Accepted => 'Aceptado',
             self::Observed => 'Aceptado con observaciones',
             self::Rejected => 'Rechazado',
+            self::Discarded => 'Descartado',
         };
     }
 
     /** Estados definitivos: ya no se envía ni cambia (RF-014). */
     public function isFinal(): bool
     {
-        return in_array($this, [self::Accepted, self::Observed, self::Rejected], true);
+        return in_array($this, [self::Accepted, self::Observed, self::Rejected, self::Discarded], true);
     }
 }

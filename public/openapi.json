@@ -2326,6 +2326,159 @@
                 ]
             }
         },
+        "/api/v1/sales-documents/{salesDocument}/credit-notes": {
+            "post": {
+                "tags": [
+                    "sales-documents"
+                ],
+                "summary": "Spec 007: nota de crédito sobre este comprobante. 201 si se creó; 200 si la clave ya existía.",
+                "operationId": "salesDocumentStoreCreditNote",
+                "parameters": [
+                    {
+                        "name": "salesDocument",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "idempotency_key": {
+                                        "type": "string"
+                                    },
+                                    "reason_code": {
+                                        "type": "string"
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 250
+                                    },
+                                    "restock": {
+                                        "type": "boolean"
+                                    },
+                                    "series_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "lines": {
+                                        "type": "array",
+                                        "maxItems": 100,
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "line_position": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "string",
+                                                    "format": "decimal"
+                                                }
+                                            },
+                                            "required": [
+                                                "line_position",
+                                                "quantity"
+                                            ]
+                                        },
+                                        "description": "Condicional: `required_if:reason_code,07`."
+                                    }
+                                },
+                                "required": [
+                                    "idempotency_key",
+                                    "reason_code",
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/sales-documents/{salesDocument}/discard": {
+            "post": {
+                "tags": [
+                    "sales-documents"
+                ],
+                "summary": "Spec 007, HU-3: el administrador descarta un comprobante rechazado.",
+                "operationId": "salesDocumentDiscard",
+                "parameters": [
+                    {
+                        "name": "salesDocument",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 250
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/sales-documents/{salesDocument}/pdf": {
             "get": {
                 "tags": [

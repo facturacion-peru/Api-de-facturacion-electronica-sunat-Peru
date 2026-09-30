@@ -3,12 +3,18 @@
 namespace App\Sunat;
 
 use App\Audit\AuditLogger;
+use App\Enums\AdjustmentReason;
+use App\Enums\DocumentType;
+use App\Enums\MovementType;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionResult;
 use App\Enums\SubmissionTrigger;
+use App\Models\InventoryMovement;
 use App\Models\SalesDocument;
 use App\Models\SunatSubmission;
 use App\Models\User;
+use App\Services\CreditNoteService;
+use App\Services\InventoryService;
 use App\Sunat\Sending\SunatResponse;
 use App\Sunat\Sending\SunatSender;
 use Illuminate\Support\Carbon;
@@ -38,6 +44,7 @@ class SunatDispatcher
     public function __construct(
         private SunatSender $sender,
         private AuditLogger $audit,
+        private InventoryService $inventory,
     ) {}
 
     /**
@@ -88,6 +95,29 @@ class SunatDispatcher
                 'locked_until' => now()->addSeconds(self::LEASE_SECONDS),
                 'updated_at' => now(),
             ]) === 1;
+    }
+
+    /**
+     * Spec 007: una nota aceptada cambia el estado de corrección del
+     * comprobante; una rechazada deshace la reposición de stock que hizo.
+     */
+    private function afterNoteResult(SalesDocument $note, SalesDocumentStatus $final, ?User $actor): void
+    {
+        $original = SalesDocument::findOrFail($note->reference_document_id);
+
+        if ($final === SalesDocumentStatus::Rejected) {
+            $by = $actor ?? User::find($note->seller_id);
+            DB::transaction(fn () => InventoryMovement::where('type', MovementType::Return)
+                ->where('source_type', $note->getMorphClass())->where('source_id', $note->id)
+                ->whereDoesntHave('reversal')->get()
+                ->each(fn (InventoryMovement $return) => $this->inventory->reverse(
+                    $return, AdjustmentReason::Error, "Nota {$note->display_number} rechazada por SUNAT", $by, fromSource: true,
+                )));
+
+            return;
+        }
+
+        $original->update(['correction_status' => CreditNoteService::correctionStatusOf($original)]);
     }
 
     private function isBetaRateLimit(SunatResponse $response): bool
@@ -141,6 +171,10 @@ class SunatDispatcher
                 'status' => ['from' => $from->value, 'to' => $final->value],
                 'sunat_code' => $response->code,
             ], actor: $actor);
+
+            if ($document->document_type === DocumentType::CreditNote) {
+                $this->afterNoteResult($document, $final, $actor);
+            }
 
             return;
         }
