@@ -1367,10 +1367,7 @@
                                         "maxLength": 32
                                     },
                                     "fiscal_address": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        },
+                                        "type": "object",
                                         "properties": {
                                             "address": {
                                                 "type": "string",

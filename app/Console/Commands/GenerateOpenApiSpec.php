@@ -358,8 +358,11 @@ class GenerateOpenApiSpec extends Command
             $existing = $schema['properties'][$segment];
             $leaf = $this->schemaForRule($rule);
 
-            if (isset($existing['properties']) && $existing['properties'] !== [] && $leaf['type'] === 'object') {
-                $leaf = array_merge($leaf, ['properties' => $existing['properties']]);
+            // Una regla 'array' con claves con nombre ('fiscal_address.address')
+            // es un objeto, no una lista: la lista se declara con '.*'.
+            if (isset($existing['properties']) && $existing['properties'] !== [] && in_array($leaf['type'], ['object', 'array'], true) && ! $this->declaresList($existing)) {
+                $leaf = array_merge($leaf, ['type' => 'object', 'properties' => $existing['properties']]);
+                unset($leaf['items']);
             }
 
             if (isset($existing['items']) && ($leaf['type'] ?? null) === 'array') {
@@ -377,6 +380,13 @@ class GenerateOpenApiSpec extends Command
             return;
         }
 
+        // Clave con nombre bajo un 'array' ya declarado: es un objeto.
+        if (($schema['properties'][$segment]['type'] ?? null) === 'array' && $segments[0] !== '*' && ! $this->declaresList($schema['properties'][$segment])) {
+            $schema['properties'][$segment]['type'] = 'object';
+            $schema['properties'][$segment]['properties'] ??= [];
+            unset($schema['properties'][$segment]['items']);
+        }
+
         $this->insertIntoSchema($schema['properties'][$segment], $segments, $rule);
 
         if ($this->isRequired($rule)) {
@@ -384,6 +394,16 @@ class GenerateOpenApiSpec extends Command
                 array_merge($schema['required'] ?? [], [$segment])
             ));
         }
+    }
+
+    /** ¿La lista tiene elementos declarados con '.*'? Los `items` vacíos son solo el valor por defecto de 'array'. */
+    private function declaresList(array $schema): bool
+    {
+        if (! isset($schema['items'])) {
+            return false;
+        }
+
+        return ($schema['items']['properties'] ?? []) !== [] || ($schema['items']['type'] ?? 'object') !== 'object';
     }
 
     /**
