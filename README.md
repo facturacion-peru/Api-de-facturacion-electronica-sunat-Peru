@@ -13,6 +13,7 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
 | [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
 | [005](../docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
+| [006](../docs/specs/006-panel-plataforma/spec.md) | Panel de la plataforma: empresas, soporte de la emisión y auditoría | Implementada |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -85,6 +86,7 @@ La clave SOL, el certificado digital (PEM con la clave privada) y su contraseña
 
 ## Seguridad y aislamiento
 
+- **Panel de la plataforma (spec 006, A-37):** lee entre empresas con `withoutTenancy()` y responde con recursos de lista blanca (`Platform*Resource`): metadatos y contadores, nunca secretos ni datos de negocio. `PlatformPrivacyTest` y `PlatformAccessTest` recorren todas las rutas `platform/*`.
 - **Plataforma (spec 006, A-38):** la sesión del administrador de la plataforma vence a las 8 h y cada inicio de sesión se audita (`auth.login`). **Antes de producción** hace falta un segundo factor (TOTP) para estas cuentas (A-24).
 
 - **Multiempresa (principio VIII).** Todo modelo de empresa usa el trait `App\Tenancy\BelongsToCompany`. Leer sin contexto de empresa lanza `TenantContextMissing`, y escribir en otra empresa lanza `TenantMismatch`. Un recurso de otra empresa responde 404, igual que uno inexistente. `withoutTenancy()` es la única salida, solo para código de plataforma.
@@ -109,7 +111,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
-| Plataforma | `GET/POST platform/companies` · `GET/PATCH platform/companies/{id}` · `POST platform/companies/{id}/activate` y `/deactivate` |
+| Plataforma | `GET/POST platform/companies` (con resumen, búsqueda y filtro `issues`) · `GET/PATCH platform/companies/{id}` (incluido el domicilio fiscal) · `POST platform/companies/{id}/activate` y `/deactivate` (con motivo) · `POST platform/companies/{id}/admin-invitation/resend` · `GET platform/sales-documents` · `POST platform/sales-documents/{id}/retry` · `GET platform/audit-logs` · `GET platform/ubigeos/search` |
 
 Las rutas de gestión de la empresa, las escrituras de inventario, el historial y las alertas exigen el rol `company_admin`. El costo de productos y lotes solo se incluye en las respuestas al administrador.
 
