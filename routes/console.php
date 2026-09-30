@@ -28,3 +28,4 @@ Schedule::command('backup:run')->dailyAt('03:00')->withoutOverlapping()->environ
 Schedule::command('backup:clean')->dailyAt('03:30')->withoutOverlapping()->environments($servers);
 Schedule::command('backup:monitor')->dailyAt('04:00')->environments($servers);
 Schedule::command('ops:check')->everyFifteenMinutes()->withoutOverlapping()->environments($servers);
+Schedule::command('ops:restore-test')->monthlyOn(1, '05:00')->withoutOverlapping()->environments($servers);

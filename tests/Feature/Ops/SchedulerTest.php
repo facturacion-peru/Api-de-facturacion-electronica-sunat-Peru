@@ -24,6 +24,7 @@ it('programa cada tarea con su frecuencia', function (string $command, string $e
     'limpieza de copias' => ['backup:clean', '30 3 * * *', ['production', 'staging']],
     'monitoreo de copias' => ['backup:monitor', '0 4 * * *', ['production', 'staging']],
     'revisión de operación' => ['ops:check', '*/15 * * * *', ['production', 'staging']],
+    'restauración de prueba mensual' => ['ops:restore-test', '0 5 1 * *', ['production', 'staging']],
 ]);
 
 // schedule:run ejecuta cada comando en otro proceso (que no ve la base en memoria
