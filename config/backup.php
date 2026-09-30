@@ -53,7 +53,8 @@ return [
                  * Set to `null` to include complete absolute path
                  * Example: base_path()
                  */
-                'relative_path' => null,
+                // Rutas dentro del zip relativas a storage/app («public/logo/…»), sin la del servidor.
+                'relative_path' => storage_path('app'),
             ],
 
             /*
