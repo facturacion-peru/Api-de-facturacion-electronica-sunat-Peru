@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureCompanyRole;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\ResolveTenant;
 use App\Inventory\Exceptions\InsufficientStock;
+use App\Ops\ErrorAlerter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -43,6 +44,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Errores 500 repetidos: aviso por correo al responsable (spec 009, A-48).
+        // Laravel ya excluye 401, 403, 404 y 422 de lo que se reporta.
+        $exceptions->report(function (Throwable $e) {
+            app(ErrorAlerter::class)->report($e);
+        });
+
         // Las rutas api/* responden siempre JSON, pida o no el cliente JSON.
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson()
