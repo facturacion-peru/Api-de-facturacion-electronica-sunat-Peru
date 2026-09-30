@@ -180,3 +180,7 @@ it('audita la emisión', function () {
     $log = AuditLog::where('action', 'sales_document.issued')->sole();
     expect($log->changes)->toMatchArray(['number' => 'B001-00000151', 'total' => '65.30']);
 });
+
+it('la nota de crédito no se emite por esta ruta, sino desde su comprobante (spec 007)', function () {
+    ($this->issue)(['document_type' => '07'])->assertStatus(422)->assertJsonValidationErrors(['document_type']);
+});

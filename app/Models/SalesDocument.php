@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CorrectionStatus;
+use App\Enums\CreditNoteReason;
 use App\Enums\DocumentType;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesDocumentStatus;
@@ -28,10 +30,13 @@ class SalesDocument extends Model
     private const MUTABLE = [
         'status', 'sunat_code', 'sunat_message', 'sunat_notes', 'cdr',
         'attempts', 'next_attempt_at', 'locked_until', 'updated_at',
+        // Spec 007: resultado de las notas y descarte de rechazados.
+        'correction_status', 'discarded_at', 'discarded_by', 'discard_reason',
     ];
 
     protected $fillable = [
-        'company_id', 'series_id', 'document_type', 'series_code', 'number', 'environment', 'issued_at',
+        'company_id', 'series_id', 'reference_document_id', 'note_reason_code', 'note_reason', 'restock',
+        'correction_status', 'discarded_at', 'discarded_by', 'discard_reason', 'document_type', 'series_code', 'number', 'environment', 'issued_at',
         'seller_id', 'payment_method', 'currency',
         'issuer_ruc', 'issuer_name', 'issuer_trade_name', 'issuer_address', 'issuer_ubigeo', 'issuer_department', 'issuer_province', 'issuer_district',
         'customer_id', 'customer_document_type', 'customer_document_number', 'customer_name', 'customer_address',
@@ -50,6 +55,10 @@ class SalesDocument extends Model
             'environment' => SunatEnvironment::class,
             'payment_method' => PaymentMethod::class,
             'status' => SalesDocumentStatus::class,
+            'note_reason_code' => CreditNoteReason::class,
+            'restock' => 'boolean',
+            'correction_status' => CorrectionStatus::class,
+            'discarded_at' => 'datetime',
             'issued_at' => 'datetime',
             'op_gravadas' => 'decimal:2',
             'op_exoneradas' => 'decimal:2',
@@ -87,6 +96,18 @@ class SalesDocument extends Model
     public function submissions(): HasMany
     {
         return $this->hasMany(SunatSubmission::class)->orderBy('started_at')->orderBy('id');
+    }
+
+    /** Nota de crédito → comprobante que modifica. */
+    public function reference(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reference_document_id');
+    }
+
+    /** Factura o boleta → sus notas de crédito. */
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(self::class, 'reference_document_id')->orderBy('id');
     }
 
     public function series(): BelongsTo

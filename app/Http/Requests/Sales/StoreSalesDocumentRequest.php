@@ -31,7 +31,8 @@ class StoreSalesDocumentRequest extends FormRequest
 
         return [
             'idempotency_key' => ['required', 'uuid'],
-            'document_type' => ['required', Rule::enum(DocumentType::class)],
+            // Las notas de crédito se emiten desde su comprobante (spec 007), no aquí.
+            'document_type' => ['required', Rule::in([DocumentType::Invoice->value, DocumentType::Receipt->value])],
             'series_id' => ['sometimes', 'nullable', 'integer', Rule::exists('series', 'id')->where('company_id', $company)],
             'customer_id' => ['sometimes', 'nullable', 'integer', Rule::exists('customers', 'id')->where('company_id', $company)],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],

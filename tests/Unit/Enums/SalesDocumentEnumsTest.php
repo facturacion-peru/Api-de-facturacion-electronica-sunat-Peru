@@ -9,10 +9,10 @@ use App\Enums\SubmissionResult;
  */
 
 it('define los estados de RF-010 y cuáles son definitivos', function () {
-    expect(array_column(SalesDocumentStatus::cases(), 'value'))->toBe(['pending', 'sent', 'accepted', 'observed', 'rejected'])
+    expect(array_column(SalesDocumentStatus::cases(), 'value'))->toBe(['pending', 'sent', 'accepted', 'observed', 'rejected', 'discarded'])
         ->and(SalesDocumentStatus::Observed->label())->toBe('Aceptado con observaciones')
         ->and(array_values(array_filter(SalesDocumentStatus::cases(), fn ($s) => $s->isFinal())))
-        ->toBe([SalesDocumentStatus::Accepted, SalesDocumentStatus::Observed, SalesDocumentStatus::Rejected]);
+        ->toBe([SalesDocumentStatus::Accepted, SalesDocumentStatus::Observed, SalesDocumentStatus::Rejected, SalesDocumentStatus::Discarded]);
 });
 
 it('usa los códigos del catálogo 06 de SUNAT para el documento del cliente', function () {

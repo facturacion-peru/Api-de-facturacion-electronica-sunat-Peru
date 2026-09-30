@@ -57,7 +57,7 @@ it('cuenta los pendientes y rechazados para avisar en la lista', function () {
 });
 
 it('valida los filtros', function () {
-    ($this->list)('?status=perdido&document_type=07')->assertStatus(422)->assertJsonValidationErrors(['status', 'document_type']);
+    ($this->list)('?status=perdido&document_type=08')->assertStatus(422)->assertJsonValidationErrors(['status', 'document_type']);
 });
 
 it('el detalle trae líneas, totales, mensaje de SUNAT e intentos', function () {

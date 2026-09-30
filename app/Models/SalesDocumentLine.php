@@ -15,7 +15,7 @@ class SalesDocumentLine extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'company_id', 'sales_document_id', 'product_id', 'position', 'product_code', 'product_name', 'unit',
+        'company_id', 'sales_document_id', 'product_id', 'reference_line_id', 'position', 'product_code', 'product_name', 'unit',
         'igv_affectation', 'quantity', 'unit_price', 'unit_value', 'gross_amount', 'discount', 'base_amount', 'igv', 'amount',
     ];
 
@@ -42,6 +42,12 @@ class SalesDocumentLine extends Model
     public function salesDocument(): BelongsTo
     {
         return $this->belongsTo(SalesDocument::class);
+    }
+
+    /** Línea de nota → línea original que corrige. */
+    public function referenceLine(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reference_line_id');
     }
 
     public function product(): BelongsTo
