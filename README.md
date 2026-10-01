@@ -1,22 +1,30 @@
 # API de facturación electrónica SUNAT (SaaS)
 
-API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT (en el ambiente beta). La consume el [frontend Vue](../frontend-api-facturacion-electronica-sunat).
+API REST multiempresa para pequeñas empresas del Perú: empresas, usuarios, roles, inventario, tickets internos y comprobantes electrónicos SUNAT (en el ambiente beta). La consume el [frontend Vue](https://github.com/facturacion-peru/frontend-api-facturacion-electronica-sunat).
 
-El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones viven en [`../docs`](../docs), empezando por la [constitución](../docs/constitution.md) y el [índice de specs](../docs/specs/README.md).
+El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones viven en [`sdd-docs`](https://github.com/facturacion-peru/sdd-docs/blob/main/docs), empezando por la [constitución](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/constitution.md) y el [índice de specs](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/README.md).
+
+## Repositorios del proyecto
+
+| Repositorio | Qué contiene |
+|---|---|
+| [sdd-docs](https://github.com/facturacion-peru/sdd-docs) | Documentación: visión, constitución, specs y aclaraciones. Explica cómo clonar los tres juntos |
+| [Api-de-facturacion-electronica-sunat-Peru](https://github.com/facturacion-peru/Api-de-facturacion-electronica-sunat-Peru) | API REST (Laravel), emisión SUNAT, despliegue y operación |
+| [frontend-api-facturacion-electronica-sunat](https://github.com/facturacion-peru/frontend-api-facturacion-electronica-sunat) | Aplicación web (Vue) de las empresas y de la plataforma |
 
 ## Estado
 
 | Spec | Qué cubre | Estado |
 |---|---|---|
-| [001](../docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
-| [002](../docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
-| [003](../docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
-| [004](../docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
-| [005](../docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
-| [006](../docs/specs/006-panel-plataforma/spec.md) | Panel de la plataforma: empresas, soporte de la emisión y auditoría | Implementada |
-| [007](../docs/specs/007-notas-credito/spec.md) | Notas de crédito (anulación y devoluciones) y descarte de rechazados | Implementada |
+| [001](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/001-empresa-usuarios-aislamiento/spec.md) | Empresas, usuarios, roles, aislamiento multiempresa y auditoría | Implementada |
+| [002](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/002-productos-inventario/spec.md) | Productos, lotes, movimientos de inventario y alertas | Implementada |
+| [003](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/003-tickets-venta/spec.md) | Tickets de venta internos (no tributarios) | Implementada |
+| [004](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/004-configuracion-sunat/spec.md) | Configuración SUNAT segura (clave SOL y certificado cifrados) y series | Implementada |
+| [005](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
+| [006](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/006-panel-plataforma/spec.md) | Panel de la plataforma: empresas, soporte de la emisión y auditoría | Implementada |
+| [007](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/007-notas-credito/spec.md) | Notas de crédito (anulación y devoluciones) y descarte de rechazados | Implementada |
 
-El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](../docs/investigacion/001-evaluacion-api-existente.md).
+El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/investigacion/001-evaluacion-api-existente.md).
 
 ## Stack
 
