@@ -46,13 +46,30 @@ Lo que hace **el responsable del SaaS** antes de desplegar: cuentas, pagos, acce
 | Contraseñas de PostgreSQL (una por ambiente) | Las crea `provision.sh` | `.env` del servidor |
 | Llave SSH de despliegue | `ssh-keygen -t ed25519 -f deploy_key -C github-actions` | Privada: secreto `DEPLOY_SSH_KEY` de GitHub; pública: `~deploy/.ssh/authorized_keys` del servidor |
 
-## 5. Secretos de GitHub Actions (cuando se despliegue)
+## 5. GitHub Actions (cuando se despliegue)
 
-En el repositorio de la API y en el del frontend, ambientes `staging` y `production` (*Settings → Environments*); en `production`, **revisor requerido**:
+La CI (`.github/workflows/ci.yml`) corre desde el primer *push*. Los trabajos de despliegue quedan **apagados** hasta crear la variable de repositorio `DEPLOY_ENABLED` con valor `true` (*Settings → Secrets and variables → Actions → Variables*). Mientras no exista el servidor, no la crees.
 
-| Secreto | Ambientes |
+En el repositorio de la API y en el del frontend, crea los ambientes `staging` y `production` (*Settings → Environments*). En `production`, marca **revisor requerido**: cada despliegue a producción espera tu aprobación.
+
+**Secretos** de cada ambiente:
+
+| Secreto | Valor |
 |---|---|
-| `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` | ambos |
-| `VITE_API_BASE_URL` (frontend) | uno por ambiente |
+| `DEPLOY_HOST` | IP o nombre del VPS |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | Llave privada de despliegue (sección 4) |
+| `DEPLOY_KNOWN_HOSTS` | Huella del servidor: `ssh-keyscan -t ed25519 <IP>`. Compárala con la que muestra la consola del proveedor; sin ella, el despliegue se niega a conectar |
+
+**Variables** de cada ambiente (no son secretas):
+
+| Variable | Repositorio | staging | production |
+|---|---|---|---|
+| `HEALTH_URL` | API | `https://staging-api.<dominio>/up` | `https://api.<dominio>/up` |
+| `HEALTH_URL` | frontend | `https://staging-app.<dominio>/` | `https://app.<dominio>/` |
+| `VITE_API_BASE_URL` | frontend | `https://staging-api.<dominio>` | `https://api.<dominio>` |
+| `VITE_PILOT_MODE` | frontend | `true` | `true` durante el piloto (A-43) |
+
+Orden: en cada cambio de `main`, la API pasa a staging y luego espera aprobación para producción. La web hace lo mismo, usando el `release.sh` de la API ya publicada. Si `HEALTH_URL` no responde después de publicar, la versión anterior vuelve sola.
 
 El `.env` de cada ambiente **no** va a GitHub: se crea una vez en el servidor (`/srv/sunat/<ambiente>/api/shared/.env`) a partir de `deploy/env.<ambiente>.example`.

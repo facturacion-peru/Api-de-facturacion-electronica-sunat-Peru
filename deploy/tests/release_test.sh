@@ -46,6 +46,32 @@ check "rollback sin versión anterior falla" "for _ in 1 2 3 4; do bash \"${HERE
 
 check "rechaza un ambiente desconocido" "! bash \"${HERE}/release.sh\" local api \"$(artifact v9)\" >/dev/null 2>&1"
 
+# ship.sh (T023) con ssh, scp y curl falsos: el «servidor» es ${TMP}/remote.
+REMOTE="${TMP}/remote" && mkdir -p "${TMP}/bin" "$REMOTE"
+cat > "${TMP}/bin/ssh" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "${TMP}/ssh.log"
+cd "$REMOTE" && bash -c "\${!#}"
+EOF
+cat > "${TMP}/bin/scp" <<EOF
+#!/usr/bin/env bash
+src="\${*: -2:1}"; dest="\${*: -1}"; cp "\$src" "$REMOTE/\${dest#*:}"
+EOF
+printf '#!/usr/bin/env bash\n[[ "$*" != *caida* ]]\n' > "${TMP}/bin/curl"
+chmod +x "${TMP}/bin/"*
+ship() { PATH="${TMP}/bin:${PATH}" DEPLOY_HOST=servidor DEPLOY_USER=deploy DEPLOY_SSH_KEY=llave DEPLOY_KNOWN_HOSTS=huella \
+    bash "${HERE}/ship.sh" "$@" >/dev/null 2>&1; }
+
+sleep 1
+check "ship sube el paquete y lo publica con la huella del servidor" "HEALTH_URL=https://api/up ship staging api \"$(artifact v10)\" \"${HERE}/release.sh\" && [ \"\$(current api)\" = v10 ] && grep -q StrictHostKeyChecking=yes \"${TMP}/ssh.log\" && [ -z \"\$(ls -A \"${REMOTE}/incoming\")\" ]"
+
+sleep 1
+check "ship vuelve atrás si la salud falla y limpia lo subido" "! HEALTH_URL=https://caida/up ship staging api \"$(artifact v11)\" \"${HERE}/release.sh\" && [ \"\$(current api)\" = v10 ] && [ -z \"\$(ls -A \"${REMOTE}/incoming\")\" ]"
+
+check "ship sin release.sh usa el de la API publicada" "HEALTH_URL=https://app/ ship staging web \"$(artifact w9)\"; tail -1 \"${TMP}/ssh.log\" | grep -q /srv/sunat/staging/api/current/deploy/release.sh"
+
+check "ship exige HEALTH_URL" "! ship staging api \"$(artifact v12)\" \"${HERE}/release.sh\""
+
 if [ "$failures" -eq 0 ]; then
     echo "Todas las pruebas de despliegue pasaron."
 else
