@@ -41,6 +41,9 @@
             "name": "customers"
         },
         {
+            "name": "dashboard"
+        },
+        {
             "name": "inventory"
         },
         {
@@ -673,6 +676,31 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/dashboard": {
+            "get": {
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "api/v1/dashboard",
+                "operationId": "getApiV1Dashboard",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
                     }
                 },
                 "security": [

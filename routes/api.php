@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Company\AuditLogController;
 use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\Inventory\AlertController;
 use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
@@ -52,6 +53,7 @@ Route::prefix('v1')->group(function () {
     // Empresa
     Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
         Route::get('/company', [CompanyController::class, 'show']);
+        Route::get('/dashboard', DashboardController::class);
 
         Route::get('/catalogs/inventory', [CatalogController::class, 'inventory']);
         Route::get('/products', [ProductController::class, 'index']);
