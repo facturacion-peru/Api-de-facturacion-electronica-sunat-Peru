@@ -15,6 +15,7 @@
 
 return [
     'GET api/v1/company' => ['type' => 'own'],
+    'GET api/v1/dashboard' => ['type' => 'list'],
     'PATCH api/v1/company' => ['type' => 'write'],
     'POST api/v1/company/logo' => ['type' => 'write'],
     'GET api/v1/users' => ['type' => 'list'],
