@@ -67,6 +67,7 @@ class DevelopmentSeeder extends Seeder
             ['AZU-001', 'Azúcar rubia', 'good', 'KGM', '4.20', '20', '10', false, [['50.500', 3.1, null]]],
             ['LEC-001', 'Leche evaporada 400 g', 'good', 'NIU', '4.50', '10', '12', false, [['8', 3.4, null]]],
             ['DEL-001', 'Delivery en el distrito', 'service', 'ZZ', '5.00', '10', null, false, []],
+            ...self::BODEGA,
         ]);
         $this->products($otra, $otraAdmin, [
             ['OTR-001', 'Producto de otra empresa', 'good', 'NIU', '10.00', '10', null, false, [['5', 6.0, null]]],
@@ -122,6 +123,57 @@ class DevelopmentSeeder extends Seeder
 
         return $user;
     }
+
+    /**
+     * Surtido de bodega para ver la paginación del catálogo de «Vender»
+     * (spec 012, T015): más de dos páginas de 20. Incluye exonerados (20),
+     * perecibles con vencimiento, servicios y uno sin stock («Sin disponible»).
+     *
+     * @var list<array{string, string, string, string, string, string, ?string, bool, list<array{string, float, ?int}>}>
+     */
+    private const BODEGA = [
+        ['ACE-001', 'Aceite vegetal 1 L', 'good', 'NIU', '9.80', '10', null, false, [['24', 7.9, null]]],
+        ['FID-001', 'Fideos spaghetti 500 g', 'good', 'NIU', '3.20', '10', null, false, [['40', 2.3, null]]],
+        ['ATN-001', 'Atún en aceite 170 g', 'good', 'NIU', '6.50', '10', null, false, [['30', 4.8, null]]],
+        ['GAL-001', 'Galletas de soda x 6', 'good', 'NIU', '2.80', '10', null, false, [['50', 1.9, null]]],
+        ['GAL-002', 'Galletas de chocolate', 'good', 'NIU', '1.20', '10', null, false, [['80', 0.8, null]]],
+        ['CHO-001', 'Chocolate en barra', 'good', 'NIU', '1.50', '10', null, false, [['60', 1.0, null]]],
+        ['GAS-001', 'Gaseosa 500 ml', 'good', 'NIU', '2.50', '10', null, false, [['48', 1.6, null]]],
+        ['GAS-002', 'Gaseosa 1.5 L', 'good', 'NIU', '6.00', '10', null, false, [['24', 4.2, null]]],
+        ['AGU-001', 'Agua sin gas 625 ml', 'good', 'NIU', '1.50', '10', null, false, [['60', 0.9, null]]],
+        ['CER-001', 'Cerveza en lata 355 ml', 'good', 'NIU', '4.50', '10', null, false, [['36', 3.3, null]]],
+        ['CAF-001', 'Café instantáneo 50 g', 'good', 'NIU', '8.50', '10', null, false, [['15', 6.4, null]]],
+        ['AVE-001', 'Avena 900 g', 'good', 'NIU', '6.80', '10', null, false, [['20', 5.0, null]]],
+        ['LEN-001', 'Lentejas 500 g', 'good', 'NIU', '4.60', '10', null, false, [['25', 3.4, null]]],
+        ['FRE-001', 'Frejol canario 500 g', 'good', 'NIU', '6.20', '10', null, false, [['25', 4.6, null]]],
+        ['SAL-001', 'Sal de mesa 1 kg', 'good', 'NIU', '1.80', '10', null, false, [['30', 1.1, null]]],
+        ['VIN-001', 'Vinagre blanco 500 ml', 'good', 'NIU', '2.90', '10', null, false, [['18', 1.9, null]]],
+        ['MAY-001', 'Mayonesa 400 g', 'good', 'NIU', '9.40', '10', null, false, [['12', 7.1, null]]],
+        ['KET-001', 'Kétchup 400 g', 'good', 'NIU', '7.80', '10', null, false, [['12', 5.8, null]]],
+        ['MOS-001', 'Mostaza 200 g', 'good', 'NIU', '4.90', '10', null, false, []],
+        ['SOP-001', 'Sopa instantánea', 'good', 'NIU', '1.80', '10', null, false, [['40', 1.2, null]]],
+        ['CAR-001', 'Caramelos x 100', 'good', 'NIU', '9.00', '10', null, false, [['10', 6.5, null]]],
+        ['DET-001', 'Detergente 900 g', 'good', 'NIU', '11.90', '10', null, false, [['12', 9.2, null]]],
+        ['JAB-001', 'Jabón de tocador', 'good', 'NIU', '3.20', '10', null, false, [['30', 2.2, null]]],
+        ['PHI-001', 'Papel higiénico x 4', 'good', 'NIU', '6.90', '10', null, false, [['20', 5.1, null]]],
+        ['SHA-001', 'Champú 400 ml', 'good', 'NIU', '14.50', '10', null, false, [['10', 11.0, null]]],
+        ['PAS-001', 'Pasta dental 90 g', 'good', 'NIU', '5.40', '10', null, false, [['18', 3.9, null]]],
+        ['VEL-001', 'Velas x 6', 'good', 'NIU', '4.50', '10', null, false, [['15', 3.0, null]]],
+        ['FOS-001', 'Fósforos x 10', 'good', 'NIU', '2.00', '10', null, false, [['25', 1.3, null]]],
+        ['PIL-001', 'Pilas AA x 2', 'good', 'NIU', '5.50', '10', null, false, [['20', 3.8, null]]],
+        ['HUE-001', 'Huevos', 'good', 'KGM', '8.90', '20', null, false, [['15.000', 7.2, null]]],
+        ['PLA-001', 'Plátano de seda', 'good', 'KGM', '3.50', '20', null, false, [['12.000', 2.4, null]]],
+        ['PAP-001', 'Papa amarilla', 'good', 'KGM', '4.80', '20', null, false, [['25.000', 3.5, null]]],
+        ['CEB-001', 'Cebolla roja', 'good', 'KGM', '3.20', '20', null, false, [['18.000', 2.2, null]]],
+        ['TOM-001', 'Tomate', 'good', 'KGM', '4.00', '20', null, false, [['10.000', 2.8, null]]],
+        ['LIM-001', 'Limón', 'good', 'KGM', '5.50', '20', null, false, [['8.000', 3.9, null]]],
+        ['POL-001', 'Pollo entero', 'good', 'KGM', '10.90', '10', null, true, [['20.000', 8.4, 5]]],
+        ['QUE-001', 'Queso fresco 500 g', 'good', 'NIU', '12.50', '10', null, true, [['10', 9.5, 7]]],
+        ['MAN-001', 'Mantequilla 200 g', 'good', 'NIU', '7.90', '10', null, true, [['12', 5.9, 30]]],
+        ['PAN-001', 'Pan de molde', 'good', 'NIU', '7.20', '10', null, true, [['10', 5.3, 6]]],
+        ['REC-001', 'Recarga de celular', 'service', 'ZZ', '10.00', '10', null, false, []],
+        ['IMP-001', 'Impresión por hoja', 'service', 'ZZ', '0.50', '10', null, false, []],
+    ];
 
     /**
      * Productos demo con entradas por el servicio real (lotes, movimientos y
