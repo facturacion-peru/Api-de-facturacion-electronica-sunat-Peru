@@ -76,8 +76,8 @@ it('se puede ejecutar dos veces sin duplicar nada', function () {
 
     expect(User::count())->toBe(5)
         ->and(Company::count())->toBe(2)
-        ->and(Product::withoutTenancy()->count())->toBe(6)
-        ->and(ProductLot::withoutTenancy()->count())->toBe(7)
+        ->and(Product::withoutTenancy()->count())->toBe(47) // 6 + 41 del surtido de bodega (spec 012)
+        ->and(ProductLot::withoutTenancy()->count())->toBe(45) // 7 + 38 (sin lote: 2 servicios y la mostaza sin stock)
         ->and(Ticket::withoutTenancy()->count())->toBe(4)
         ->and(Ticket::withoutTenancy()->where('status', 'voided')->count())->toBe(1)
         ->and(Certificate::withoutTenancy()->count())->toBe(1)
