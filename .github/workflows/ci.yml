@@ -1,0 +1,165 @@
+# CI y despliegue de la API (spec 009, plan «CI/CD»).
+#
+# - CI en cada push y pull request: pruebas en SQLite y en PostgreSQL, Pint,
+#   shellcheck y las pruebas de los scripts de despliegue.
+# - En cada cambio de main que pase la CI: paquete sin dependencias de
+#   desarrollo → staging → producción (con aprobación manual en el ambiente
+#   «production» de GitHub).
+#
+# El despliegue queda apagado hasta que exista el servidor: se enciende con la
+# variable de repositorio DEPLOY_ENABLED=true (deploy/PREPARACION.md).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  PHP_VERSION: '8.5'
+  PHP_EXTENSIONS: bcmath, curl, dom, gd, intl, mbstring, openssl, pdo_pgsql, pdo_sqlite, soap, zip, zlib
+
+jobs:
+  tests-sqlite:
+    name: Pruebas (SQLite)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Preparar .env de pruebas
+        run: cp .env.example .env && php artisan key:generate --no-interaction
+      - run: php artisan test
+
+  tests-pgsql:
+    name: Pruebas (PostgreSQL)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: db_api_sunat_testing
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      # Para las pruebas de copias y restauración (pg_dump / psql).
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - name: Cliente de PostgreSQL 16
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Preparar .env de pruebas
+        run: cp .env.example .env && php artisan key:generate --no-interaction
+      - run: composer test:pgsql
+
+  quality:
+    name: Pint y shellcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: vendor/bin/pint --test
+      - run: shellcheck deploy/*.sh deploy/tests/*.sh
+
+  package:
+    name: Paquete
+    needs: [tests-sqlite, tests-pgsql, quality]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+      - name: Empaquetar
+        run: |
+          tar -czf "$RUNNER_TEMP/api.tar.gz" \
+            --exclude=./.git --exclude=./.github --exclude=./tests --exclude=./storage \
+            --exclude=./ejemplos-postman --exclude=./.env --exclude=./phpunit.xml .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api
+          path: ${{ runner.temp }}/api.tar.gz
+          retention-days: 30
+
+  deploy-staging:
+    name: Desplegar a staging
+    needs: package
+    runs-on: ubuntu-24.04
+    environment:
+      name: staging
+      url: ${{ vars.HEALTH_URL }}
+    concurrency: deploy-api-staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api
+          path: ${{ runner.temp }}
+      - name: Subir y publicar
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: bash deploy/ship.sh staging api "$RUNNER_TEMP/api.tar.gz" deploy/release.sh
+
+  deploy-production:
+    name: Desplegar a producción
+    needs: deploy-staging
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+      url: ${{ vars.HEALTH_URL }}
+    concurrency: deploy-api-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api
+          path: ${{ runner.temp }}
+      - name: Subir y publicar
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: bash deploy/ship.sh production api "$RUNNER_TEMP/api.tar.gz" deploy/release.sh

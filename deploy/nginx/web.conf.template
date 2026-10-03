@@ -1,0 +1,31 @@
+# Aplicación web de {{ENV}} (spec 009): archivos estáticos compilados en CI.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{HOST}};
+
+    root /srv/sunat/{{ENV}}/web/current;
+    index index.html;
+    charset utf-8;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Recursos con hash en el nombre: caché larga.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA: toda ruta cae en index.html, que nunca se cachea (así llega la versión nueva).
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+}

@@ -16,8 +16,18 @@ use Tests\Support\SalesFixture;
 /*
  * T050 · CE-002: tras cualquier combinación de ventas, devoluciones,
  * anulaciones, notas rechazadas y descartes, el stock y los saldos cuadran
- * con lo emitido menos lo devuelto. Secuencias aleatorias con semilla fija.
+ * con lo emitido menos lo devuelto. Secuencias aleatorias con semilla fija:
+ * todo sale de mt_rand (Collection::random y shuffle usan random_int, que no
+ * respeta mt_srand, y harían la secuencia distinta en cada ejecución).
  */
+
+/** Elemento al azar de una lista, con mt_rand (determinista con mt_srand). */
+function pick(iterable $items): mixed
+{
+    $items = array_values(collect($items)->all());
+
+    return $items[mt_rand(0, count($items) - 1)];
+}
 
 it('stock y saldos cuadran tras una secuencia aleatoria', function (int $seed) {
     mt_srand($seed);
@@ -38,7 +48,10 @@ it('stock y saldos cuadran tras una secuencia aleatoria', function (int $seed) {
     $sunat = fn (bool $ok) => app()->instance(SunatSender::class, new FakeSunatSender($ok ? FakeSunatSender::accepted() : FakeSunatSender::rejected()));
 
     for ($step = 0; $step < 30; $step++) {
-        $accepted = SalesDocument::whereIn('document_type', ['03'])->where('status', 'accepted')->get();
+        // Semilla por paso: el código bajo prueba (p. ej. Faker en las factories)
+        // también consume mt_rand, y así cada paso no depende de los anteriores.
+        mt_srand($seed * 1000 + $step);
+        $accepted = SalesDocument::whereIn('document_type', ['03'])->where('status', 'accepted')->orderBy('id')->get();
         $op = $accepted->isEmpty() ? 0 : mt_rand(0, 5);
 
         try {
@@ -47,7 +60,12 @@ it('stock y saldos cuadran tras una secuencia aleatoria', function (int $seed) {
                 0, 1 => (function () use ($sales, $seller, $admin, $products, $sunat) {
                     $ok = mt_rand(0, 4) > 0;
                     $sunat($ok);
-                    $lines = collect($products)->shuffle()->take(mt_rand(1, 3))->map(fn ($p) => [
+                    $pool = $products;
+                    $chosen = [];
+                    foreach (range(1, mt_rand(1, 3)) as $_) {
+                        $chosen[] = array_splice($pool, mt_rand(0, count($pool) - 1), 1)[0];
+                    }
+                    $lines = collect($chosen)->map(fn ($p) => [
                         'product_id' => $p->id,
                         'quantity' => $p->unit->allowsDecimals() ? number_format(mt_rand(250, 3000) / 1000, 3, '.', '') : (string) mt_rand(1, 5),
                         'discount' => mt_rand(0, 2) === 0 ? '0.'.mt_rand(10, 90) : null,
@@ -59,8 +77,8 @@ it('stock y saldos cuadran tras una secuencia aleatoria', function (int $seed) {
                 })(),
                 // Devolución parcial de una línea al azar.
                 2, 3 => (function () use ($accepted, $notes, $seller, $sunat) {
-                    $doc = $accepted->random();
-                    $line = $doc->lines()->get()->random();
+                    $doc = pick($accepted);
+                    $line = pick($doc->lines()->get());
                     $remaining = bcsub($line->quantity, (CreditNoteService::returnedByLine($doc)[$line->id] ?? App\Sunat\ReturnedSoFar::none())->quantity, 3);
                     if (bccomp($remaining, '0', 3) <= 0) {
                         return;
@@ -72,7 +90,7 @@ it('stock y saldos cuadran tras una secuencia aleatoria', function (int $seed) {
                 // Devolución total o anulación (con o sin reposición).
                 4, 5 => (function () use ($accepted, $notes, $seller, $sunat, $op) {
                     $sunat(mt_rand(0, 5) > 0);
-                    $notes->issue($accepted->random(), ['idempotency_key' => (string) Str::uuid(), 'reason_code' => $op === 4 ? '06' : '01',
+                    $notes->issue(pick($accepted), ['idempotency_key' => (string) Str::uuid(), 'reason_code' => $op === 4 ? '06' : '01',
                         'reason' => 'Resto', 'restock' => (bool) mt_rand(0, 1)], $seller);
                 })(),
             };
