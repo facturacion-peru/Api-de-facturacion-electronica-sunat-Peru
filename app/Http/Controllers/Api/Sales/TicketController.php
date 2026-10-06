@@ -13,11 +13,13 @@ use App\Http\Resources\ApiCollection;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Sales\TicketPdf;
 use App\Services\TicketService;
 use App\Support\Decimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 /** Ventas con ticket interno (spec 003). */
@@ -61,6 +63,17 @@ class TicketController extends Controller
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
         return TicketResource::make($ticket->load(['lines', 'seller']));
+    }
+
+    /** PDF de 80 mm para imprimir o compartir desde la app (spec 013, A-63). */
+    public function pdf(Request $request, Ticket $ticket, TicketPdf $pdf): Response
+    {
+        abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
+
+        return response($pdf->render($ticket->load(['lines', 'seller', 'company'])), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$ticket->display_number}-80mm.pdf\"",
+        ]);
     }
 
     public function void(VoidTicketRequest $request, Ticket $ticket): TicketResource

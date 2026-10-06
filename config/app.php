@@ -62,6 +62,12 @@ return [
     'frontend_url' => rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'),
 
     /*
+    | Versión mínima de la app Android (spec 013, A-67). Vacía: sin control.
+    | Las versiones menores reciben 426 y la app pide actualizarla.
+    */
+    'android_min_version' => env('APP_ANDROID_MIN_VERSION') ?: null,
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

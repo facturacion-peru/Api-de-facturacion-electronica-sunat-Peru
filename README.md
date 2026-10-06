@@ -70,7 +70,8 @@ En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitació
 | Variable | Descripción |
 |---|---|
 | `FRONTEND_URL` | Base de los enlaces de invitación (`/invitacion/{token}`) y recuperación (`/restablecer`). Por defecto `http://localhost:5173` |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*`. La app Android llama desde `https://localhost` |
+| `APP_ANDROID_MIN_VERSION` | Versión mínima de la app Android (`x.y.z`); las menores reciben 426 y la app pide actualizar. Vacía = sin control |
 | `SANCTUM_EXPIRATION` | Minutos de vida del token (1440 = 24 h) |
 
 ## Secretos de SUNAT y `APP_KEY`
