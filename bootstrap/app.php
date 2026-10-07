@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureCompanyRole;
 use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureSupportedAppVersion;
 use App\Http\Middleware\ResolveTenant;
 use App\Inventory\Exceptions\InsufficientStock;
 use App\Ops\ErrorAlerter;
@@ -36,6 +37,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // El rol de plataforma se comprueba antes del binding: si no, un usuario
         // de empresa distinguiría ids existentes (404) de inexistentes (403).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsurePlatformAdmin::class);
+
+        // Versión mínima de la app Android en toda la API, también en el login (spec 013).
+        $middleware->api(append: EnsureSupportedAppVersion::class);
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,

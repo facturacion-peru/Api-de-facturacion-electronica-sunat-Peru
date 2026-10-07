@@ -3147,6 +3147,41 @@
                 ]
             }
         },
+        "/api/v1/tickets/{ticket}/pdf": {
+            "get": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "PDF de 80 mm para imprimir o compartir desde la app (spec 013, A-63).",
+                "operationId": "ticketPdf",
+                "parameters": [
+                    {
+                        "name": "ticket",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/tickets/{ticket}/void": {
             "post": {
                 "tags": [

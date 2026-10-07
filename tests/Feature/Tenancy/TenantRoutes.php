@@ -39,6 +39,7 @@ return [
     'GET api/v1/tickets' => ['type' => 'list'],
     'POST api/v1/tickets' => ['type' => 'write'],
     'GET api/v1/tickets/{ticket}' => ['type' => 'resource', 'param' => 'ticket'],
+    'GET api/v1/tickets/{ticket}/pdf' => ['type' => 'resource', 'param' => 'ticket'],
     'POST api/v1/tickets/{ticket}/void' => ['type' => 'resource', 'param' => 'ticket'],
     'GET api/v1/sunat/settings' => ['type' => 'own'],
     'GET api/v1/sunat/status' => ['type' => 'list'],
