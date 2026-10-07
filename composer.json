@@ -22,6 +22,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "openspout/openspout": "^4.32",
         "spatie/laravel-backup": "^10.3"
     },
     "require-dev": {

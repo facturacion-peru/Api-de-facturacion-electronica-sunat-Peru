@@ -24,7 +24,7 @@ concurrency:
 
 env:
   PHP_VERSION: '8.5'
-  PHP_EXTENSIONS: bcmath, curl, dom, gd, intl, mbstring, openssl, pdo_pgsql, pdo_sqlite, soap, zip, zlib
+  PHP_EXTENSIONS: bcmath, curl, dom, gd, intl, mbstring, openssl, pdo_pgsql, pdo_sqlite, soap, xmlreader, zip, zlib
 
 jobs:
   tests-sqlite:
