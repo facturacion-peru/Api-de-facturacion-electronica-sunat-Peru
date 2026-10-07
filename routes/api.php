@@ -116,6 +116,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/exports/sales', [ExportController::class, 'sales']);
                 Route::get('/imports/{kind}/template', [ImportController::class, 'template'])->whereIn('kind', ['products', 'customers']);
                 Route::post('/imports/{kind}/preview', [ImportController::class, 'preview'])->whereIn('kind', ['products', 'customers']);
+                Route::post('/imports/{preview}/confirm', [ImportController::class, 'confirm'])->whereUuid('preview');
             });
         });
 
