@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Validator;
  */
 class ProductImport implements RowImport
 {
+    use ReportsRows;
+
     /** Campo del modelo o de la entrada => columna del archivo. */
     private const FIELDS = [
         'code' => 'codigo', 'name' => 'nombre', 'type' => 'tipo', 'unit' => 'unidad', 'sale_price' => 'precio_venta',
@@ -53,7 +55,7 @@ class ProductImport implements RowImport
     public function analyze(array $records, array $columns, string $mode): Analysis
     {
         $analysis = new Analysis;
-        $duplicates = $this->duplicates($records);
+        $duplicates = $this->repeated(array_column(array_map(fn ($record) => [$record[0], trim($record[1]['codigo'] ?? '')], $records), 1, 0));
         $existing = Product::query()
             ->whereIn('code', array_filter(array_map(fn ($record) => trim($record[1]['codigo'] ?? ''), $records)))
             ->get()->keyBy('code');
@@ -74,7 +76,7 @@ class ProductImport implements RowImport
                 ProductValidation::messages(),
                 self::FIELDS,
             );
-            $failed = $this->collect($analysis, $row, $validator->errors()->messages());
+            $failed = $this->collect($analysis, $row, $validator->errors()->messages(), self::FIELDS);
 
             $hasStock = collect(self::STOCK_COLUMNS)->contains(fn ($column) => trim($values[$column] ?? '') !== '');
             $entry = null;
@@ -204,19 +206,7 @@ class ProductImport implements RowImport
             self::FIELDS,
         );
 
-        return $this->collect($analysis, $row, $validator->errors()->messages());
-    }
-
-    /**
-     * @param  array<string, list<string>>  $messages
-     */
-    private function collect(Analysis $analysis, int $row, array $messages): bool
-    {
-        foreach ($messages as $field => $fieldMessages) {
-            $analysis->error($row, self::FIELDS[$field] ?? $field, $fieldMessages[0]);
-        }
-
-        return $messages !== [];
+        return $this->collect($analysis, $row, $validator->errors()->messages(), self::FIELDS);
     }
 
     /**
@@ -244,33 +234,6 @@ class ProductImport implements RowImport
         if (Validator::make($data, $rules)->fails()) {
             throw new ImportConflict("La fila {$row} ya no es válida: los productos cambiaron desde la vista previa.");
         }
-    }
-
-    /**
-     * Códigos repetidos dentro del archivo => sus filas.
-     *
-     * @param  list<array{int, array<string, string>}>  $records
-     * @return array<string, list<int>>
-     */
-    private function duplicates(array $records): array
-    {
-        $rows = [];
-        foreach ($records as [$row, $values]) {
-            $code = trim($values['codigo'] ?? '');
-            if ($code !== '') {
-                $rows[$code][] = $row;
-            }
-        }
-
-        return array_filter($rows, fn (array $list) => count($list) > 1);
-    }
-
-    /** @param  list<int>  $rows */
-    private function listRows(array $rows): string
-    {
-        $last = array_pop($rows);
-
-        return $rows === [] ? (string) $last : implode(', ', $rows).' y '.$last;
     }
 
     private function type(string $value): ?string
