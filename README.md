@@ -23,12 +23,13 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [005](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/005-emision-comprobantes-beta/spec.md) | Emisión de boletas y facturas en beta, clientes, reintentos y PDF | Implementada |
 | [006](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/006-panel-plataforma/spec.md) | Panel de la plataforma: empresas, soporte de la emisión y auditoría | Implementada |
 | [007](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/007-notas-credito/spec.md) | Notas de crédito (anulación y devoluciones) y descarte de rechazados | Implementada |
+| [014](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/014-exportar-importar/spec.md) | Exportar productos, clientes y ventas (XLSX o CSV) e importar productos y clientes con vista previa | Implementada |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/investigacion/001-evaluacion-api-existente.md).
 
 ## Stack
 
-Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1 (XML UBL, firma y envío), DomPDF y endroid/qr-code para los comprobantes. Requisitos de plataforma: `ext-bcmath`, `ext-openssl` y `ext-gd`. La API no usa toolchain JavaScript.
+Laravel 12 · PHP 8.2+ · Sanctum (tokens Bearer) · PostgreSQL · Pest. Greenter 5.1 (XML UBL, firma y envío), DomPDF y endroid/qr-code para los comprobantes; OpenSpout 4 para XLSX y CSV (spec 014). Requisitos de plataforma: `ext-bcmath`, `ext-openssl`, `ext-gd`, `ext-zip` y `ext-xmlreader`. La API no usa toolchain JavaScript.
 
 ## Puesta en marcha
 
@@ -122,6 +123,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
+| Datos (administrador) | `GET exports/products?format=xlsx\|csv&lots=` (filtros del listado) · `GET exports/customers` · `GET exports/sales?from=&to=&types[]=&statuses[]=` · `GET imports/{products\|customers}/template` · `POST imports/{kind}/preview` (multipart `file`, `mode=create\|upsert`) · `POST imports/{preview}/confirm` |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
 | Plataforma | `GET/POST platform/companies` (con resumen, búsqueda y filtro `issues`) · `GET/PATCH platform/companies/{id}` (incluido el domicilio fiscal) · `POST platform/companies/{id}/activate` y `/deactivate` (con motivo) · `POST platform/companies/{id}/admin-invitation/resend` · `GET platform/sales-documents` · `POST platform/sales-documents/{id}/retry` · `GET platform/audit-logs` · `GET platform/ubigeos/search` |
 
@@ -135,6 +137,19 @@ Las rutas de gestión de la empresa, las escrituras de inventario, el historial 
 - **Saldos:** los movimientos son inmutables, y el saldo de cada lote es una caché de la suma de sus movimientos. Los errores se corrigen con ajustes o reversiones.
 - **Ventas con ticket:** `App\Services\TicketService` numera sin huecos (secuencia por empresa bloqueada en la transacción), copia precio y datos del catálogo, calcula importes con `Decimal::mul`/`round` y descuenta stock con el ticket como origen. La misma `idempotency_key` devuelve el ticket ya creado. Anular revierte sus ventas; revertirlas a mano está bloqueado. El ticket **no es comprobante de pago**: lleva siempre `legal_notice`.
 - **Decimales exactos:** toda la aritmética usa `bcmath` (requisito de plataforma `ext-bcmath`). `App\Support\Decimal` redondea lo que devuelve la base, porque en SQLite `SUM()` usa coma flotante.
+
+## Exportar e importar (spec 014)
+
+- **Formato:** `App\DataTransfer\Spreadsheet` lee y escribe XLSX y CSV.
+  - **Lectura:** de una fórmula toma su valor guardado, nunca la evalúa. Los números llegan sin artefactos de coma flotante y las fechas, como AAAA-MM-DD. Acepta CSV de Excel en Windows-1252 y con `;` como separador.
+  - **Escritura:** los textos van como celdas de texto, y en CSV llevan un apóstrofo si empiezan como una fórmula (la lectura lo quita). Varias hojas en CSV se entregan como un ZIP.
+- **Exportaciones** (`App\DataTransfer\Exports`): se generan al pedirlas, se envían y se borran, y quedan en la auditoría (`export.*`).
+  - **Recorrido:** por bloques, sin cargar todo en memoria (20 000 líneas de venta ocupan unos 27 MB).
+  - **Ventas:** tickets y comprobantes intercalados por fecha. Las notas de crédito van en negativo, y la columna `suma_como_venta` usa la misma regla del panel de inicio (`App\Support\SalesCounting`).
+- **Importaciones** (`App\DataTransfer\Imports`):
+  1. **Vista previa:** `ImportPreviewer` valida cada fila con las reglas del alta manual (`App\Validation\*`) y guarda las filas normalizadas en `import_previews`. El archivo subido no se guarda. Caduca a los 30 minutos y `model:prune` la borra al día.
+  2. **Confirmación:** `ImportApplier` aplica todo en una transacción con los servicios de siempre (`ProductService`, `CustomerService`, `InventoryService::registerEntry`). Bloquea la vista previa, así que una confirmación doble recibe 410. Si los datos cambiaron, responde 409 y no aplica nada.
+- **Límites:** 2 000 filas y 5 MB por archivo, y ventas de hasta 12 meses. Exportaciones e importaciones comparten el límite `data-transfer` (10 por minuto por usuario).
 
 ## Pruebas
 
