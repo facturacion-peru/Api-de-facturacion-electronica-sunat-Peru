@@ -51,6 +51,22 @@ class Product extends Model
      *
      * @param  Builder<Product>  $query
      */
+    /**
+     * Filtros del listado (búsqueda por código o nombre, tipo y estado). Los
+     * comparte la exportación (spec 014), para que respete el filtro de la
+     * pantalla.
+     */
+    public function scopeListFilter(Builder $query, string $status = 'active', ?string $type = null, ?string $search = null): void
+    {
+        $search = mb_strtolower(trim((string) $search));
+
+        $query->when($status !== 'all', fn ($q) => $q->where('active', $status === 'active'))
+            ->when(filled($type), fn ($q) => $q->where('type', $type))
+            ->when($search !== '', fn ($q) => $q->where(fn ($inner) => $inner
+                ->whereRaw('LOWER(code) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(name) LIKE ?', ["%{$search}%"])));
+    }
+
     public function scopeWithStock(Builder $query): void
     {
         $query->withSum('lots as stock_sum', 'remaining_quantity')

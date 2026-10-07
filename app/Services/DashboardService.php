@@ -10,6 +10,7 @@ use App\Models\SalesDocument;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\Decimal;
+use App\Support\SalesCounting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -26,9 +27,6 @@ use Illuminate\Support\Collection;
  */
 class DashboardService
 {
-    /** Estados de comprobante que cuentan como venta (A-54). */
-    private const COUNTED = [SalesDocumentStatus::Pending, SalesDocumentStatus::Sent, SalesDocumentStatus::Accepted, SalesDocumentStatus::Observed];
-
     private const DAYS = 7;
 
     private const RECENT = 5;
@@ -70,14 +68,14 @@ class DashboardService
 
         $documents = SalesDocument::query()->tap($range)
             ->whereIn('document_type', [DocumentType::Invoice, DocumentType::Receipt])
-            ->whereIn('status', self::COUNTED)
+            ->whereIn('status', SalesCounting::DOCUMENT_STATUSES)
             ->when($own, fn ($q) => $q->where('seller_id', $user->id))
             ->get(['total', 'issued_at']);
 
         // La nota resta a quien hizo la venta que corrige.
         $notes = SalesDocument::query()->tap($range)
             ->where('document_type', DocumentType::CreditNote)
-            ->whereIn('status', self::COUNTED)
+            ->whereIn('status', SalesCounting::DOCUMENT_STATUSES)
             ->when($own, fn ($q) => $q->whereIn('reference_document_id', SalesDocument::query()->select('id')->where('seller_id', $user->id)))
             ->get(['total', 'issued_at']);
 
