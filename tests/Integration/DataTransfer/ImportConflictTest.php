@@ -53,6 +53,11 @@ function slowKinds(int $microseconds): ImportKinds
                     return $this->inner->analyze($records, $columns, $mode);
                 }
 
+                public function assertStillNew(array $rows): void
+                {
+                    $this->inner->assertStillNew($rows);
+                }
+
                 public function apply(array $row, User $actor, array &$result): void
                 {
                     usleep($this->pause);

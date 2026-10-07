@@ -91,3 +91,12 @@ it('falta una columna obligatoria', function () {
     ($this->preview)([['DNI', 'Luis']], 'create', ['tipo_documento', 'nombre'])
         ->assertUnprocessable()->assertJsonPath('errors.file.0', 'Falta la columna «numero_documento». Usa la plantilla.');
 });
+
+it('409 si un documento se registró después de la vista previa: no se crea ninguno', function () {
+    $preview = ($this->preview)([['DNI', '45678912', 'Luis Quispe', ''], ['DNI', '11223344', 'Rosa Díaz', '']]);
+    Customer::factory()->create(['company_id' => $this->company->id, 'document_type' => CustomerDocumentType::Dni, 'document_number' => '11223344', 'name' => 'Rosa']);
+
+    ($this->call)('POST', '/api/v1/imports/'.$preview->json('data.id').'/confirm')->assertConflict()
+        ->assertJsonPath('message', 'Los clientes cambiaron desde la vista previa: vuelve a subir el archivo para revisarla de nuevo.');
+    expect(Customer::query()->where('document_number', '45678912')->exists())->toBeFalse();
+});

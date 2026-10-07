@@ -97,6 +97,20 @@ class CustomerImport implements RowImport
         return $analysis;
     }
 
+    public function assertStillNew(array $rows): void
+    {
+        $new = array_column(array_filter($rows, fn ($row) => $row['action'] === 'create'), 'data');
+        if ($new === []) {
+            return;
+        }
+
+        $taken = Customer::query()->whereIn('document_number', array_column($new, 'document_number'))->get()->toBase()
+            ->map(fn (Customer $c) => $this->key(['document_type' => $c->document_type->value, 'document_number' => $c->document_number]));
+        if ($taken->intersect(array_map($this->key(...), $new))->isNotEmpty()) {
+            throw new ImportConflict('Un documento que se iba a crear ya existe.');
+        }
+    }
+
     public function apply(array $row, User $actor, array &$result): void
     {
         if ($row['action'] === 'update') {
@@ -110,9 +124,6 @@ class CustomerImport implements RowImport
             return;
         }
 
-        if ($this->validator($row['data'], null)->fails()) {
-            throw new ImportConflict("La fila {$row['row']} ya no es válida: los clientes cambiaron desde la vista previa.");
-        }
         $this->customers->create($row['data'], $actor);
         $result['created']++;
     }

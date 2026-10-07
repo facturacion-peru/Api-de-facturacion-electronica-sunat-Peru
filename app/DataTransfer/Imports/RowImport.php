@@ -25,6 +25,15 @@ interface RowImport
     public function analyze(array $records, array $columns, string $mode): Analysis;
 
     /**
+     * Antes de aplicar: las altas siguen siendo nuevas (una consulta para
+     * todas). Lanza ImportConflict si no. El índice único cubre lo que pase
+     * entre esta comprobación y cada alta.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     */
+    public function assertStillNew(array $rows): void;
+
+    /**
      * Aplica una fila guardada en la vista previa. Lanza ImportConflict si los
      * datos cambiaron desde la vista previa.
      *

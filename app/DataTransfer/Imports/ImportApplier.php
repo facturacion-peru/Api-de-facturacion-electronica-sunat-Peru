@@ -42,6 +42,7 @@ class ImportApplier
                 }
                 $locked->update(['confirmed_at' => now()]);
 
+                $import->assertStillNew($locked->rows);
                 $result = ['created' => 0, 'updated' => 0, 'entries' => 0];
                 foreach ($locked->rows as $row) {
                     $import->apply($row, $user, $result);

@@ -112,6 +112,14 @@ class ProductImport implements RowImport
         return $analysis;
     }
 
+    public function assertStillNew(array $rows): void
+    {
+        $codes = array_column(array_column(array_filter($rows, fn ($row) => $row['action'] === 'create'), 'data'), 'code');
+        if ($codes !== [] && Product::query()->whereIn('code', $codes)->exists()) {
+            throw new ImportConflict('Un código que se iba a crear ya existe.');
+        }
+    }
+
     public function apply(array $row, User $actor, array &$result): void
     {
         $data = $row['data'];
@@ -128,7 +136,6 @@ class ProductImport implements RowImport
             return;
         }
 
-        $this->revalidate($data, null, $row['row']);
         $product = $this->products->create($data, $actor);
         $result['created']++;
 
@@ -227,10 +234,15 @@ class ProductImport implements RowImport
         return $fields;
     }
 
-    /** @param  array<string, mixed>  $data */
-    private function revalidate(array $data, ?Product $product, int $row): void
+    /**
+     * Las actualizaciones se revalidan fila por fila: una regla depende del
+     * stock, que cambia sin tocar el producto.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function revalidate(array $data, Product $product, int $row): void
     {
-        $rules = [...ProductValidation::rules($product ? ['sometimes', 'required'] : ['required'], $data, $product), 'active' => ['sometimes', 'boolean']];
+        $rules = [...ProductValidation::rules(['sometimes', 'required'], $data, $product), 'active' => ['sometimes', 'boolean']];
         if (Validator::make($data, $rules)->fails()) {
             throw new ImportConflict("La fila {$row} ya no es válida: los productos cambiaron desde la vista previa.");
         }
