@@ -3,14 +3,11 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\CompanyRole;
-use App\Enums\ProductType;
-use App\Enums\UnitOfMeasure;
+use App\Validation\ProductValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProductRequest extends FormRequest
 {
-    use ProductRules;
-
     public function authorize(): bool
     {
         return $this->user()->hasCompanyRole(CompanyRole::CompanyAdmin);
@@ -19,16 +16,12 @@ class StoreProductRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return $this->productRules(['required']);
+        return ProductValidation::rules(['required'], $this->all());
     }
 
-    protected function effectiveType(): ?ProductType
+    /** @return array<string, string> */
+    public function messages(): array
     {
-        return ProductType::tryFrom((string) $this->input('type'));
-    }
-
-    protected function effectiveUnit(): ?UnitOfMeasure
-    {
-        return UnitOfMeasure::tryFrom((string) $this->input('unit'));
+        return ProductValidation::messages();
     }
 }
