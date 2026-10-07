@@ -20,6 +20,9 @@ $ping = fn (string $key) => function () use ($key) {
 Schedule::command('sunat:send-pending')->everyMinute()->withoutOverlapping()
     ->onSuccess($ping('heartbeat_url'));
 
+// Vistas previas de importación caducadas (spec 014).
+Schedule::command('model:prune', ['--model' => [App\Models\ImportPreview::class]])->dailyAt('02:30')->withoutOverlapping();
+
 // Operación del servidor (spec 009): solo en staging y producción.
 $servers = ['production', 'staging'];
 

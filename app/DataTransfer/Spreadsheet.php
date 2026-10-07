@@ -109,8 +109,10 @@ final class Spreadsheet
         if ($blankRows > 0 && $this->writer instanceof XlsxWriter) {
             $headers = array_keys($columns);
             $text = (new Style)->setFormat('@');
+            // OpenSpout no escribe filas de celdas vacías: las columnas de texto
+            // llevan una cadena vacía con formato «@» (la lectura las ignora).
             $blank = new Row(array_map(fn (string $header) => in_array($header, $textColumns, true)
-                ? new Cell\EmptyCell(null, $text)
+                ? new Cell\StringCell('', $text)
                 : new Cell\EmptyCell(null, null), $headers));
             for ($i = 0; $i < $blankRows; $i++) {
                 $this->writer->addRow($blank);

@@ -20,6 +20,7 @@ dataset('data transfer routes', [
     'exportar productos' => ['GET', '/api/v1/exports/products'],
     'exportar clientes' => ['GET', '/api/v1/exports/customers'],
     'exportar ventas' => ['GET', '/api/v1/exports/sales?from=2026-10-01&to=2026-10-07'],
+    'plantilla' => ['GET', '/api/v1/imports/products/template'],
 ]);
 
 it('el vendedor no puede exportar ni importar', function (string $method, string $uri) {
