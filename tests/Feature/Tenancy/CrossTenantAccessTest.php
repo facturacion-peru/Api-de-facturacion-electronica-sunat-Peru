@@ -166,6 +166,10 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
         ]),
+        'POST api/v1/imports/{kind}/preview' => callAsA('POST', '/api/v1/imports/products/preview', [
+            'company_id' => $this->b->id, 'mode' => 'upsert',
+            'file' => Tests\Support\ImportFiles::make(['codigo', 'nombre', 'tipo', 'unidad', 'precio_venta', 'afectacion_igv'], [['A-IMP', 'Nuevo de A', 'bien', 'NIU', '1', '10']]),
+        ]),
     };
 
     expect($response->status())->toBeLessThan(500);
@@ -177,6 +181,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ->and(Series::withoutTenancy()->where('company_id', $this->b->id)->pluck('code')->all())->toBe(['BZ99'])
         ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B'])
         ->and(SalesDocument::withoutTenancy()->pluck('id')->all())->toBe([$this->documentB->id])
+        ->and(App\Models\ImportPreview::withoutTenancy()->where('company_id', $this->b->id)->count())->toBe(0)
         ->and($this->seriesB->fresh()->last_number)->toBe(42);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));

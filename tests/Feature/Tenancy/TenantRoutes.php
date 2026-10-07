@@ -67,6 +67,7 @@ return [
     'GET api/v1/exports/customers' => ['type' => 'list', 'query' => ['format' => 'csv']],
     'GET api/v1/exports/sales' => ['type' => 'list', 'query' => ['format' => 'csv', 'from' => '2000-01-01', 'to' => '2000-12-31', 'today' => true]],
     'GET api/v1/imports/{kind}/template' => ['type' => 'reference', 'reason' => 'Plantilla de importación fija, igual para todas las empresas'],
+    'POST api/v1/imports/{kind}/preview' => ['type' => 'write'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
