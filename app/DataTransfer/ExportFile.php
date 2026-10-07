@@ -9,6 +9,7 @@ final readonly class ExportFile
         public string $path,
         public string $filename,
         public string $mimeType,
+        public int $rows = 0,
     ) {}
 
     /** Borra la carpeta temporal con todo lo que se generó en ella. */

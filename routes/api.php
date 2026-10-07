@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Company\CompanyController;
 use App\Http\Controllers\Api\Company\InvitationController;
 use App\Http\Controllers\Api\Company\UserController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataTransfer\ExportController;
 use App\Http\Controllers\Api\Inventory\AlertController;
 use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
@@ -106,6 +107,13 @@ Route::prefix('v1')->group(function () {
             Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy']);
 
             Route::get('/audit-logs', [AuditLogController::class, 'index']);
+
+            // Exportar e importar datos (spec 014).
+            Route::middleware('throttle:data-transfer')->group(function () {
+                Route::get('/exports/products', [ExportController::class, 'products']);
+                Route::get('/exports/customers', [ExportController::class, 'customers']);
+                Route::get('/exports/sales', [ExportController::class, 'sales']);
+            });
         });
 
         Route::prefix('ubigeos')->group(function () {

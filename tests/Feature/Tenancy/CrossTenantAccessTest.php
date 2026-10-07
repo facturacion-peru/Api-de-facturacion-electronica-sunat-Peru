@@ -68,8 +68,13 @@ function callAsA(string $method, string $uri, array $data = [])
 
 function expectNoTraceOfB($response): void
 {
+    // Las exportaciones son descargas en streaming (spec 014).
+    $content = $response->baseResponse instanceof Symfony\Component\HttpFoundation\StreamedResponse
+        ? $response->streamedContent()
+        : $response->getContent();
+
     foreach (test()->bMarkers as $marker) {
-        expect($response->getContent())->not->toContain($marker);
+        expect($content)->not->toContain($marker);
     }
 }
 
@@ -112,10 +117,16 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
 })->with(tenantRoutes('resource'));
 
-it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route) {
+it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route, array $case) {
     [$method, $uri] = explode(' ', $route, 2);
+    $query = $case['query'] ?? [];
+    // Las exportaciones de ventas piden un rango: el de hoy, donde están las ventas de B.
+    if (($query['today'] ?? false) === true) {
+        unset($query['today']);
+        $query = [...$query, 'from' => today()->toDateString(), 'to' => today()->toDateString()];
+    }
 
-    $response = callAsA($method, '/'.$uri, ['company_id' => $this->b->id, 'actor_id' => $this->adminB->id]);
+    $response = callAsA($method, '/'.$uri, [...$query, 'company_id' => $this->b->id, 'actor_id' => $this->adminB->id]);
 
     $response->assertOk();
     expectNoTraceOfB($response);

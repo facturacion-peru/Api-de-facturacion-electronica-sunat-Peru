@@ -63,6 +63,11 @@ final class Spreadsheet
 
     private bool $firstSheet = true;
 
+    /** Filas de datos de la primera hoja (las que se informan en la auditoría). */
+    private int $rows = 0;
+
+    private int $sheets = 0;
+
     public function __construct(private readonly string $format)
     {
         $this->directory = sys_get_temp_dir().'/sunat-export-'.bin2hex(random_bytes(8));
@@ -80,6 +85,7 @@ final class Spreadsheet
     public function sheet(string $name, array $columns, array $textColumns = [], int $blankRows = 0): void
     {
         $this->types = array_values($columns);
+        $this->sheets++;
 
         if ($this->format === self::CSV) {
             $this->writer?->close();
@@ -120,6 +126,10 @@ final class Spreadsheet
             $cells[] = $this->cell($value, $this->types[$index] ?? self::TEXT);
         }
         $this->writer->addRow(new Row($cells));
+
+        if ($this->sheets === 1) {
+            $this->rows++;
+        }
     }
 
     /** Cierra el archivo; varias hojas en CSV se entregan en un ZIP. */
@@ -128,11 +138,11 @@ final class Spreadsheet
         $this->writer?->close();
 
         if ($this->format === self::XLSX) {
-            return new ExportFile("{$this->directory}/export.xlsx", "{$basename}.xlsx", self::XLSX_MIME);
+            return new ExportFile("{$this->directory}/export.xlsx", "{$basename}.xlsx", self::XLSX_MIME, $this->rows);
         }
 
         if (count($this->csvFiles) === 1) {
-            return new ExportFile($this->csvFiles[0]['path'], "{$basename}.csv", 'text/csv; charset=UTF-8');
+            return new ExportFile($this->csvFiles[0]['path'], "{$basename}.csv", 'text/csv; charset=UTF-8', $this->rows);
         }
 
         $zipPath = "{$this->directory}/export.zip";
@@ -143,7 +153,7 @@ final class Spreadsheet
         }
         $zip->close();
 
-        return new ExportFile($zipPath, "{$basename}.zip", 'application/zip');
+        return new ExportFile($zipPath, "{$basename}.zip", 'application/zip', $this->rows);
     }
 
     /** Neutraliza un texto que una hoja de cálculo tomaría por fórmula (RF-011). */
