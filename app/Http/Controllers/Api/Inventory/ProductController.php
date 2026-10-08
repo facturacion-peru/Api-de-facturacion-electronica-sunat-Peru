@@ -25,15 +25,10 @@ class ProductController extends Controller
     public function index(IndexProductRequest $request): ApiCollection
     {
         $status = $request->user()->hasCompanyRole(CompanyRole::CompanyAdmin) ? $request->input('status', 'active') : 'active';
-        $search = mb_strtolower(trim((string) $request->input('search')));
 
         $products = Product::query()
             ->withStock()
-            ->when($status !== 'all', fn ($q) => $q->where('active', $status === 'active'))
-            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->input('type')))
-            ->when($search !== '', fn ($q) => $q->where(fn ($inner) => $inner
-                ->whereRaw('LOWER(code) LIKE ?', ["%{$search}%"])
-                ->orWhereRaw('LOWER(name) LIKE ?', ["%{$search}%"])))
+            ->listFilter($status, $request->input('type'), $request->input('search'))
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();

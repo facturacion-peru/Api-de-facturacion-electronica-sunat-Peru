@@ -19,12 +19,8 @@ class CustomerController extends Controller
 
     public function index(IndexCustomerRequest $request): ApiCollection
     {
-        $search = mb_strtolower(trim((string) $request->input('search')));
-
         $customers = Customer::query()
-            ->when($search !== '', fn ($q) => $q->where(fn ($inner) => $inner
-                ->where('document_number', 'like', "{$search}%")
-                ->orWhereRaw('LOWER(name) LIKE ?', ["%{$search}%"])))
+            ->listFilter($request->input('search'))
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();

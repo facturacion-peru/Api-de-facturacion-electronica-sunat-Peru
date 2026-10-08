@@ -3,13 +3,12 @@
 namespace App\Http\Requests\Sales;
 
 use App\Enums\CompanyRole;
+use App\Validation\CustomerValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 /** Solo el administrador edita clientes (A-34). */
 class UpdateCustomerRequest extends FormRequest
 {
-    use CustomerRules;
-
     public function authorize(): bool
     {
         return $this->user()->hasCompanyRole(CompanyRole::CompanyAdmin);
@@ -17,12 +16,23 @@ class UpdateCustomerRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->normalizeCustomer();
+        $this->merge(CustomerValidation::normalize($this->all()));
     }
 
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return $this->customerRules(partial: true, ignoreId: $this->route('customer')?->id);
+        return CustomerValidation::rules(partial: true, input: $this->all(), ignoreId: $this->route('customer')?->id);
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return CustomerValidation::messages();
+    }
+
+    public function after(): array
+    {
+        return [CustomerValidation::after($this->all())];
     }
 }

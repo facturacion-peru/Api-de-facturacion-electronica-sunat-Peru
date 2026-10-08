@@ -40,6 +40,10 @@ class AppServiceProvider extends ServiceProvider
         // bloqueo por cuenta (5 fallos en 15 min por correo + IP, RF-012).
         RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(self::PUBLIC_AUTH_PER_MINUTE)->by($request->ip()));
 
+        // Exportaciones e importaciones (spec 014): generan archivos y validan
+        // miles de filas, así que tienen su propio límite por usuario.
+        RateLimiter::for('data-transfer', fn (Request $request) => Limit::perMinute(10)->by((string) $request->user()?->id));
+
         // User no tiene scope de empresa: {user} se resuelve solo entre los
         // miembros de la empresa del contexto (fuera de uno, siempre 404).
         Route::bind('user', fn (string $value) => User::query()

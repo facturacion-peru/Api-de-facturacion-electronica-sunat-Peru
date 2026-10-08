@@ -3,16 +3,12 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\CompanyRole;
-use App\Enums\ProductType;
-use App\Enums\UnitOfMeasure;
 use App\Models\Product;
-use Closure;
+use App\Validation\ProductValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProductRequest extends FormRequest
 {
-    use ProductRules;
-
     public function authorize(): bool
     {
         return $this->user()->hasCompanyRole(CompanyRole::CompanyAdmin);
@@ -21,24 +17,15 @@ class UpdateProductRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $rules = $this->productRules(['sometimes', 'required'], $this->product()->id);
-        $rules['type'][] = function (string $attribute, mixed $value, Closure $fail) {
-            if ($value === ProductType::Service->value && bccomp($this->product()->stock(), '0', 3) > 0) {
-                $fail('No se puede convertir en servicio un producto con stock.');
-            }
-        };
+        $rules = ProductValidation::rules(['sometimes', 'required'], $this->all(), $this->product());
 
         return [...$rules, 'active' => ['sometimes', 'boolean']];
     }
 
-    protected function effectiveType(): ?ProductType
+    /** @return array<string, string> */
+    public function messages(): array
     {
-        return $this->has('type') ? ProductType::tryFrom((string) $this->input('type')) : $this->product()->type;
-    }
-
-    protected function effectiveUnit(): ?UnitOfMeasure
-    {
-        return $this->has('unit') ? UnitOfMeasure::tryFrom((string) $this->input('unit')) : $this->product()->unit;
+        return ProductValidation::messages();
     }
 
     private function product(): Product

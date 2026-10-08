@@ -8,6 +8,8 @@
  * Tipos:
  * - resource:  {param} de la empresa B → 404 idéntico a un id inexistente.
  * - list:      solo datos de A, aunque se envíen parámetros que apunten a B.
+ *              `query` agrega parámetros obligatorios (las exportaciones van
+ *              en CSV para poder buscar rastros de B en el contenido).
  * - own:       datos de la propia empresa sin id en la URL; nunca los de B.
  * - write:     crear/modificar apuntando a B no afecta a B.
  * - reference: datos de referencia sin empresa (ubigeo). Exento, con motivo.
@@ -61,6 +63,12 @@ return [
     'GET api/v1/sales-documents/{salesDocument}/pdf' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/xml' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/cdr' => ['type' => 'resource', 'param' => 'salesDocument'],
+    'GET api/v1/exports/products' => ['type' => 'list', 'query' => ['format' => 'csv', 'status' => 'all', 'lots' => 1]],
+    'GET api/v1/exports/customers' => ['type' => 'list', 'query' => ['format' => 'csv']],
+    'GET api/v1/exports/sales' => ['type' => 'list', 'query' => ['format' => 'csv', 'from' => '2000-01-01', 'to' => '2000-12-31', 'today' => true]],
+    'GET api/v1/imports/{kind}/template' => ['type' => 'reference', 'reason' => 'Plantilla de importación fija, igual para todas las empresas'],
+    'POST api/v1/imports/{kind}/preview' => ['type' => 'write'],
+    'POST api/v1/imports/{preview}/confirm' => ['type' => 'resource', 'param' => 'preview'],
     'GET api/v1/ubigeos/regiones' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/provincias' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],
     'GET api/v1/ubigeos/distritos' => ['type' => 'reference', 'reason' => 'Catálogo oficial de ubigeo, igual para todas las empresas'],

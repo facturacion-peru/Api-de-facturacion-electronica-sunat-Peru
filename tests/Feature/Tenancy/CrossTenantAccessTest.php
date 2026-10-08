@@ -51,6 +51,11 @@ beforeEach(function () {
     $this->seriesB = Series::factory()->create(['company_id' => $this->b->id, 'code' => 'BZ99', 'last_number' => 42]);
     $this->customerB = Customer::factory()->create(['company_id' => $this->b->id, 'document_number' => '87654321', 'name' => 'Comprador secreto de B']);
     $this->documentB = SalesDocument::factory()->status(App\Enums\SalesDocumentStatus::Pending)->create(['series_id' => $this->seriesB->id, 'customer_name' => 'Comprador secreto de B']);
+    $this->previewB = app(TenantContext::class)->run($this->b, fn () => App\Models\ImportPreview::create([
+        'user_id' => $this->adminB->id, 'kind' => 'products', 'mode' => 'create', 'summary' => ['rows' => 1],
+        'rows' => [['row' => 2, 'action' => 'create', 'data' => ['code' => 'B-IMPORTADO'], 'entry' => null]],
+        'errors' => [], 'warnings' => [], 'changes' => [], 'expires_at' => now()->addMinutes(30),
+    ]));
     $this->sunatB = SunatSetting::create(['company_id' => $this->b->id, 'environment' => 'beta', 'status' => 'pending', 'sol_user' => 'USUARIOB', 'sol_password' => 'ClaveSolDeB']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;
@@ -68,8 +73,13 @@ function callAsA(string $method, string $uri, array $data = [])
 
 function expectNoTraceOfB($response): void
 {
+    // Las exportaciones son descargas en streaming (spec 014).
+    $content = $response->baseResponse instanceof Symfony\Component\HttpFoundation\StreamedResponse
+        ? $response->streamedContent()
+        : $response->getContent();
+
     foreach (test()->bMarkers as $marker) {
-        expect($response->getContent())->not->toContain($marker);
+        expect($content)->not->toContain($marker);
     }
 }
 
@@ -85,6 +95,7 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'series' => $this->seriesB->id,
         'customer' => $this->customerB->id,
         'salesDocument' => $this->documentB->id,
+        'preview' => $this->previewB->id,
     };
     $payload = $method === 'PATCH'
         ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
@@ -108,14 +119,23 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and($this->documentB->fresh()->status->value)->toBe('pending')
         ->and(SalesDocument::withoutTenancy()->where('reference_document_id', $this->documentB->id)->count())->toBe(0);
 
+    expect($this->previewB->fresh()->confirmed_at)->toBeNull()
+        ->and(Product::withoutTenancy()->where('code', 'B-IMPORTADO')->exists())->toBeFalse();
+
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
         ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
 })->with(tenantRoutes('resource'));
 
-it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route) {
+it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route, array $case) {
     [$method, $uri] = explode(' ', $route, 2);
+    $query = $case['query'] ?? [];
+    // Las exportaciones de ventas piden un rango: el de hoy, donde están las ventas de B.
+    if (($query['today'] ?? false) === true) {
+        unset($query['today']);
+        $query = [...$query, 'from' => today()->toDateString(), 'to' => today()->toDateString()];
+    }
 
-    $response = callAsA($method, '/'.$uri, ['company_id' => $this->b->id, 'actor_id' => $this->adminB->id]);
+    $response = callAsA($method, '/'.$uri, [...$query, 'company_id' => $this->b->id, 'actor_id' => $this->adminB->id]);
 
     $response->assertOk();
     expectNoTraceOfB($response);
@@ -155,6 +175,10 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
         ]),
+        'POST api/v1/imports/{kind}/preview' => callAsA('POST', '/api/v1/imports/products/preview', [
+            'company_id' => $this->b->id, 'mode' => 'upsert',
+            'file' => Tests\Support\ImportFiles::make(['codigo', 'nombre', 'tipo', 'unidad', 'precio_venta', 'afectacion_igv'], [['A-IMP', 'Nuevo de A', 'bien', 'NIU', '1', '10']]),
+        ]),
     };
 
     expect($response->status())->toBeLessThan(500);
@@ -166,6 +190,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ->and(Series::withoutTenancy()->where('company_id', $this->b->id)->pluck('code')->all())->toBe(['BZ99'])
         ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B'])
         ->and(SalesDocument::withoutTenancy()->pluck('id')->all())->toBe([$this->documentB->id])
+        ->and(App\Models\ImportPreview::withoutTenancy()->where('company_id', $this->b->id)->pluck('id')->all())->toBe([$this->previewB->id])
         ->and($this->seriesB->fresh()->last_number)->toBe(42);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
