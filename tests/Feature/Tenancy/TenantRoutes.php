@@ -42,6 +42,7 @@ return [
     'POST api/v1/tickets' => ['type' => 'write'],
     'GET api/v1/tickets/{ticket}' => ['type' => 'resource', 'param' => 'ticket'],
     'GET api/v1/tickets/{ticket}/pdf' => ['type' => 'resource', 'param' => 'ticket'],
+    'GET api/v1/tickets/{ticket}/print' => ['type' => 'resource', 'param' => 'ticket'],
     'POST api/v1/tickets/{ticket}/void' => ['type' => 'resource', 'param' => 'ticket'],
     'GET api/v1/sunat/settings' => ['type' => 'own'],
     'GET api/v1/sunat/status' => ['type' => 'list'],
@@ -61,6 +62,9 @@ return [
     'POST api/v1/sales-documents/{salesDocument}/credit-notes' => ['type' => 'resource', 'param' => 'salesDocument'],
     'POST api/v1/sales-documents/{salesDocument}/discard' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/pdf' => ['type' => 'resource', 'param' => 'salesDocument'],
+    'GET api/v1/sales-documents/{salesDocument}/print' => ['type' => 'resource', 'param' => 'salesDocument'],
+    // Hoja de prueba de la impresora (spec 015): lleva el nombre de la empresa.
+    'GET api/v1/printing/test-page' => ['type' => 'list'],
     'GET api/v1/sales-documents/{salesDocument}/xml' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/sales-documents/{salesDocument}/cdr' => ['type' => 'resource', 'param' => 'salesDocument'],
     'GET api/v1/exports/products' => ['type' => 'list', 'query' => ['format' => 'csv', 'status' => 'all', 'lots' => 1]],

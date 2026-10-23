@@ -20,6 +20,12 @@ final class DocumentPdf
 {
     public const FORMATS = ['a4', '80mm'];
 
+    /** Etiqueta del documento del cliente según su tipo SUNAT (también en la impresión térmica, spec 015). */
+    public const CUSTOMER_DOCUMENT_LABELS = ['1' => 'DNI', '4' => 'Carné ext.', '6' => 'RUC'];
+
+    /** Nombre del comprobante en la leyenda de representación impresa. */
+    public const REPRESENTATION_NAMES = ['01' => 'factura', '03' => 'boleta de venta', '07' => 'nota de crédito'];
+
     /** Ancho del papel térmico en puntos (80 mm). */
     private const TICKET_WIDTH_PT = 226.77;
 
@@ -40,6 +46,15 @@ final class DocumentPdf
         ]).'|';
     }
 
+    public static function title(SalesDocument $document): string
+    {
+        return match ($document->document_type) {
+            DocumentType::Invoice => 'FACTURA ELECTRÓNICA',
+            DocumentType::Receipt => 'BOLETA DE VENTA ELECTRÓNICA',
+            DocumentType::CreditNote => 'NOTA DE CRÉDITO ELECTRÓNICA',
+        };
+    }
+
     public function html(SalesDocument $document, string $format): string
     {
         $qr = (new PngWriter)->write(new QrCode(data: self::qrPayload($document), size: 240, margin: 4));
@@ -48,11 +63,7 @@ final class DocumentPdf
         return view('pdf.sales-document', [
             'document' => $document,
             'format' => $format,
-            'title' => match ($document->document_type) {
-                DocumentType::Invoice => 'FACTURA ELECTRÓNICA',
-                DocumentType::Receipt => 'BOLETA DE VENTA ELECTRÓNICA',
-                DocumentType::CreditNote => 'NOTA DE CRÉDITO ELECTRÓNICA',
-            },
+            'title' => self::title($document),
             'amountInWords' => AmountInWords::soles($document->total),
             'qr' => $qr->getDataUri(),
             'logo' => $logoPath && Storage::disk('public')->exists($logoPath)

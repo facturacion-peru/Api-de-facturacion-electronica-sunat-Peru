@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Api\Platform\EmissionSupportController;
 use App\Http\Controllers\Api\Platform\PlatformAuditController;
+use App\Http\Controllers\Api\Printing\PrintingController;
 use App\Http\Controllers\Api\Sales\CustomerController;
 use App\Http\Controllers\Api\Sales\SalesDocumentController;
 use App\Http\Controllers\Api\Sales\TicketController;
@@ -68,6 +69,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/tickets', [TicketController::class, 'store']);
         Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
         Route::get('/tickets/{ticket}/pdf', [TicketController::class, 'pdf']);
+        Route::get('/tickets/{ticket}/print', [TicketController::class, 'print']);
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
@@ -77,6 +79,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/sales-documents/{salesDocument}/retry', [SalesDocumentController::class, 'retry']);
         Route::post('/sales-documents/{salesDocument}/credit-notes', [SalesDocumentController::class, 'storeCreditNote']);
         Route::get('/sales-documents/{salesDocument}/pdf', [SalesDocumentController::class, 'pdf']);
+        Route::get('/sales-documents/{salesDocument}/print', [SalesDocumentController::class, 'print']);
+        Route::get('/printing/test-page', [PrintingController::class, 'testPage']);
         Route::get('/sales-documents/{salesDocument}/xml', [SalesDocumentController::class, 'xml']);
         Route::get('/sales-documents/{salesDocument}/cdr', [SalesDocumentController::class, 'cdr']);
 

@@ -65,7 +65,7 @@
         <tr><td class="muted" style="width: 30%;">Fecha de emisión</td><td>{{ $document->issued_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</td></tr>
         <tr><td class="muted">Cliente</td><td>{{ $document->customer_name }}</td></tr>
         @if ($document->customer_document_number !== '-')
-            <tr><td class="muted">{{ ['1' => 'DNI', '4' => 'Carné ext.', '6' => 'RUC'][$document->customer_document_type] ?? 'Documento' }}</td><td>{{ $document->customer_document_number }}</td></tr>
+            <tr><td class="muted">{{ \App\Sales\DocumentPdf::CUSTOMER_DOCUMENT_LABELS[$document->customer_document_type] ?? 'Documento' }}</td><td>{{ $document->customer_document_number }}</td></tr>
         @endif
         @if ($document->customer_address)
             <tr><td class="muted">Dirección</td><td>{{ $document->customer_address }}</td></tr>
@@ -136,7 +136,7 @@
     @endif
 
     <div class="dashed"></div>
-    <div class="center muted">Representación impresa de la {{ ['01' => 'factura', '03' => 'boleta de venta', '07' => 'nota de crédito'][$document->document_type->value] }} electrónica emitida en el ambiente de pruebas de SUNAT.</div>
+    <div class="center muted">Representación impresa de la {{ \App\Sales\DocumentPdf::REPRESENTATION_NAMES[$document->document_type->value] }} electrónica emitida en el ambiente de pruebas de SUNAT.</div>
     <div class="center" style="font-weight: bold; margin-top: 4pt;">PRUEBAS — SIN VALOR LEGAL</div>
 </body>
 </html>

@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionTrigger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Printing\PrintRequest;
 use App\Http\Requests\Sales\DiscardSalesDocumentRequest;
 use App\Http\Requests\Sales\IndexSalesDocumentRequest;
 use App\Http\Requests\Sales\SalesDocumentPdfRequest;
@@ -14,6 +15,7 @@ use App\Http\Requests\Sales\StoreSalesDocumentRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\SalesDocumentResource;
 use App\Models\SalesDocument;
+use App\Printing\DocumentPrint;
 use App\Sales\DocumentPdf;
 use App\Services\CreditNoteService;
 use App\Services\SalesDocumentService;
@@ -117,6 +119,15 @@ class SalesDocumentController extends Controller
         return response($pdf->render($salesDocument->load(['lines', 'company', 'reference']), $format), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$salesDocument->display_number}-{$format}.pdf\"",
+        ]);
+    }
+
+    /** Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF. */
+    public function print(PrintRequest $request, SalesDocument $salesDocument, DocumentPrint $print): Response
+    {
+        return response($print->render($salesDocument->load(['lines', 'company', 'reference']), $request->options()), 200, [
+            'Content-Type' => 'application/octet-stream',
+            'Cache-Control' => 'no-store',
         ]);
     }
 
