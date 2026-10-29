@@ -65,6 +65,9 @@
             "name": "platform"
         },
         {
+            "name": "printing"
+        },
+        {
             "name": "products"
         },
         {
@@ -2062,6 +2065,49 @@
                 ]
             }
         },
+        "/api/v1/printing/test-page": {
+            "get": {
+                "tags": [
+                    "printing"
+                ],
+                "summary": "Test page printing",
+                "operationId": "printingTestPage",
+                "parameters": [
+                    {
+                        "name": "width",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "qr",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/products": {
             "get": {
                 "tags": [
@@ -2905,6 +2951,57 @@
                 ]
             }
         },
+        "/api/v1/sales-documents/{salesDocument}/print": {
+            "get": {
+                "tags": [
+                    "sales-documents"
+                ],
+                "summary": "Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF.",
+                "operationId": "salesDocumentPrint",
+                "parameters": [
+                    {
+                        "name": "salesDocument",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "width",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "qr",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/sales-documents/{salesDocument}/retry": {
             "post": {
                 "tags": [
@@ -3516,6 +3613,57 @@
                         "required": true,
                         "schema": {
                             "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/tickets/{ticket}/print": {
+            "get": {
+                "tags": [
+                    "tickets"
+                ],
+                "summary": "Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF.",
+                "operationId": "ticketPrint",
+                "parameters": [
+                    {
+                        "name": "ticket",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "width",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "qr",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],

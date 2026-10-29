@@ -6,6 +6,7 @@ use App\Enums\CompanyRole;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Printing\PrintRequest;
 use App\Http\Requests\Sales\IndexTicketRequest;
 use App\Http\Requests\Sales\StoreTicketRequest;
 use App\Http\Requests\Sales\VoidTicketRequest;
@@ -13,6 +14,7 @@ use App\Http\Resources\ApiCollection;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Printing\TicketPrint;
 use App\Sales\TicketPdf;
 use App\Services\TicketService;
 use App\Support\Decimal;
@@ -73,6 +75,17 @@ class TicketController extends Controller
         return response($pdf->render($ticket->load(['lines', 'seller', 'company'])), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$ticket->display_number}-80mm.pdf\"",
+        ]);
+    }
+
+    /** Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF. */
+    public function print(PrintRequest $request, Ticket $ticket, TicketPrint $print): Response
+    {
+        abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
+
+        return response($print->render($ticket->load(['lines', 'seller', 'company']), $request->options()), 200, [
+            'Content-Type' => 'application/octet-stream',
+            'Cache-Control' => 'no-store',
         ]);
     }
 
