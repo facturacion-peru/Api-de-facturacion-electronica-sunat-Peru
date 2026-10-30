@@ -30,6 +30,8 @@ class SalesDocumentResource extends ApiResource
             'document_type' => $this->document_type->value,
             'document_type_label' => $this->document_type->label(),
             'series_code' => $this->series_code,
+            // En el detalle (con líneas), también la dirección (spec 017).
+            'establishment' => $this->relationLoaded('lines') ? EstablishmentRef::withAddress($this->establishment) : EstablishmentRef::of($this->establishment),
             'number' => $this->number,
             'display_number' => $this->display_number,
             'environment' => $this->environment->value,

@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
 class SalesDocumentController extends Controller
 {
     /** Relaciones del detalle: líneas, intentos y, desde la 007, notas y documento modificado. */
-    private const DETAIL = ['lines', 'seller', 'submissions', 'creditNotes', 'reference'];
+    private const DETAIL = ['lines', 'seller', 'submissions', 'creditNotes', 'reference', 'establishment'];
 
     public function __construct(private SalesDocumentService $documents) {}
 
@@ -44,7 +44,7 @@ class SalesDocumentController extends Controller
         $customer = mb_strtolower(trim((string) ($filters['customer'] ?? '')));
 
         $page = SalesDocument::query()
-            ->with('seller')
+            ->with(['seller', 'establishment'])
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('issued_at', '>=', Carbon::parse($from)->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('issued_at', '<=', Carbon::parse($to)->endOfDay()))
             ->when($filters['document_type'] ?? null, fn ($q, $type) => $q->where('document_type', $type))

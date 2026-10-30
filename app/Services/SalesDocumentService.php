@@ -13,8 +13,10 @@ use App\Enums\SubmissionTrigger;
 use App\Enums\SunatEnvironment;
 use App\Enums\SunatStatus;
 use App\Enums\TaxRegime;
+use App\Establishments\EstablishmentAccess;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\Establishment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\SalesDocument;
@@ -54,6 +56,7 @@ class SalesDocumentService
         private UblBuilder $builder,
         private DocumentSigner $signer,
         private SunatDispatcher $dispatcher,
+        private EstablishmentAccess $establishments,
     ) {}
 
     /**
@@ -88,7 +91,7 @@ class SalesDocumentService
         $type = DocumentType::from($data['document_type']);
 
         $this->ensureCanIssue($company, $type);
-        $series = $this->resolveSeries($type, $data['series_id'] ?? null);
+        [$series, $establishment] = $this->resolveSeries($actor, $type, $data['series_id'] ?? null, isset($data['establishment_id']) ? (int) $data['establishment_id'] : null);
         $customer = isset($data['customer_id']) ? Customer::findOrFail($data['customer_id']) : null;
 
         $products = Product::whereIn('id', collect($data['lines'])->pluck('product_id'))->get()->keyBy('id');
@@ -106,7 +109,6 @@ class SalesDocumentService
             ? [$customer->document_type->value, $customer->document_number, $customer->name]
             : self::ANONYMOUS_CUSTOMER;
 
-        $establishment = $series->establishment ?? $company->mainEstablishment;
         $district = $establishment->district()->with(['provincia', 'region'])->first();
 
         $document = new SalesDocument([
@@ -203,25 +205,39 @@ class SalesDocumentService
         }
     }
 
-    private function resolveSeries(DocumentType $type, ?int $seriesId): Series
+    /**
+     * Serie y local de la emisión (spec 017): con serie, el local es el suyo y
+     * debe ser uno donde el usuario trabaja; sin serie, se resuelve el local y
+     * se elige entre sus series activas.
+     *
+     * @return array{Series, Establishment}
+     */
+    private function resolveSeries(User $actor, DocumentType $type, ?int $seriesId, ?int $establishmentId): array
     {
         if ($seriesId !== null) {
             $series = Series::with('establishment')->findOrFail($seriesId);
 
-            return match (true) {
+            match (true) {
                 $series->document_type !== $type => throw ValidationException::withMessages(['series_id' => "La serie {$series->code} no es de {$type->label()}."]),
                 ! $series->active => throw ValidationException::withMessages(['series_id' => "La serie {$series->code} está desactivada."]),
-                default => $series,
+                $establishmentId !== null && $establishmentId !== $series->establishment_id => throw ValidationException::withMessages(['establishment_id' => "La serie {$series->code} es de otro local."]),
+                ! $this->establishments->allowed($actor)->contains('id', $series->establishment_id) => throw ValidationException::withMessages(['series_id' => "La serie {$series->code} es de un local donde no puedes trabajar."]),
+                default => null,
             };
+
+            return [$series, $series->establishment];
         }
 
-        $active = Series::with('establishment')->where('document_type', $type)->where('active', true)->orderBy('code')->get();
+        $establishment = $this->establishments->resolve($actor, $establishmentId);
+        $active = Series::with('establishment')->where('establishment_id', $establishment->id)
+            ->where('document_type', $type)->where('active', true)->orderBy('code')->get();
 
-        return match ($active->count()) {
-            0 => throw ValidationException::withMessages(['series_id' => "No hay una serie de {$type->label()} activa. Pide al administrador que cree o active una."]),
+        return [match ($active->count()) {
+            0 => throw ValidationException::withMessages(['series_id' => 'No hay una serie de '.$type->label().' activa'
+                .($establishment->is_main ? '' : " en {$establishment->name}").'. Pide al administrador que cree o active una.']),
             1 => $active->first(),
             default => throw ValidationException::withMessages(['series_id' => 'Elige la serie: '.$active->pluck('code')->implode(', ').'.']),
-        };
+        }, $establishment];
     }
 
     /** HU-1.2 y HU-2.2: la factura exige RUC; la boleta de más de S/ 700, documento ⚖️. */

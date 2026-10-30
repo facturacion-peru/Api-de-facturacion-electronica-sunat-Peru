@@ -3022,6 +3022,10 @@
                                         "type": "integer",
                                         "nullable": true
                                     },
+                                    "establishment_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
                                     "customer_id": {
                                         "type": "integer",
                                         "nullable": true
@@ -3468,8 +3472,18 @@
                 "tags": [
                     "series"
                 ],
-                "summary": "Listar series",
+                "summary": "Series de los locales que el usuario puede leer, o de uno (spec 017).",
                 "operationId": "seriesIndex",
+                "parameters": [
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Operación exitosa"
@@ -3526,6 +3540,10 @@
                                         "type": "integer",
                                         "minimum": 0,
                                         "maximum": 99999999
+                                    },
+                                    "establishment_id": {
+                                        "type": "integer",
+                                        "nullable": true
                                     }
                                 },
                                 "required": [
@@ -3895,6 +3913,10 @@
                                 "properties": {
                                     "idempotency_key": {
                                         "type": "string"
+                                    },
+                                    "establishment_id": {
+                                        "type": "integer",
+                                        "nullable": true
                                     },
                                     "payment_method": {
                                         "type": "string"
