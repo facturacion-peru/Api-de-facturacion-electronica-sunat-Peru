@@ -81,9 +81,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('product_lots', function (Blueprint $table) {
+        // Tras un traslado, un lote queda repartido entre locales y el esquema
+        // anterior no puede representarlo: el único antiguo solo vuelve si cabe.
+        $split = DB::table('product_lots')->select('product_id', 'lot_number')
+            ->groupBy('product_id', 'lot_number')->havingRaw('count(*) > 1')->exists();
+
+        Schema::table('product_lots', function (Blueprint $table) use ($split) {
             $table->dropUnique(['product_id', 'establishment_id', 'lot_number']);
-            $table->unique(['product_id', 'lot_number']);
+
+            if (! $split) {
+                $table->unique(['product_id', 'lot_number']);
+            }
         });
 
         foreach (array_reverse(self::TABLES) as $name) {
