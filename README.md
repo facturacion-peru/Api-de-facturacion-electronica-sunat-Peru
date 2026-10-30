@@ -26,7 +26,8 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [014](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/014-exportar-importar/spec.md) | Exportar productos, clientes y ventas (XLSX o CSV) e importar productos y clientes con vista previa | Implementada |
 | [015](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/015-impresion-bluetooth/spec.md) | Bytes ESC/POS del ticket y de los comprobantes para la impresora térmica Bluetooth de la app | Implementada, falta verificar con impresora |
 | [016](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/016-imagen-producto/spec.md) | Foto opcional del producto y logo de la empresa en S3 | Implementada, falta verificar con el bucket |
-| [017](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/017-varios-establecimientos/spec.md) | Varios establecimientos: stock, ventas, series y cifras por local, traslados y vendedores asignados | Implementada en la rama `017-varios-establecimientos` |
+| [017](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/017-varios-establecimientos/spec.md) | Varios establecimientos: stock, ventas, series y cifras por local, traslados y vendedores asignados | Implementada |
+| [018](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/018-consulta-dni-ruc/spec.md) | Búsqueda del cliente por DNI o RUC con apisperu.com, con clientes verificados | Implementada en la rama `018-consulta-dni-ruc` |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -80,6 +81,8 @@ En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitació
 | `IMAGES_DISK` | Disco de las fotos de producto y los logos: `images` (S3, por defecto) o `public` en desarrollo local (necesita `php artisan storage:link`) |
 | `AWS_ROOT` | Carpeta del bucket para las imágenes, de lectura pública por la política del bucket |
 | `AWS_BACKUP_ROOT` | Carpeta del mismo bucket para las copias de seguridad, privada. `AWS_BACKUP_ACCESS_KEY_ID` y `AWS_BACKUP_SECRET_ACCESS_KEY` dan una clave propia a las copias (por defecto, las `AWS_*`) |
+| `APISPERU_TOKEN` | Token de apisperu.com para buscar DNI y RUC (spec 018), de la plataforma. Vacío = solo se usa lo guardado y el registro manual |
+| `APISPERU_BASE_URL` | Base del servicio. Por defecto `https://dniruc.apisperu.com/api/v1` |
 
 ## Secretos de SUNAT y `APP_KEY`
 
@@ -128,10 +131,11 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET establishments` · `POST establishments` · `PATCH establishments/{id}` (administrador) · `GET users` · `PATCH users/{user}` · `PUT users/{user}/establishments` (administrador) · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `GET tickets/{id}/pdf` · `GET tickets/{id}/print?width=58\|80` · `POST tickets/{id}/void` (administrador) |
 | Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `POST/DELETE products/{id}/image` (administrador; multipart `image`) · `GET products/{id}/lots` · `POST products/{id}/entries` · `POST products/{id}/transfers` (administrador) · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
-| Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET sales-documents/{id}/print?width=58\|80&qr=native\|image` · `GET printing/test-page` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
+| Clientes | `GET/POST customers` · `PATCH customers/{id}` (administrador) · `POST customers/lookup` (DNI o RUC) · `POST customers/{id}/refresh` |
+| Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET sales-documents/{id}/print?width=58\|80&qr=native\|image` · `GET printing/test-page` |
 | Datos (administrador) | `GET exports/products?format=xlsx\|csv&lots=` (filtros del listado) · `GET exports/customers` · `GET exports/sales?from=&to=&types[]=&statuses[]=` · `GET imports/{products\|customers}/template` · `POST imports/{kind}/preview` (multipart `file`, `mode=create\|upsert`) · `POST imports/{preview}/confirm` |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
-| Plataforma | `GET/POST platform/companies` (con resumen, búsqueda y filtro `issues`) · `GET/PATCH platform/companies/{id}` (incluido el domicilio fiscal) · `POST platform/companies/{id}/activate` y `/deactivate` (con motivo) · `POST platform/companies/{id}/admin-invitation/resend` · `GET platform/sales-documents` · `POST platform/sales-documents/{id}/retry` · `GET platform/audit-logs` · `GET platform/ubigeos/search` |
+| Plataforma | `GET/POST platform/companies` (con resumen, búsqueda y filtro `issues`) · `GET/PATCH platform/companies/{id}` (incluido el domicilio fiscal) · `POST platform/companies/{id}/activate` y `/deactivate` (con motivo) · `POST platform/companies/{id}/admin-invitation/resend` · `GET platform/sales-documents` · `POST platform/sales-documents/{id}/retry` · `GET platform/audit-logs` · `GET platform/ubigeos/search` · `GET platform/document-lookups/usage` |
 
 Las rutas de gestión de la empresa, las escrituras de inventario, el historial y las alertas exigen el rol `company_admin`. El costo de productos y lotes solo se incluye en las respuestas al administrador.
 
@@ -152,6 +156,15 @@ Las rutas de gestión de la empresa, las escrituras de inventario, el historial 
 - **Comprobantes:** el local es el de la serie (su `CodLocal` y su dirección van al XML); la nota de crédito usa una serie de notas del local del original. El correlativo de tickets sigue siendo de la empresa.
 - **Con un solo local** todo funciona como antes: la app 0.3.0 sigue vendiendo sin mandar `establishment_id`. La migración dejó lo existente en el principal y a los vendedores asignados a él.
 - **Pruebas:** `CrossEstablishmentAccessTest` recorre `TenantRoutes.php` como `CrossTenantAccessTest`; `EstablishmentMigrationTest` y `ConcurrentTransferTest` están en `tests/Integration/Establishments`. Para pruebas anteriores a los locales, `mainOf($modelo)` (en `tests/Pest.php`) da el principal.
+
+## Consulta de DNI y RUC (spec 018)
+
+- **Búsqueda:** `POST customers/lookup` mira primero los clientes de la empresa, luego la tabla común `document_lookups` (de la plataforma, sin empresa) y al final apisperu.com (`App\DocumentLookup\ApisPeruClient`). Si encuentra el documento, el cliente queda guardado y **verificado** (`customers.verified_at`). Si el servicio falla, responde 200 sin cliente y con `meta.reason` (`not_found`, `unavailable`, `quota` o `disabled`), y se sigue con el registro manual.
+- **Verificado:** su nombre y dirección no se editan a mano (422) ni con una importación; cambian solo con `POST customers/{id}/refresh`, que siempre consulta.
+- **Token:** `APISPERU_TOKEN`, de la plataforma, solo en el `.env` del servidor. Sin token, la búsqueda usa solo lo guardado. Pasar al plan de pago es cambiar el token. No hay topes por empresa (A-96).
+- **Uso:** una fila en `document_lookup_requests` por llamada real (sin el número consultado); la plataforma ve 14 días en `GET platform/document-lookups/usage`.
+- **Concurrencia:** un `Cache::lock` por documento hace que dos búsquedas simultáneas gasten una consulta. En producción el caché debe ser compartido entre procesos (`CACHE_STORE=database`, el de siempre).
+- **Pruebas:** `Http::fake()` intercepta el cliente; la forma real de las respuestas está en la [verificación de la 018](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/018-consulta-dni-ruc/verificacion.md).
 
 ## Exportar e importar (spec 014)
 
