@@ -165,11 +165,8 @@ class GenerateOpenApiSpec extends Command
     {
         $action = $route->getActionName();
 
-        if (! Str::contains($action, '@')) {
-            return null;
-        }
-
-        [$class, $method] = explode('@', $action);
+        // Un controlador invocable se registra sin método: es __invoke (spec 017).
+        [$class, $method] = Str::contains($action, '@') ? explode('@', $action) : [$action, '__invoke'];
 
         try {
             return new ReflectionMethod($class, $method);
