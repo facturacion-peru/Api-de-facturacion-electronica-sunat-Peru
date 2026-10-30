@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Sales;
 use App\Enums\CompanyRole;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Printing\PrintRequest;
 use App\Http\Requests\Sales\IndexTicketRequest;
@@ -41,10 +42,11 @@ class TicketController extends Controller
      * Ventas filtradas, de la más reciente a la más antigua, con totales por
      * medio de pago sin anulados (HU-4.1). El vendedor solo ve las suyas (HU-4.2).
      */
-    public function index(IndexTicketRequest $request): ApiCollection
+    public function index(IndexTicketRequest $request, EstablishmentAccess $access): ApiCollection
     {
         $filters = $request->validated();
         $query = $this->scoped($request->user())
+            ->whereIn('establishment_id', $access->filter($request->user(), $request->integer('establishment_id') ?: null))
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('issued_at', '>=', Carbon::parse($from)->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('issued_at', '<=', Carbon::parse($to)->endOfDay()))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))

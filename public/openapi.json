@@ -2963,6 +2963,14 @@
                         }
                     },
                     {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "required": false,
@@ -3855,6 +3863,14 @@
                     },
                     {
                         "name": "seller_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "establishment_id",
                         "in": "query",
                         "required": false,
                         "schema": {

@@ -141,9 +141,12 @@ class ProductImport implements RowImport
         $result['created']++;
 
         if ($row['entry'] !== null) {
-            // El local elegido en la vista previa (spec 017); si ya no está activo, nada se importa.
-            $establishment = Establishment::active()->find($row['entry']['establishment_id'] ?? null)
-                ?? throw new ImportConflict('El local del stock inicial ya no está activo. Vuelve a subir el archivo.');
+            // El local elegido en la vista previa (spec 017; una vista previa anterior
+            // no lo trae: el principal). Si ya no está activo, nada se importa.
+            $establishment = isset($row['entry']['establishment_id'])
+                ? Establishment::active()->find($row['entry']['establishment_id'])
+                : Establishment::where('is_main', true)->first();
+            $establishment ?? throw new ImportConflict('El local del stock inicial ya no está activo. Vuelve a subir el archivo.');
             $entry = collect($row['entry'])->except('establishment_id')->filter(fn ($value) => $value !== null)->all();
             $this->inventory->registerEntry($product, $establishment, $entry, $actor);
             $result['entries']++;

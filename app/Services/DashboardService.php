@@ -6,7 +6,6 @@ use App\Enums\CompanyRole;
 use App\Enums\DocumentType;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\TicketStatus;
-use App\Establishments\EstablishmentAccess;
 use App\Models\SalesDocument;
 use App\Models\Ticket;
 use App\Models\User;
@@ -34,13 +33,16 @@ class DashboardService
 
     public function __construct(private InventoryAlertService $alerts) {}
 
-    /** @return array<string, mixed> */
-    public function summary(User $user): array
+    /**
+     * @param  list<int>  $establishments  Locales a sumar (spec 017).
+     * @return array<string, mixed>
+     */
+    public function summary(User $user, array $establishments): array
     {
         $own = ! $user->hasCompanyRole(CompanyRole::CompanyAdmin);
         $today = today();
         $from = $today->copy()->subDays(self::DAYS - 1);
-        $days = $this->days($user, $own, $from, $today->copy()->endOfDay());
+        $days = $this->days($user, $own, $establishments, $from, $today->copy()->endOfDay());
         $last = $days[array_key_last($days)];
 
         return [
@@ -49,19 +51,18 @@ class DashboardService
             'today' => ['total' => $last['total'], 'count' => $last['count']],
             'last_7_days' => $days,
             'attention' => [
-                'pending_documents' => SalesDocument::query()->whereIn('status', [SalesDocumentStatus::Pending, SalesDocumentStatus::Sent])->count(),
-                'rejected_documents' => SalesDocument::query()->where('status', SalesDocumentStatus::Rejected)->count(),
-                // Provisional hasta T021: todos los locales que puede leer.
-                'inventory_alerts' => $own ? null : $this->alerts->count(app(EstablishmentAccess::class)->filter($user, null)),
+                'pending_documents' => SalesDocument::query()->whereIn('establishment_id', $establishments)->whereIn('status', [SalesDocumentStatus::Pending, SalesDocumentStatus::Sent])->count(),
+                'rejected_documents' => SalesDocument::query()->whereIn('establishment_id', $establishments)->where('status', SalesDocumentStatus::Rejected)->count(),
+                'inventory_alerts' => $own ? null : $this->alerts->count($establishments),
             ],
-            'recent_sales' => $this->recent($user, $own),
+            'recent_sales' => $this->recent($user, $own, $establishments),
         ];
     }
 
     /** @return list<array{date: string, total: string, count: int}> */
-    private function days(User $user, bool $own, Carbon $from, Carbon $to): array
+    private function days(User $user, bool $own, array $establishments, Carbon $from, Carbon $to): array
     {
-        $range = fn (Builder $q) => $q->whereBetween('issued_at', [$from, $to]);
+        $range = fn (Builder $q) => $q->whereBetween('issued_at', [$from, $to])->whereIn('establishment_id', $establishments);
 
         $tickets = Ticket::query()->tap($range)
             ->where('status', TicketStatus::Issued)
@@ -98,9 +99,9 @@ class DashboardService
     }
 
     /** @return list<array<string, mixed>> */
-    private function recent(User $user, bool $own): array
+    private function recent(User $user, bool $own, array $establishments): array
     {
-        $latest = fn (Builder $q) => $q->when($own, fn ($q) => $q->where('seller_id', $user->id))
+        $latest = fn (Builder $q) => $q->whereIn('establishment_id', $establishments)->when($own, fn ($q) => $q->where('seller_id', $user->id))
             ->orderByDesc('issued_at')->orderByDesc('id')->limit(self::RECENT)->get();
 
         $tickets = $latest(Ticket::query())->map(fn (Ticket $t) => [
