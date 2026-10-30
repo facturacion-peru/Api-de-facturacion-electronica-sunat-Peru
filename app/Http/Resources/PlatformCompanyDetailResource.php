@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Company;
+use App\Models\Establishment;
 use App\Platform\CompanySummaries;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,8 @@ class PlatformCompanyDetailResource extends ApiResource
                 'ubigeo' => $main->ubigeo,
                 'district' => $main->district?->info_busqueda,
             ] : null,
+            // Spec 017: cuántos locales tiene (activos o no), sin sus datos.
+            'establishments_count' => Establishment::withoutTenancy()->where('company_id', $this->id)->count(),
             'admin' => $summaries->admin($this->resource),
             'active_users' => $summaries->activeUsers($this->resource),
             'last_activity_at' => $summaries->lastActivityAt($this->resource),

@@ -22,6 +22,6 @@ it('la lista y la ficha de empresas exponen exactamente los campos declarados', 
 
     expect(array_keys($row))->toBe($summary)
         ->and(array_keys($detail))->toBe([...$summary, 'person_type', 'tax_regime', 'tax_regime_label', 'email', 'phone',
-            'fiscal_address', 'admin', 'active_users', 'last_activity_at'])
+            'fiscal_address', 'establishments_count', 'admin', 'active_users', 'last_activity_at'])
         ->and(array_keys($detail['admin']))->toBe(['name', 'email', 'invitation']);
 });

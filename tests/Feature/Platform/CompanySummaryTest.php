@@ -70,6 +70,8 @@ it('HU-1.3 la ficha trae administrador, usuarios activos y última actividad', f
         ->and($a['active_users'])->toBe(2)
         ->and($a['last_activity_at'])->toStartWith('2026-09-25')
         ->and($a['fiscal_address'])->toHaveKeys(['address', 'ubigeo', 'district'])
+        // Spec 017: cuántos locales tiene, sin datos de venta por local.
+        ->and($a['establishments_count'])->toBe(1)
         ->and($b['admin'])->toBe(['name' => null, 'email' => 'jefe@beta.pe', 'invitation' => 'pending'])
         ->and($b['last_activity_at'])->toBeNull();
 });
