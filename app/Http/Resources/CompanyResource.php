@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Images\CompanyLogo;
 use App\Models\Company;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Datos generales de la empresa. Nunca incluye secretos (HU-4.4).
@@ -27,7 +27,7 @@ class CompanyResource extends ApiResource
             'tax_regime' => $this->tax_regime->value,
             'email' => $this->email,
             'phone' => $this->phone,
-            'logo_url' => $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null,
+            'logo_url' => app(CompanyLogo::class)->url($this->logo_path),
             'active' => $this->active,
             'expiry_warning_days' => $this->expiry_warning_days,
             'fiscal_address' => $main ? [

@@ -25,6 +25,7 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [007](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/007-notas-credito/spec.md) | Notas de crédito (anulación y devoluciones) y descarte de rechazados | Implementada |
 | [014](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/014-exportar-importar/spec.md) | Exportar productos, clientes y ventas (XLSX o CSV) e importar productos y clientes con vista previa | Implementada |
 | [015](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/015-impresion-bluetooth/spec.md) | Bytes ESC/POS del ticket y de los comprobantes para la impresora térmica Bluetooth de la app | Implementada, falta verificar con impresora |
+| [016](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/016-imagen-producto/spec.md) | Foto opcional del producto y logo de la empresa en S3 | Implementada, falta verificar con el bucket |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -75,6 +76,9 @@ En desarrollo el correo va al log (`MAIL_MAILER=log`): los enlaces de invitació
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos, separados por comas. Vacío = `FRONTEND_URL`. Nunca `*`. La app Android llama desde `https://localhost` |
 | `APP_ANDROID_MIN_VERSION` | Versión mínima de la app Android (`x.y.z`); las menores reciben 426 y la app pide actualizar. Vacía = sin control |
 | `SANCTUM_EXPIRATION` | Minutos de vida del token (1440 = 24 h) |
+| `IMAGES_DISK` | Disco de las fotos de producto y los logos: `images` (S3, por defecto) o `public` en desarrollo local (necesita `php artisan storage:link`) |
+| `AWS_ROOT` | Carpeta del bucket para las imágenes, de lectura pública por la política del bucket |
+| `AWS_BACKUP_ROOT` | Carpeta del mismo bucket para las copias de seguridad, privada. `AWS_BACKUP_ACCESS_KEY_ID` y `AWS_BACKUP_SECRET_ACCESS_KEY` dan una clave propia a las copias (por defecto, las `AWS_*`) |
 
 ## Secretos de SUNAT y `APP_KEY`
 
@@ -122,7 +126,7 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 | Sesión | `POST auth/logout` · `GET auth/me` |
 | Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `GET tickets/{id}/pdf` · `GET tickets/{id}/print?width=58\|80` · `POST tickets/{id}/void` (administrador) |
-| Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
+| Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `POST/DELETE products/{id}/image` (administrador; multipart `image`) · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET sales-documents/{id}/print?width=58\|80&qr=native\|image` · `GET printing/test-page` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
 | Datos (administrador) | `GET exports/products?format=xlsx\|csv&lots=` (filtros del listado) · `GET exports/customers` · `GET exports/sales?from=&to=&types[]=&statuses[]=` · `GET imports/{products\|customers}/template` · `POST imports/{kind}/preview` (multipart `file`, `mode=create\|upsert`) · `POST imports/{preview}/confirm` |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
@@ -158,6 +162,17 @@ Las rutas de gestión de la empresa, las escrituras de inventario, el historial 
 - **Contenido:** `App\Printing\TicketPrint` y `DocumentPrint` arman lo mismo que los PDF de 80 mm, con el mismo QR (`DocumentPdf::qrPayload`), resumen, monto en letras y marca de pruebas. Sin logo. `PrintParityTest` comprueba que toda palabra del PDF aparezca en la impresión: **si cambia una plantilla `pdf/*.blade.php`, hay que cambiar también su clase de impresión.**
 - **Formato:** `App\Printing\Escpos\EscposBuilder`, sin dependencias: comandos básicos de Epson, tabla PC850 (`ESC t 2`) y ajuste de línea a 32 (58 mm) o 48 (80 mm) caracteres. Quita los caracteres de control de los textos, así que un nombre de producto no puede colar comandos. El QR va con el comando nativo (`GS ( k`) o, con `qr=image`, como imagen de 1 bit (`QrRaster`, sin GD).
 - **Para revisar sin impresora:** `Tests\Support\EscposText::decode($bytes)` muestra el texto que saldría impreso.
+
+## Imágenes en S3 (spec 016)
+
+- **Discos:** `images` guarda las fotos y los logos en `AWS_ROOT`; `s3`, las copias en `AWS_BACKUP_ROOT`. El código nunca nombra el disco: usa `config('filesystems.images_disk')`. Los objetos no llevan ACL: la lectura pública la da la política del bucket, solo sobre `AWS_ROOT/*` y sin listado. Pasos en AWS: [plan 016, «Operación en AWS»](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/016-imagen-producto/plan.md).
+- **Foto del producto:** `App\Images\ImageProcessor` vuelve a codificar JPEG, PNG o WebP (hasta 2 MB y 4000×4000) en WebP de 800 y 200 px, derecha según el EXIF y sin metadatos. Las claves son UUID (`<uuid>.webp` y `<uuid>-thumb.webp`), sin RUC, id ni nombre. `ProductImageService` sube fuera de la transacción, bloquea la fila para cambiar la clave y borra los objetos anteriores después del commit.
+- **Logo:** `LogoProcessor` lo guarda como `<uuid>.png` con alfa. `CompanyLogo` lee las rutas antiguas (con «/») del disco `public`, y da a los PDF un data URI con un día de caché; si S3 falla, el PDF sale sin logo.
+- **Si S3 falla:** subir responde 503 y nada cambia; los GET arman las direcciones sin consultar S3. Un borrado fallido queda en `image_deletions`.
+- **Comandos:**
+  - `images:cleanup` (scheduler, 02:45) reintenta los borrados pendientes y se rinde a los 10 intentos con un aviso en el log.
+  - `images:move-logos` lleva los logos antiguos de `public` al disco de imágenes. `deploy/release.sh` lo corre después de migrar; si uno falla, avisa sin detener la publicación.
+- **Pruebas:** `Storage::fake('images')`, `Tests\Support\TestImages` (JPEG con EXIF de orientación y GPS armado a mano) y `Tests\Support\FailingDisks` (S3 caído o sin poder borrar).
 
 ## Pruebas
 

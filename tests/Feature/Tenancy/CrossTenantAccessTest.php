@@ -45,7 +45,8 @@ beforeEach(function () {
 
     app(TenantContext::class)->run($this->b, fn () => app(AuditLogger::class)->record('b.accion_secreta', $this->sellerB, actor: $this->adminB));
 
-    $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B', 'min_stock' => '100']);
+    // Con foto (spec 016, CE-003): su clave tampoco debe aparecer en una respuesta a A.
+    $this->productB = Product::factory()->create(['company_id' => $this->b->id, 'code' => 'B-SECRETO', 'name' => 'Producto secreto de B', 'min_stock' => '100', 'image_key' => 'bbbbbbbb-0000-4000-8000-00000000000b']);
     $this->lotB = ProductLot::factory()->for($this->productB)->create(['lot_number' => 'LOTE-DE-B']);
     $this->ticketB = Ticket::factory()->create(['company_id' => $this->b->id, 'customer_name' => 'Cliente secreto de B']);
     $this->seriesB = Series::factory()->create(['company_id' => $this->b->id, 'code' => 'BZ99', 'last_number' => 42]);
@@ -61,7 +62,7 @@ beforeEach(function () {
     $this->token = $this->adminA->createToken('t')->plainTextToken;
 
     /** Rastros de B que nunca deben aparecer en una respuesta a A. */
-    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB', 'BZ99', 'Comprador secreto de B', '87654321'];
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB', 'BZ99', 'Comprador secreto de B', '87654321', 'bbbbbbbb-0000-4000-8000-00000000000b'];
 });
 
 function callAsA(string $method, string $uri, array $data = [])

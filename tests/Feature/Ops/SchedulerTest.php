@@ -21,6 +21,7 @@ it('programa cada tarea con su frecuencia', function (string $command, string $e
 })->with([
     'reenvío a SUNAT (y latido)' => ['sunat:send-pending', '* * * * *', []],
     'vistas previas de importación caducadas' => ['model:prune', '30 2 * * *', []],
+    'imágenes pendientes de borrar' => ['images:cleanup', '45 2 * * *', []],
     'copia diaria' => ['backup:run', '0 3 * * *', ['production', 'staging']],
     'limpieza de copias' => ['backup:clean', '30 3 * * *', ['production', 'staging']],
     'monitoreo de copias' => ['backup:monitor', '0 4 * * *', ['production', 'staging']],

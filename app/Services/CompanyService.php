@@ -5,6 +5,10 @@ namespace App\Services;
 use App\Audit\AuditLogger;
 use App\Enums\CompanyRole;
 use App\Enums\TaxRegime;
+use App\Images\CompanyLogo;
+use App\Images\ImageStore;
+use App\Images\InvalidImage;
+use App\Images\LogoProcessor;
 use App\Models\Company;
 use App\Models\Establishment;
 use App\Models\User;
@@ -13,6 +17,9 @@ use App\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class CompanyService
 {
@@ -21,6 +28,8 @@ class CompanyService
         private InvitationService $invitations,
         private SunatConfigService $sunat,
         private TenantContext $tenant,
+        private LogoProcessor $logos,
+        private ImageStore $images,
     ) {}
 
     /**
@@ -122,19 +131,37 @@ class CompanyService
         return $changes;
     }
 
-    /** Guarda el logo en el disco público y borra el anterior. */
+    /**
+     * Guarda el logo como PNG con alfa en el disco de imágenes (spec 016,
+     * HU-4) y borra el anterior después de guardar el nuevo. Un logo antiguo
+     * del disco `public` se borra de ahí.
+     */
     public function updateLogo(Company $company, UploadedFile $logo, User $actor): Company
     {
-        $previous = $company->logo_path;
-        $path = $logo->store("companies/{$company->id}", 'public');
-
-        $company->update(['logo_path' => $path]);
-
-        if ($previous !== null && $previous !== $path) {
-            Storage::disk('public')->delete($previous);
+        try {
+            $png = $this->logos->process($logo->getContent());
+        } catch (InvalidImage) {
+            throw ValidationException::withMessages(['logo' => 'El logo no se puede leer. Prueba con otra imagen.']);
         }
 
-        $this->audit->record('company.logo_updated', $company, actor: $actor);
+        $path = ImageStore::logoPath((string) Str::uuid());
+        $this->images->put([$path => $png], 'image/png', 'No se pudo guardar el logo. Inténtalo de nuevo.');
+
+        try {
+            $previous = $company->logo_path;
+            $company->update(['logo_path' => $path]);
+            $this->audit->record('company.logo_updated', $company, actor: $actor);
+        } catch (Throwable $e) {
+            $this->images->delete($path);
+
+            throw $e;
+        }
+
+        if ($previous !== null && CompanyLogo::isLegacy($previous)) {
+            Storage::disk('public')->delete($previous);
+        } elseif ($previous !== null) {
+            $this->images->delete($previous);
+        }
 
         return $company;
     }

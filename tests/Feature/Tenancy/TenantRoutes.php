@@ -32,6 +32,8 @@ return [
     'POST api/v1/products' => ['type' => 'write'],
     'GET api/v1/products/{product}' => ['type' => 'resource', 'param' => 'product'],
     'PATCH api/v1/products/{product}' => ['type' => 'resource', 'param' => 'product'],
+    'POST api/v1/products/{product}/image' => ['type' => 'resource', 'param' => 'product'],
+    'DELETE api/v1/products/{product}/image' => ['type' => 'resource', 'param' => 'product'],
     'GET api/v1/products/{product}/lots' => ['type' => 'resource', 'param' => 'product'],
     'POST api/v1/products/{product}/entries' => ['type' => 'resource', 'param' => 'product'],
     'POST api/v1/lots/{lot}/adjustments' => ['type' => 'resource', 'param' => 'lot'],

@@ -26,7 +26,7 @@ function requestAs(CompanyRole $role, ?Company $company = null): Request
     return $request;
 }
 
-$productKeys = ['id', 'code', 'name', 'type', 'unit', 'sale_price', 'igv_affectation', 'min_stock', 'tracks_expiry', 'active', 'stock', 'available_stock'];
+$productKeys = ['id', 'code', 'name', 'type', 'unit', 'sale_price', 'igv_affectation', 'min_stock', 'tracks_expiry', 'active', 'image', 'stock', 'available_stock'];
 $lotKeys = ['id', 'lot_number', 'received_at', 'expires_at', 'expired', 'initial_quantity', 'remaining_quantity'];
 
 it('ProductResource para el administrador incluye el costo', function () use ($productKeys) {
@@ -43,6 +43,18 @@ it('ProductResource para el vendedor omite el costo', function () use ($productK
 
     expect(array_keys(ProductResource::make($product)->resolve(requestAs(CompanyRole::Seller, $product->company))))
         ->toBe([...$productKeys, 'created_at']);
+});
+
+it('ProductResource lleva la foto como {url, thumb_url} o null (spec 016)', function () {
+    $product = Product::factory()->create(['image_key' => '0b6f3c2e-6d1a-4c3e-9f7a-2b8d5e4c1a90']);
+    app(TenantContext::class)->set($product->company);
+    $request = requestAs(CompanyRole::Seller, $product->company);
+
+    expect(ProductResource::make($product)->resolve($request)['image'])
+        ->toBeArray()
+        ->toHaveKeys(['url', 'thumb_url'])
+        ->toHaveCount(2)
+        ->and(ProductResource::make($product->forceFill(['image_key' => null]))->resolve($request)['image'])->toBeNull();
 });
 
 it('LotResource incluye el costo solo para el administrador', function () use ($lotKeys) {

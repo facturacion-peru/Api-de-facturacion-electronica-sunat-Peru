@@ -125,10 +125,13 @@ class GenerateOpenApiSpec extends Command
         ];
 
         if ($expectsBody && $rules !== []) {
+            // Con archivos, el cliente envía un formulario multipart, no JSON (spec 016).
+            $mediaType = $this->expectsFiles($rules) ? 'multipart/form-data' : 'application/json';
+
             $operation['requestBody'] = [
                 'required' => true,
                 'content' => [
-                    'application/json' => ['schema' => $this->schemaFromRules($rules)],
+                    $mediaType => ['schema' => $this->schemaFromRules($rules)],
                 ],
             ];
         }
@@ -142,6 +145,20 @@ class GenerateOpenApiSpec extends Command
         }
 
         return $operation;
+    }
+
+    /**
+     * @param  array<string, string>  $rules
+     */
+    private function expectsFiles(array $rules): bool
+    {
+        foreach ($rules as $rule) {
+            if (array_intersect(['file', 'image'], explode('|', $rule)) !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function reflectAction(RoutingRoute $route): ?ReflectionMethod
@@ -477,6 +494,15 @@ class GenerateOpenApiSpec extends Command
 
             // En decimales (cadena) min/max son valores, no longitudes: no se documentan.
             if (! in_array($name, ['max', 'min'], true) || ! is_numeric($argument) || ($schema['format'] ?? null) === 'decimal') {
+                continue;
+            }
+
+            // En archivos, max es el tamaño en kilobytes, no una longitud.
+            if (($schema['format'] ?? null) === 'binary') {
+                if ($name === 'max') {
+                    $notes[] = 'Máximo '.$argument.' KB.';
+                }
+
                 continue;
             }
 

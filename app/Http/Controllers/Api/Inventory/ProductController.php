@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\Inventory;
 use App\Enums\CompanyRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\IndexProductRequest;
+use App\Http\Requests\Inventory\ProductImageRequest;
 use App\Http\Requests\Inventory\StoreProductRequest;
 use App\Http\Requests\Inventory\UpdateProductRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\ProductResource;
+use App\Images\ProductImageService;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /** Catálogo de productos de la empresa (HU-1). */
 class ProductController extends Controller
@@ -60,5 +63,17 @@ class ProductController extends Controller
         }
 
         return $resource;
+    }
+
+    /** Sube o cambia la foto (spec 016, HU-1). */
+    public function updateImage(ProductImageRequest $request, Product $product, ProductImageService $images): ProductResource
+    {
+        return ProductResource::make($images->replace($product, $request->file('image'), $request->user()));
+    }
+
+    /** Quita la foto; sin foto también responde 200. */
+    public function destroyImage(Request $request, Product $product, ProductImageService $images): ProductResource
+    {
+        return ProductResource::make($images->remove($product, $request->user()));
     }
 }

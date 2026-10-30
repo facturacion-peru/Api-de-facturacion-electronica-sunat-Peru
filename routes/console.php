@@ -23,6 +23,9 @@ Schedule::command('sunat:send-pending')->everyMinute()->withoutOverlapping()
 // Vistas previas de importación caducadas (spec 014).
 Schedule::command('model:prune', ['--model' => [App\Models\ImportPreview::class]])->dailyAt('02:30')->withoutOverlapping();
 
+// Imágenes que no se pudieron borrar de S3 (spec 016).
+Schedule::command('images:cleanup')->dailyAt('02:45')->withoutOverlapping();
+
 // Operación del servidor (spec 009): solo en staging y producción.
 $servers = ['production', 'staging'];
 

@@ -37,6 +37,12 @@ check "una versión nueva reemplaza a la anterior" "release api \"$(artifact v2)
 sleep 1
 check "si falla la salud vuelve a la versión anterior y borra la fallida" "! HEALTH_CMD=false release api \"$(artifact v3)\" && [ \"\$(current api)\" = v2 ] && [ \"\$(find \"${BASE}/staging/api/releases\" -mindepth 1 -maxdepth 1 -type d | wc -l)\" -eq 2 ]"
 
+# PHP falso que anota cada orden y falla al mover los logos (spec 016).
+printf '#!/usr/bin/env bash\necho "$*" >> "%s/php.log"\n[[ "$*" != *move-logos* ]]\n' "$TMP" > "${TMP}/php"
+chmod +x "${TMP}/php"
+sleep 1
+check "mueve los logos después de migrar y un fallo no detiene la publicación" "PHP_BIN=\"${TMP}/php\" release api \"$(artifact v2b)\" && [ \"\$(current api)\" = v2b ] && grep -n . \"${TMP}/php.log\" | grep -A1 'artisan migrate' | grep -q 'images:move-logos'"
+
 for n in 4 5 6 7 8; do sleep 1; release web "$(artifact "w$n")"; done
 check "la web conserva solo las últimas 5 versiones" "[ \"\$(find \"${BASE}/staging/web/releases\" -mindepth 1 -maxdepth 1 -type d | wc -l)\" -eq 5 ] && [ \"\$(current web)\" = w8 ]"
 

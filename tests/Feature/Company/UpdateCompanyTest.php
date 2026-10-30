@@ -4,8 +4,6 @@ use App\Enums\CompanyRole;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 /*
  * T060 · HU-5: el administrador consulta y corrige los datos de su empresa.
@@ -64,36 +62,7 @@ it('valida correo y teléfono', function () {
         ->assertJsonValidationErrors(['email', 'phone']);
 });
 
-it('sube el logo y reemplaza el anterior', function () {
-    Storage::fake('public');
-
-    ($this->asAdmin)()->post('/api/v1/company/logo', ['logo' => UploadedFile::fake()->image('logo.png', 200, 200)->size(300)])
-        ->assertOk();
-    $first = $this->company->fresh()->logo_path;
-
-    $response = ($this->asAdmin)()->post('/api/v1/company/logo', ['logo' => UploadedFile::fake()->image('nuevo.jpg')->size(300)])
-        ->assertOk();
-    $second = $this->company->fresh()->logo_path;
-
-    expect($second)->toStartWith("companies/{$this->company->id}/")
-        ->and($response->json('data.logo_url'))->toContain($second)
-        ->and(AuditLog::withoutTenancy()->where('action', 'company.logo_updated')->count())->toBe(2);
-
-    Storage::disk('public')->assertExists($second);
-    Storage::disk('public')->assertMissing($first);
-});
-
-it('rechaza logos de otro formato o de más de 1 MB', function (string $name, int $kilobytes) {
-    Storage::fake('public');
-
-    ($this->asAdmin)()->postJson('/api/v1/company/logo', ['logo' => UploadedFile::fake()->create($name, $kilobytes)])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['logo']);
-})->with([
-    'PDF' => ['logo.pdf', 100],
-    'SVG' => ['logo.svg', 10],
-    'PNG de 2 MB' => ['logo.png', 2048],
-]);
+// El logo (spec 016, en S3) se prueba en CompanyLogoTest.
 
 it('el vendedor no edita la empresa', function () {
     ($this->asSeller)()->patchJson('/api/v1/company', ['nombre_comercial' => 'X'])->assertForbidden();
