@@ -8,6 +8,7 @@ use App\Enums\DocumentType;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SunatEnvironment;
+use App\Establishments\VisibleByEstablishment;
 use App\Sales\Exceptions\SalesDocumentImmutable;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\SalesDocumentFactory;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SalesDocument extends Model
 {
     /** @use HasFactory<SalesDocumentFactory> */
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, HasFactory, VisibleByEstablishment;
 
     /** Lo único que cambia después de emitir: el estado del envío a SUNAT. */
     private const MUTABLE = [

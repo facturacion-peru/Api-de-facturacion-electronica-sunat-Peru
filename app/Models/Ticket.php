@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Establishments\VisibleByEstablishment;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, HasFactory, VisibleByEstablishment;
 
     public const LEGAL_NOTICE = 'Documento interno — no es comprobante de pago';
 

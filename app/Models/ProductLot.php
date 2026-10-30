@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Establishments\VisibleByEstablishment;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\ProductLotFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ProductLot extends Model
 {
     /** @use HasFactory<ProductLotFactory> */
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, HasFactory, VisibleByEstablishment;
 
     protected $fillable = [
         'company_id',

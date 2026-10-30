@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
+use App\Establishments\VisibleByEstablishment;
 use App\Inventory\Exceptions\MovementImmutable;
 use App\Tenancy\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class InventoryMovement extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, VisibleByEstablishment;
 
     public const UPDATED_AT = null;
 
