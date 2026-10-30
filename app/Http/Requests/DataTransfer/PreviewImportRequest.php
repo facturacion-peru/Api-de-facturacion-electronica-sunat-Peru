@@ -19,6 +19,8 @@ class PreviewImportRequest extends FormRequest
         return [
             'file' => ['required', 'file', 'max:5120', 'mimes:xlsx,csv,txt'],
             'mode' => ['sometimes', 'in:create,upsert'],
+            // Local del stock inicial de los productos (spec 017); por defecto el principal.
+            'establishment_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 

@@ -1146,6 +1146,10 @@
                                             "create",
                                             "upsert"
                                         ]
+                                    },
+                                    "establishment_id": {
+                                        "type": "integer",
+                                        "nullable": true
                                     }
                                 },
                                 "required": [

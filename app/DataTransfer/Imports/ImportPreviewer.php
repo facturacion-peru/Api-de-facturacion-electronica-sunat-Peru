@@ -4,6 +4,7 @@ namespace App\DataTransfer\Imports;
 
 use App\DataTransfer\Spreadsheet;
 use App\DataTransfer\UnreadableFile;
+use App\Models\Establishment;
 use App\Models\ImportPreview;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -21,7 +22,8 @@ class ImportPreviewer
 
     public function __construct(private ImportKinds $kinds) {}
 
-    public function preview(string $kind, string $mode, UploadedFile $file, User $user): ImportPreview
+    /** @param  Establishment  $establishment  Local del stock inicial (spec 017). */
+    public function preview(string $kind, string $mode, UploadedFile $file, User $user, Establishment $establishment): ImportPreview
     {
         $import = $this->kinds->for($kind);
         [$columns, $records] = $this->read($file->getRealPath());
@@ -52,7 +54,8 @@ class ImportPreviewer
             'user_id' => $user->id,
             'kind' => $kind,
             'mode' => $mode,
-            'rows' => $analysis->errors === [] ? $analysis->rows : [],
+            'rows' => $analysis->errors === [] ? array_map(fn (array $row) => ($row['entry'] ?? null) === null ? $row
+                : [...$row, 'entry' => [...$row['entry'], 'establishment_id' => $establishment->id]], $analysis->rows) : [],
             'summary' => $analysis->summary(count($records)),
             'errors' => $analysis->errors,
             'warnings' => $analysis->warnings,
