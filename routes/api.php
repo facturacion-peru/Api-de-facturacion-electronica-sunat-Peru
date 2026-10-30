@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Api\Platform\DocumentLookupController as PlatformDocumentLookupController;
 use App\Http\Controllers\Api\Platform\EmissionSupportController;
 use App\Http\Controllers\Api\Platform\PlatformAuditController;
 use App\Http\Controllers\Api\Printing\PrintingController;
@@ -75,6 +76,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::post('/customers/lookup', [CustomerController::class, 'lookup']);
+        Route::post('/customers/{customer}/refresh', [CustomerController::class, 'refresh']);
         Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
         Route::get('/sales-documents', [SalesDocumentController::class, 'index']);
         Route::post('/sales-documents', [SalesDocumentController::class, 'store']);
@@ -155,6 +157,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/ubigeos/search', [UbigeoController::class, 'searchUbigeo']);
         Route::get('/sales-documents', [EmissionSupportController::class, 'index']);
         Route::get('/audit-logs', [PlatformAuditController::class, 'index']);
+        Route::get('/document-lookups/usage', [PlatformDocumentLookupController::class, 'usage']);
         Route::post('/sales-documents/{platformDocument}/retry', [EmissionSupportController::class, 'retry']);
     });
 });

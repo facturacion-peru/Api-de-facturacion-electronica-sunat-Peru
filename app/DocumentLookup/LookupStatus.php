@@ -13,4 +13,16 @@ enum LookupStatus: string
     case Quota = 'quota';
     // Sin token configurado: no se llama al servicio.
     case Disabled = 'disabled';
+
+    /** Por qué no se pudo consultar, para quien atiende. */
+    public function message(): string
+    {
+        return match ($this) {
+            self::Found => 'Datos actualizados.',
+            self::NotFound => 'El servicio no encontró este documento.',
+            self::Unavailable => 'El servicio de consulta no responde. Inténtalo más tarde.',
+            self::Quota => 'Se acabaron las consultas de hoy. Inténtalo mañana.',
+            self::Disabled => 'La consulta de DNI y RUC no está activada.',
+        };
+    }
 }
