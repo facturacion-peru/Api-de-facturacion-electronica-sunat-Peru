@@ -497,14 +497,14 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
                                     "logo": {
                                         "type": "string",
                                         "format": "binary",
-                                        "maxLength": 1024
+                                        "description": "Máximo 1024 KB."
                                     }
                                 },
                                 "required": [
@@ -964,14 +964,14 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
                                     "file": {
                                         "type": "string",
                                         "format": "binary",
-                                        "maxLength": 5120
+                                        "description": "Máximo 5120 KB."
                                     },
                                     "mode": {
                                         "type": "string",
@@ -3244,14 +3244,14 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
                                     "certificate": {
                                         "type": "string",
                                         "format": "binary",
-                                        "maxLength": 1024
+                                        "description": "Máximo 1024 KB."
                                     },
                                     "password": {
                                         "type": "string",
