@@ -16,6 +16,13 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+    | Disco de las fotos de producto y los logos (spec 016): `images` (S3) o,
+    | en desarrollo local, `public` (A-84). El código nunca nombra el disco.
+    */
+
+    'images_disk' => env('IMAGES_DISK', 'images'),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
@@ -47,16 +54,35 @@ return [
             'report' => false,
         ],
 
+        // Copias de seguridad (spec 009, BACKUP_DISK=s3): carpeta y clave propias en el bucket (A-79).
         's3' => [
+            'driver' => 's3',
+            'key' => env('AWS_BACKUP_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('AWS_BACKUP_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'root' => env('AWS_BACKUP_ROOT', ''),
+            'url' => env('AWS_URL'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        // Fotos de producto y logos (spec 016, A-79): lectura pública por la política del bucket, sin ACL.
+        // Las claves cambian en cada subida, así que la caché puede ser permanente.
+        'images' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
             'bucket' => env('AWS_BUCKET'),
+            'root' => env('AWS_ROOT', ''),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
+            'options' => ['CacheControl' => 'public, max-age=31536000, immutable'],
+            'throw' => true,
             'report' => false,
         ],
 
