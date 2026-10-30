@@ -69,18 +69,29 @@ class ImageStore
         $pending = [];
 
         foreach ($paths as $path) {
-            try {
-                if (! $this->disk()->delete($path)) {
-                    throw new \RuntimeException("No se borró {$path}.");
-                }
-            } catch (Throwable $e) {
+            if (($error = $this->tryDelete($path)) !== null) {
                 $pending[] = $path;
-                Log::warning('No se pudo borrar una imagen; queda pendiente.', ['path' => $path, 'error' => $e->getMessage()]);
+                Log::warning('No se pudo borrar una imagen; queda pendiente.', ['path' => $path, 'error' => $error]);
             }
         }
 
         if ($pending !== []) {
             ImageDeletion::enqueue(...$pending);
+        }
+    }
+
+    /** Un intento de borrado: null si se borró (o ya no existía), o el error. */
+    public function tryDelete(string $path): ?string
+    {
+        try {
+            // S3 no falla si el objeto no existe; el disco local devuelve false si no pudo.
+            if (! $this->disk()->delete($path) && $this->disk()->exists($path)) {
+                return "No se borró {$path}.";
+            }
+
+            return null;
+        } catch (Throwable $e) {
+            return $e->getMessage();
         }
     }
 }
