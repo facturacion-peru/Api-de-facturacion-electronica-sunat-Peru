@@ -22,10 +22,12 @@ class ExportProductsRequest extends FormRequest
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
             'type' => ['sometimes', 'in:good,service'],
             'status' => ['sometimes', 'in:active,inactive,all'],
+            // Sin local: los que el usuario puede leer (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
         ];
     }
 
-    /** @return array{status: string, type: ?string, search: ?string, lots: bool} */
+    /** @return array{status: string, type: ?string, search: ?string, lots: bool, establishment_id: ?int} */
     public function filters(): array
     {
         return [
@@ -33,6 +35,7 @@ class ExportProductsRequest extends FormRequest
             'type' => $this->input('type'),
             'search' => $this->input('search'),
             'lots' => $this->boolean('lots'),
+            'establishment_id' => $this->integer('establishment_id') ?: null,
         ];
     }
 

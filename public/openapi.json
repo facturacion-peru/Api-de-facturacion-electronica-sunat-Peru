@@ -997,6 +997,14 @@
                                 "all"
                             ]
                         }
+                    },
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
@@ -1076,6 +1084,14 @@
                                 "type": "object",
                                 "properties": []
                             }
+                        }
+                    },
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
                         }
                     }
                 ],

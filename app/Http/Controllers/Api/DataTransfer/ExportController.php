@@ -7,6 +7,7 @@ use App\DataTransfer\ExportFile;
 use App\DataTransfer\Exports\CustomersExport;
 use App\DataTransfer\Exports\ProductsExport;
 use App\DataTransfer\Exports\SalesExport;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DataTransfer\ExportCustomersRequest;
 use App\Http\Requests\DataTransfer\ExportProductsRequest;
@@ -21,9 +22,10 @@ class ExportController extends Controller
 {
     public function __construct(private AuditLogger $audit) {}
 
-    public function products(ExportProductsRequest $request, ProductsExport $export): StreamedResponse
+    public function products(ExportProductsRequest $request, ProductsExport $export, EstablishmentAccess $access): StreamedResponse
     {
-        $file = $export->build($request->fileFormat(), $request->filters());
+        $establishments = $access->filter($request->user(), $request->filters()['establishment_id']);
+        $file = $export->build($request->fileFormat(), [...$request->filters(), 'establishments' => $establishments]);
 
         return $this->download('export.products', $file, $request->fileFormat(), $request->filters());
     }
@@ -36,9 +38,10 @@ class ExportController extends Controller
         return $this->download('export.customers', $file, $request->fileFormat(), $filters);
     }
 
-    public function sales(ExportSalesRequest $request, SalesExport $export): StreamedResponse
+    public function sales(ExportSalesRequest $request, SalesExport $export, EstablishmentAccess $access): StreamedResponse
     {
-        $file = $export->build($request->fileFormat(), $request->filters());
+        $establishments = $access->filter($request->user(), $request->filters()['establishment_id']);
+        $file = $export->build($request->fileFormat(), [...$request->filters(), 'establishments' => $establishments]);
 
         return $this->download('export.sales', $file, $request->fileFormat(), $request->filters());
     }

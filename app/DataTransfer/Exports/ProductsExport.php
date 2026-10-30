@@ -2,6 +2,7 @@
 
 namespace App\DataTransfer\Exports;
 
+use App\DataTransfer\EstablishmentLabel;
 use App\DataTransfer\ExportFile;
 use App\DataTransfer\ProductColumns;
 use App\DataTransfer\Spreadsheet;
@@ -17,17 +18,23 @@ class ProductsExport
 {
     private const CHUNK = 200;
 
-    /** @param  array{status: string, type: ?string, search: ?string, lots: bool}  $filters */
+    /**
+     * El stock es la suma de los locales pedidos; los lotes, uno por fila con su local (spec 017).
+     *
+     * @param  array{status: string, type: ?string, search: ?string, lots: bool, establishments?: list<int>|null}  $filters
+     */
     public function build(string $format, array $filters): ExportFile
     {
+        $establishments = $filters['establishments'] ?? null;
+        $in = fn ($lots) => $lots->when($establishments !== null, fn ($q) => $q->whereIn('establishment_id', $establishments))->where('remaining_quantity', '>', 0);
         $query = fn () => Product::query()
-            ->withStock()
+            ->withStock($establishments)
             ->listFilter($filters['status'], $filters['type'], $filters['search']);
 
         $sheet = new Spreadsheet($format);
         $sheet->sheet('productos', [...ProductColumns::CATALOG, ...ProductColumns::EXPORT_ONLY]);
 
-        $query()->with(['lots' => fn ($lots) => $lots->where('remaining_quantity', '>', 0)])
+        $query()->with(['lots' => $in])
             ->orderBy('name')->orderBy('id')
             ->chunk(self::CHUNK, function ($products) use ($sheet) {
                 foreach ($products as $product) {
@@ -42,7 +49,7 @@ class ProductsExport
 
         if ($filters['lots']) {
             $sheet->sheet('lotes', ProductColumns::LOTS);
-            $query()->with(['lots' => fn ($lots) => $lots->where('remaining_quantity', '>', 0)->orderBy('received_at')->orderBy('id')])
+            $query()->with(['lots' => fn ($lots) => $in($lots)->with('establishment')->orderBy('received_at')->orderBy('id')])
                 ->orderBy('name')->orderBy('id')
                 ->chunk(self::CHUNK, function ($products) use ($sheet) {
                     foreach ($products as $product) {
@@ -50,6 +57,7 @@ class ProductsExport
                             $sheet->row([
                                 $product->code,
                                 $product->name,
+                                EstablishmentLabel::of($lot->establishment),
                                 $lot->lot_number,
                                 $lot->received_at?->toDateString(),
                                 $lot->expires_at?->toDateString(),

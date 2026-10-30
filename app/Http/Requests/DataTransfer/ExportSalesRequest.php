@@ -32,6 +32,8 @@ class ExportSalesRequest extends FormRequest
             'types.*' => [Rule::in(array_keys(SalesExport::TYPES))],
             'statuses' => ['sometimes', 'array'],
             'statuses.*' => [Rule::in(array_unique($statuses))],
+            // Sin local: los que el usuario puede leer (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
         ];
     }
 
@@ -62,6 +64,7 @@ class ExportSalesRequest extends FormRequest
             'to' => (string) $this->input('to'),
             'types' => array_values((array) $this->input('types', [])),
             'statuses' => array_values((array) $this->input('statuses', [])),
+            'establishment_id' => $this->integer('establishment_id') ?: null,
         ];
     }
 
