@@ -116,7 +116,7 @@ class SalesDocumentController extends Controller
     {
         $format = $request->validated('format', 'a4');
 
-        return response($pdf->render($salesDocument->load(['lines', 'company', 'reference']), $format), 200, [
+        return response($pdf->render($salesDocument->load(['lines', 'company', 'reference', 'establishment']), $format), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$salesDocument->display_number}-{$format}.pdf\"",
         ]);
@@ -125,7 +125,7 @@ class SalesDocumentController extends Controller
     /** Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF. */
     public function print(PrintRequest $request, SalesDocument $salesDocument, DocumentPrint $print): Response
     {
-        return response($print->render($salesDocument->load(['lines', 'company', 'reference']), $request->options()), 200, [
+        return response($print->render($salesDocument->load(['lines', 'company', 'reference', 'establishment']), $request->options()), 200, [
             'Content-Type' => 'application/octet-stream',
             'Cache-Control' => 'no-store',
         ]);

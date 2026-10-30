@@ -2,6 +2,7 @@
 
 namespace App\Sales;
 
+use App\Models\Establishment;
 use App\Models\Ticket;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -21,6 +22,7 @@ final class TicketPdf
         return view('pdf.ticket', [
             'ticket' => $ticket,
             'companyName' => $ticket->company->nombre_comercial ?: $ticket->company->razon_social,
+            'branch' => Establishment::branchOf($ticket->establishment),
         ])->render();
     }
 

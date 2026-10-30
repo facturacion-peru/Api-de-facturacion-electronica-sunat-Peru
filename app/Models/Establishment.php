@@ -53,6 +53,15 @@ class Establishment extends Model
         return $this->hasMany(SalesDocument::class);
     }
 
+    /**
+     * El local a nombrar en lo impreso (spec 017): el principal no se nombra,
+     * para que una empresa con un solo local vea sus papeles como siempre.
+     */
+    public static function branchOf(?self $establishment): ?self
+    {
+        return $establishment !== null && ! $establishment->is_main ? $establishment : null;
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->where('active', true);

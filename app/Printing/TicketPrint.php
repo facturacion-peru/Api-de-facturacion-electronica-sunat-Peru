@@ -3,6 +3,7 @@
 namespace App\Printing;
 
 use App\Enums\TicketStatus;
+use App\Models\Establishment;
 use App\Models\Ticket;
 use App\Printing\Escpos\Align;
 use App\Printing\Escpos\EscposBuilder;
@@ -25,7 +26,13 @@ final class TicketPrint
 
         $printer
             ->text($ticket->company->nombre_comercial ?: $ticket->company->razon_social, Align::Center, bold: true)
-            ->text('RUC '.$ticket->company->ruc, Align::Center)
+            ->text('RUC '.$ticket->company->ruc, Align::Center);
+
+        if ($branch = Establishment::branchOf($ticket->establishment)) {
+            $printer->text($branch->name, Align::Center)->text($branch->address, Align::Center);
+        }
+
+        $printer
             ->text('TICKET '.$ticket->display_number, Align::Center, bold: true)
             ->text($ticket->issued_at->timezone(config('app.timezone'))->format('d/m/Y H:i'), Align::Center)
             ->rule()

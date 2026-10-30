@@ -2,6 +2,7 @@
 
 namespace App\Printing;
 
+use App\Models\Establishment;
 use App\Models\SalesDocument;
 use App\Printing\Escpos\Align;
 use App\Printing\Escpos\EscposBuilder;
@@ -27,7 +28,13 @@ final class DocumentPrint
             ->text(self::BETA_MARK, Align::Center, bold: true)
             ->feed()
             ->text($document->issuer_trade_name ?: $document->issuer_name, Align::Center, bold: true)
-            ->text($document->issuer_name, Align::Center)
+            ->text($document->issuer_name, Align::Center);
+
+        if ($branch = Establishment::branchOf($document->establishment)) {
+            $printer->text($branch->name, Align::Center);
+        }
+
+        $printer
             ->text($document->issuer_address, Align::Center)
             ->rule()
             ->text('RUC '.$document->issuer_ruc, Align::Center, bold: true)

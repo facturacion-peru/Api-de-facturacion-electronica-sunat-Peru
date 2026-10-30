@@ -34,6 +34,7 @@
             @if ($logo)<img src="{{ $logo }}" style="max-width: 110pt; max-height: 45pt;"><br>@endif
             <div class="issuer-name">{{ $document->issuer_trade_name ?: $document->issuer_name }}</div>
             <div>{{ $document->issuer_name }}</div>
+            @if ($branch)<div>{{ $branch->name }}</div>@endif
             <div class="muted">{{ $document->issuer_address }}</div>
             <div class="doc-box section">
                 <div class="ruc">RUC {{ $document->issuer_ruc }}</div>
@@ -48,6 +49,7 @@
                     @if ($logo)<img src="{{ $logo }}" style="max-width: 140pt; max-height: 60pt;"><br>@endif
                     <div class="issuer-name">{{ $document->issuer_trade_name ?: $document->issuer_name }}</div>
                     <div>{{ $document->issuer_name }}</div>
+                    @if ($branch)<div>{{ $branch->name }}</div>@endif
                     <div class="muted">{{ $document->issuer_address }}</div>
                 </td>
                 <td>

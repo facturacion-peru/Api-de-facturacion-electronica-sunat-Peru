@@ -72,7 +72,7 @@ class TicketController extends Controller
     {
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return response($pdf->render($ticket->load(['lines', 'seller', 'company'])), 200, [
+        return response($pdf->render($ticket->load(['lines', 'seller', 'company', 'establishment'])), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$ticket->display_number}-80mm.pdf\"",
         ]);
@@ -83,7 +83,7 @@ class TicketController extends Controller
     {
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return response($print->render($ticket->load(['lines', 'seller', 'company']), $request->options()), 200, [
+        return response($print->render($ticket->load(['lines', 'seller', 'company', 'establishment']), $request->options()), 200, [
             'Content-Type' => 'application/octet-stream',
             'Cache-Control' => 'no-store',
         ]);

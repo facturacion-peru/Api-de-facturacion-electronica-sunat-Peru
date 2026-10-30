@@ -4,6 +4,7 @@ namespace App\Sales;
 
 use App\Enums\DocumentType;
 use App\Images\CompanyLogo;
+use App\Models\Establishment;
 use App\Models\SalesDocument;
 use App\Sunat\AmountInWords;
 use Dompdf\Dompdf;
@@ -66,6 +67,7 @@ final class DocumentPdf
             'amountInWords' => AmountInWords::soles($document->total),
             'qr' => $qr->getDataUri(),
             'logo' => app(CompanyLogo::class)->dataUri($document->company?->logo_path),
+            'branch' => Establishment::branchOf($document->establishment),
         ])->render();
     }
 
