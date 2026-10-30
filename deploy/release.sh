@@ -52,6 +52,10 @@ if [ "$PART" = api ]; then
     (
         cd "$RELEASE"
         "$PHP_BIN" artisan migrate --force --no-interaction
+        # Logos antiguos al disco de imágenes (spec 016). Si alguno falla, se sigue viendo desde
+        # storage/app/public: se avisa sin detener la publicación, y el siguiente despliegue lo reintenta.
+        "$PHP_BIN" artisan images:move-logos --no-interaction \
+            || echo "Aviso: no se movieron todos los logos al disco de imágenes; ver el log." >&2
         "$PHP_BIN" artisan storage:link --force --no-interaction >/dev/null
         "$PHP_BIN" artisan config:cache --no-interaction
         "$PHP_BIN" artisan route:cache --no-interaction
