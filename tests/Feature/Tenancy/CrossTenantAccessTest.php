@@ -170,6 +170,8 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         'PUT api/v1/sunat/credentials' => callAsA('PUT', '/api/v1/sunat/credentials', ['company_id' => $this->b->id, 'sol_user' => 'NUEVOA', 'sol_password' => 'otra']),
         'POST api/v1/sunat/certificate' => callAsA('POST', '/api/v1/sunat/certificate', ['company_id' => $this->b->id, 'password' => 'x']),
         'POST api/v1/sunat/validate' => callAsA('POST', '/api/v1/sunat/validate', ['company_id' => $this->b->id]),
+        // Spec 018: buscar el documento de un cliente de B crea uno propio en A, sin tocar el de B.
+        'POST api/v1/customers/lookup' => callAsA('POST', '/api/v1/customers/lookup', ['company_id' => $this->b->id, 'document_type' => '1', 'document_number' => '87654321']),
         'POST api/v1/customers' => callAsA('POST', '/api/v1/customers', ['company_id' => $this->b->id, 'document_type' => '1', 'document_number' => '11223344', 'name' => 'Cliente de A']),
         'POST api/v1/sales-documents' => callAsA('POST', '/api/v1/sales-documents', [
             'company_id' => $this->b->id, 'idempotency_key' => $this->ticketB->idempotency_key, 'document_type' => '03',

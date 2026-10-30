@@ -74,6 +74,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/tickets/{ticket}/print', [TicketController::class, 'print']);
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
+        Route::post('/customers/lookup', [CustomerController::class, 'lookup']);
         Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
         Route::get('/sales-documents', [SalesDocumentController::class, 'index']);
         Route::post('/sales-documents', [SalesDocumentController::class, 'store']);

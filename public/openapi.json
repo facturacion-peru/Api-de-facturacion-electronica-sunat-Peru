@@ -629,6 +629,57 @@
                 ]
             }
         },
+        "/api/v1/customers/lookup": {
+            "post": {
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Busca por DNI o RUC (spec 018): empresa, tabla común y servicio. Si el",
+                "operationId": "customerLookup",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "document_type": {
+                                        "type": "string"
+                                    },
+                                    "document_number": {
+                                        "type": "string",
+                                        "maxLength": 15
+                                    }
+                                },
+                                "required": [
+                                    "document_type",
+                                    "document_number"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/customers/{customer}": {
             "patch": {
                 "tags": [

@@ -62,6 +62,8 @@ return [
     'PATCH api/v1/series/{series}' => ['type' => 'resource', 'param' => 'series'],
     'GET api/v1/customers' => ['type' => 'list'],
     'POST api/v1/customers' => ['type' => 'write'],
+    // Spec 018: crea el cliente en la empresa del contexto; nunca toca los de B.
+    'POST api/v1/customers/lookup' => ['type' => 'write'],
     'PATCH api/v1/customers/{customer}' => ['type' => 'resource', 'param' => 'customer'],
     'GET api/v1/sales-documents' => ['type' => 'list'],
     'POST api/v1/sales-documents' => ['type' => 'write'],

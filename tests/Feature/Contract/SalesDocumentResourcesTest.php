@@ -50,6 +50,7 @@ it('el cliente expone exactamente los campos declarados', function () {
 
     expect(array_keys(CustomerResource::make($customer)->resolve()))->toBe([
         'id', 'document_type', 'document_type_label', 'document_number', 'name', 'address',
+        'verified', 'verified_at', 'ruc_status', 'ruc_condition',
     ]);
 });
 
