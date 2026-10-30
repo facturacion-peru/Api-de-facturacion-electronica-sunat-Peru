@@ -3,6 +3,7 @@
 use App\DataTransfer\Exports\SalesExport;
 use App\Enums\CompanyRole;
 use App\Models\Company;
+use App\Models\Establishment;
 use App\Models\Product;
 use App\Models\User;
 use App\Tenancy\TenantContext;
@@ -22,12 +23,13 @@ it('exporta 20 000 líneas de venta sin cargar todo en memoria', function (strin
     $product = Product::factory()->create(['company_id' => $company->id]);
 
     $now = now()->toDateTimeString();
+    $main = Establishment::where('is_main', true)->value('id');
     for ($block = 0; $block < 4; $block++) {
         $tickets = [];
         for ($i = 1; $i <= 500; $i++) {
             $number = $block * 500 + $i;
             $tickets[] = [
-                'company_id' => $company->id, 'number' => $number, 'status' => 'issued', 'seller_id' => $seller->id,
+                'company_id' => $company->id, 'establishment_id' => $main, 'number' => $number, 'status' => 'issued', 'seller_id' => $seller->id,
                 'payment_method' => 'cash', 'subtotal' => '100.00', 'discount_total' => '0.00', 'total' => '100.00',
                 'idempotency_key' => (string) Str::uuid(), 'issued_at' => Carbon::parse('2026-10-01')->addMinutes($number)->toDateTimeString(),
                 'created_at' => $now, 'updated_at' => $now,

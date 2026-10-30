@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
 use App\Inventory\Exceptions\InsufficientStock;
+use App\Models\Establishment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
@@ -50,6 +51,8 @@ class InventoryService
 
             $lot = ProductLot::create([
                 'company_id' => $product->company_id,
+                // Provisional hasta T010: el principal.
+                'establishment_id' => Establishment::withoutTenancy()->where('company_id', $product->company_id)->where('is_main', true)->value('id'),
                 'product_id' => $product->id,
                 // Provisional hasta conocer el id (número automático, A-13).
                 'lot_number' => $data['lot_number'] ?? 'L-pendiente-'.uniqid(),
@@ -355,6 +358,7 @@ class InventoryService
     ): InventoryMovement {
         return InventoryMovement::create([
             'company_id' => $lot->company_id,
+            'establishment_id' => $lot->establishment_id,
             'product_id' => $lot->product_id,
             'lot_id' => $lot->id,
             'type' => $type,

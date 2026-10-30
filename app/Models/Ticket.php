@@ -25,6 +25,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'company_id',
+        'establishment_id',
         'number',
         'status',
         'seller_id',
@@ -73,5 +74,10 @@ class Ticket extends Model
     public function voider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function establishment(): BelongsTo
+    {
+        return $this->belongsTo(Establishment::class);
     }
 }

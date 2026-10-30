@@ -35,7 +35,7 @@ class SalesDocument extends Model
     ];
 
     protected $fillable = [
-        'company_id', 'series_id', 'reference_document_id', 'note_reason_code', 'note_reason', 'restock',
+        'company_id', 'establishment_id', 'series_id', 'reference_document_id', 'note_reason_code', 'note_reason', 'restock',
         'correction_status', 'discarded_at', 'discarded_by', 'discard_reason', 'document_type', 'series_code', 'number', 'environment', 'issued_at',
         'seller_id', 'payment_method', 'currency',
         'issuer_ruc', 'issuer_name', 'issuer_trade_name', 'issuer_address', 'issuer_ubigeo', 'issuer_department', 'issuer_province', 'issuer_district',
@@ -123,5 +123,10 @@ class SalesDocument extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function establishment(): BelongsTo
+    {
+        return $this->belongsTo(Establishment::class);
     }
 }

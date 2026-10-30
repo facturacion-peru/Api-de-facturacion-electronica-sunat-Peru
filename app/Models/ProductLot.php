@@ -20,6 +20,7 @@ class ProductLot extends Model
 
     protected $fillable = [
         'company_id',
+        'establishment_id',
         'product_id',
         'lot_number',
         'received_at',
@@ -60,5 +61,10 @@ class ProductLot extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function establishment(): BelongsTo
+    {
+        return $this->belongsTo(Establishment::class);
     }
 }

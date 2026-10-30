@@ -7,6 +7,7 @@ use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Models\Establishment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Ticket;
@@ -118,6 +119,8 @@ class TicketService
 
         $ticket = Ticket::create([
             'company_id' => $companyId,
+            // Provisional hasta T016: el principal.
+            'establishment_id' => Establishment::where('is_main', true)->value('id'),
             'number' => $this->nextNumber($companyId),
             'status' => TicketStatus::Issued,
             'seller_id' => $actor->id,

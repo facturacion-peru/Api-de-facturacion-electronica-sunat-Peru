@@ -111,6 +111,7 @@ class SalesDocumentService
 
         $document = new SalesDocument([
             'company_id' => $company->id,
+            'establishment_id' => $establishment->id,
             'series_id' => $series->id,
             'document_type' => $type,
             'series_code' => $series->code,

@@ -24,6 +24,7 @@ class ProductLotFactory extends Factory
         return [
             'product_id' => Product::factory(),
             'company_id' => fn (array $attributes) => Product::withoutTenancy()->find($attributes['product_id'])->company_id,
+            'establishment_id' => fn (array $attributes) => EstablishmentFactory::mainIdFor($attributes['company_id']),
             'lot_number' => fake()->unique()->bothify('LOTE-####'),
             'received_at' => today(),
             'expires_at' => null,

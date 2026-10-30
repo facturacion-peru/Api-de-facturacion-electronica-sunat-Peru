@@ -7,6 +7,7 @@ use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -65,6 +66,12 @@ class User extends Authenticatable
     }
 
     /** El enlace apunta a la pantalla del frontend, no a una ruta de Laravel. */
+    /** Locales asignados a un vendedor (A-87); para decidir el acceso, usar EstablishmentAccess. */
+    public function establishments(): BelongsToMany
+    {
+        return $this->belongsToMany(Establishment::class)->withPivot('company_id')->withTimestamps();
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));

@@ -19,6 +19,7 @@ class Invitation extends Model
         'company_id',
         'email',
         'role',
+        'establishment_ids',
         'token_hash',
         'expires_at',
         'accepted_at',
@@ -33,6 +34,7 @@ class Invitation extends Model
     {
         return [
             'role' => CompanyRole::class,
+            'establishment_ids' => 'array',
             'expires_at' => 'datetime',
             'accepted_at' => 'datetime',
         ];

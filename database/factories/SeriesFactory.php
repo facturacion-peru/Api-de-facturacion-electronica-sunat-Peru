@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\DocumentType;
 use App\Models\Company;
-use App\Models\Establishment;
 use App\Models\Series;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -17,7 +16,7 @@ class SeriesFactory extends Factory
     {
         return [
             'company_id' => Company::factory()->withMainEstablishment(),
-            'establishment_id' => fn (array $a) => Establishment::withoutTenancy()->where('company_id', $a['company_id'])->where('is_main', true)->value('id'),
+            'establishment_id' => fn (array $a) => EstablishmentFactory::mainIdFor($a['company_id']),
             'document_type' => DocumentType::Receipt,
             'code' => 'B'.fake()->unique()->numerify('###'),
             'last_number' => 0,
