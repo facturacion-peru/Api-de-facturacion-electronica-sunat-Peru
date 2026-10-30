@@ -3,13 +3,13 @@
 namespace App\Sales;
 
 use App\Enums\DocumentType;
+use App\Images\CompanyLogo;
 use App\Models\SalesDocument;
 use App\Sunat\AmountInWords;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * PDF del comprobante en A4 y 80 mm (spec 005, RF-007). Se genera al
@@ -58,7 +58,6 @@ final class DocumentPdf
     public function html(SalesDocument $document, string $format): string
     {
         $qr = (new PngWriter)->write(new QrCode(data: self::qrPayload($document), size: 240, margin: 4));
-        $logoPath = $document->company?->logo_path;
 
         return view('pdf.sales-document', [
             'document' => $document,
@@ -66,9 +65,7 @@ final class DocumentPdf
             'title' => self::title($document),
             'amountInWords' => AmountInWords::soles($document->total),
             'qr' => $qr->getDataUri(),
-            'logo' => $logoPath && Storage::disk('public')->exists($logoPath)
-                ? 'data:'.Storage::disk('public')->mimeType($logoPath).';base64,'.base64_encode(Storage::disk('public')->get($logoPath))
-                : null,
+            'logo' => app(CompanyLogo::class)->dataUri($document->company?->logo_path),
         ])->render();
     }
 

@@ -9,8 +9,11 @@ use App\Services\SalesDocumentService;
 use App\Sunat\Sending\FakeSunatSender;
 use App\Sunat\Sending\SunatSender;
 use App\Tenancy\TenantContext;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Support\FailingDisks;
 use Tests\Support\SalesFixture;
+use Tests\Support\TestImages;
 
 /*
  * T062 · RF-007, RF-020, RF-021: PDF A4 y 80 mm con QR y marca de pruebas;
@@ -106,4 +109,35 @@ it('007 el PDF de la nota de crédito muestra el documento que modifica y el mot
         ->toContain('Boleta de venta B001-00000151')
         ->toContain('07 · Devolución por ítem: Producto dañado')
         ->toContain('Representación impresa de la nota de crédito electrónica');
+});
+
+it('016 el PDF lleva el logo del disco de imágenes y lo conserva en caché', function () {
+    $images = Storage::fake('images');
+    $logo = TestImages::png(300, 100);
+    $images->put('0b6f3c2e-6d1a-4c3e-9f7a-2b8d5e4c1a90.png', $logo);
+    $this->company->update(['logo_path' => '0b6f3c2e-6d1a-4c3e-9f7a-2b8d5e4c1a90.png']);
+    $document = $this->document->fresh()->load('lines');
+
+    expect(app(DocumentPdf::class)->html($document, 'a4'))->toContain('data:image/png;base64,'.base64_encode($logo));
+
+    // Sin volver a S3: la clave cambia con cada logo, así que la caché nunca queda vieja.
+    $images->delete('0b6f3c2e-6d1a-4c3e-9f7a-2b8d5e4c1a90.png');
+    expect(app(DocumentPdf::class)->html($document, '80mm'))->toContain(base64_encode($logo));
+});
+
+it('016 con S3 caído el PDF sale sin logo', function () {
+    Storage::set('images', FailingDisks::unreachable());
+    $this->company->update(['logo_path' => '0b6f3c2e-6d1a-4c3e-9f7a-2b8d5e4c1a90.png']);
+
+    expect(app(DocumentPdf::class)->html($this->document->fresh()->load('lines'), 'a4'))->not->toContain('<img src="data:image/png;base64,iVBOR');
+    ($this->download)('pdf?format=a4')->assertOk()->assertHeader('content-type', 'application/pdf');
+});
+
+it('016 un logo antiguo del disco public sigue saliendo en el PDF', function () {
+    $public = Storage::fake('public');
+    $logo = TestImages::png(300, 100);
+    $public->put("companies/{$this->company->id}/viejo.png", $logo);
+    $this->company->update(['logo_path' => "companies/{$this->company->id}/viejo.png"]);
+
+    expect(app(DocumentPdf::class)->html($this->document->fresh()->load('lines'), 'a4'))->toContain(base64_encode($logo));
 });
