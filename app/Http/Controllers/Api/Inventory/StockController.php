@@ -10,6 +10,7 @@ use App\Http\Requests\Inventory\StoreStockEntryRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\LotResource;
 use App\Http\Resources\MovementResource;
+use App\Models\Establishment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
@@ -51,7 +52,8 @@ class StockController extends Controller
 
     public function storeEntry(StoreStockEntryRequest $request, Product $product): JsonResponse
     {
-        $lot = $this->inventory->registerEntry($product, $request->validated(), $request->user());
+        // Provisional hasta T014: el principal.
+        $lot = $this->inventory->registerEntry($product, Establishment::where('is_main', true)->firstOrFail(), $request->validated(), $request->user());
 
         return LotResource::make($lot->load('creator'))
             ->additional(['product_stock' => $this->inventory->balance($product)])

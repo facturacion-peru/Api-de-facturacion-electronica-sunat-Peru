@@ -153,7 +153,7 @@ class TicketService
                 'amount' => $line['amount'],
             ]);
 
-            $this->inventory->consume($product, $line['quantity'], $ticket, $actor);
+            $this->inventory->consume($product, $ticket->establishment, $line['quantity'], $ticket, $actor);
         }
 
         $this->audit->record('ticket.issued', $ticket, [

@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\DataTransfer\ProductColumns;
 use App\Enums\ProductType;
 use App\Enums\UnitOfMeasure;
+use App\Models\Establishment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\InventoryService;
@@ -140,7 +141,8 @@ class ProductImport implements RowImport
         $result['created']++;
 
         if ($row['entry'] !== null) {
-            $this->inventory->registerEntry($product, array_filter($row['entry'], fn ($value) => $value !== null), $actor);
+            // Provisional hasta T020: el principal.
+            $this->inventory->registerEntry($product, Establishment::where('is_main', true)->firstOrFail(), array_filter($row['entry'], fn ($value) => $value !== null), $actor);
             $result['entries']++;
         }
     }

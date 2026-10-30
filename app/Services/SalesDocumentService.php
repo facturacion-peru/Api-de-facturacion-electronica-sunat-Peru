@@ -176,7 +176,7 @@ class SalesDocumentService
 
         foreach ($lines as $i => $lineModel) {
             $document->lines()->save($lineModel);
-            $this->inventory->consume($products[$data['lines'][$i]['product_id']], $lineModel->quantity, $document, $actor);
+            $this->inventory->consume($products[$data['lines'][$i]['product_id']], $establishment, $lineModel->quantity, $document, $actor);
         }
 
         $this->audit->record('sales_document.issued', $document, [

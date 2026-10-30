@@ -44,12 +44,12 @@ it('mantiene saldos consistentes tras 300 operaciones aleatorias', function () {
 
         try {
             match (mt_rand(1, 10)) {
-                1, 2, 3 => $inventory->registerEntry($product, [
+                1, 2, 3 => $inventory->registerEntry($product, mainOf($product), [
                     'quantity' => $quantity($product, 20),
                     'received_at' => today()->subDays(mt_rand(0, 30))->toDateString(),
                     'expires_at' => $product->tracks_expiry ? today()->addDays(mt_rand(-5, 90))->toDateString() : null,
                 ], $actor) && $stats['entry']++,
-                4, 5, 6, 7 => DB::transaction(fn () => $inventory->consume($product, $quantity($product, 15), null, $actor)) && $stats['sale']++,
+                4, 5, 6, 7 => DB::transaction(fn () => $inventory->consume($product, mainOf($product), $quantity($product, 15), null, $actor)) && $stats['sale']++,
                 8 => ($lot = ProductLot::withoutTenancy()->where('product_id', $product->id)->inRandomOrder()->first())
                     ? $inventory->adjust($lot, (mt_rand(0, 1) ? '' : '-').$quantity($product, 5), AdjustmentReason::Count, null, $actor) && $stats['adjustment']++
                     : null,

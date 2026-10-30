@@ -39,20 +39,19 @@ class InventoryService
      *
      * @param  array{quantity: string, received_at?: ?string, lot_number?: ?string, expires_at?: ?string, unit_cost?: ?string, reference?: ?string}  $data
      */
-    public function registerEntry(Product $product, array $data, User $actor): ProductLot
+    public function registerEntry(Product $product, Establishment $establishment, array $data, User $actor): ProductLot
     {
         if (! $product->type->tracksStock()) {
             throw ValidationException::withMessages(['product' => 'Los servicios no tienen stock.']);
         }
 
-        return DB::transaction(function () use ($product, $data, $actor) {
+        return DB::transaction(function () use ($product, $establishment, $data, $actor) {
             $this->lock($product);
             $quantity = $this->normalize($data['quantity']);
 
             $lot = ProductLot::create([
                 'company_id' => $product->company_id,
-                // Provisional hasta T010: el principal.
-                'establishment_id' => Establishment::withoutTenancy()->where('company_id', $product->company_id)->where('is_main', true)->value('id'),
+                'establishment_id' => $establishment->id,
                 'product_id' => $product->id,
                 // Provisional hasta conocer el id (número automático, A-13).
                 'lot_number' => $data['lot_number'] ?? 'L-pendiente-'.uniqid(),
@@ -73,6 +72,7 @@ class InventoryService
 
             $this->audit->record('inventory.entry', $lot, [
                 'product' => $product->code,
+                'establishment' => $establishment->code,
                 'lot_number' => $lot->lot_number,
                 'quantity' => $quantity,
             ], actor: $actor);
@@ -82,9 +82,9 @@ class InventoryService
     }
 
     /**
-     * Descuenta stock por una venta (HU-3): FEFO si el producto controla
-     * vencimiento, FIFO si no; nunca de lotes vencidos; un movimiento por
-     * lote. Para las specs 003 y 005.
+     * Descuenta stock por una venta (HU-3) en el local donde se vende (spec
+     * 017): FEFO si el producto controla vencimiento, FIFO si no; nunca de
+     * lotes vencidos; un movimiento por lote. Para las specs 003 y 005.
      *
      * Debe llamarse dentro de la transacción de la venta, para que venta y
      * descuento se confirmen o fallen juntos (RF-017).
@@ -93,7 +93,7 @@ class InventoryService
      *
      * @throws InsufficientStock
      */
-    public function consume(Product $product, string $quantity, ?Model $source, User $actor): Collection
+    public function consume(Product $product, Establishment $establishment, string $quantity, ?Model $source, User $actor): Collection
     {
         if (bccomp($quantity, '0', self::SCALE) <= 0) {
             throw new InvalidArgumentException('La cantidad a descontar debe ser mayor que cero.');
@@ -109,7 +109,7 @@ class InventoryService
 
         $this->lock($product);
         $pending = $this->normalize($quantity);
-        $lots = $this->sellableLots($product);
+        $lots = $this->sellableLots($product, $establishment);
         $available = Decimal::sum($lots->pluck('remaining_quantity'));
 
         if (bccomp($available, $pending, self::SCALE) < 0) {
@@ -305,11 +305,13 @@ class InventoryService
         return $movements;
     }
 
-    /** Stock físico del producto (suma de saldos de sus lotes). */
-    public function balance(Product $product): string
+    /** Stock físico del producto en un local, o en todos (suma de saldos de sus lotes). */
+    public function balance(Product $product, ?Establishment $establishment = null): string
     {
         // Suma en PHP con bcmath: exacta también en SQLite, donde SUM() usa flotantes.
-        return Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $product->id)->pluck('remaining_quantity'));
+        return Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $product->id)
+            ->when($establishment, fn ($q) => $q->where('establishment_id', $establishment->id))
+            ->pluck('remaining_quantity'));
     }
 
     /**
@@ -318,10 +320,11 @@ class InventoryService
      *
      * @return Collection<int, ProductLot>
      */
-    private function sellableLots(Product $product): Collection
+    private function sellableLots(Product $product, Establishment $establishment): Collection
     {
         return ProductLot::withoutTenancy()
             ->where('product_id', $product->id)
+            ->where('establishment_id', $establishment->id)
             ->where('remaining_quantity', '>', 0)
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', today()))
             ->when($product->tracks_expiry, fn ($q) => $q->orderByRaw('expires_at IS NULL')->orderBy('expires_at'))
@@ -364,7 +367,10 @@ class InventoryService
             'type' => $type,
             'quantity' => $quantity,
             'lot_balance_after' => $lot->remaining_quantity,
-            'product_balance_after' => $this->balance($lot->product()->withoutGlobalScopes()->first()),
+            // Saldo del producto en el local del lote (spec 017).
+            'product_balance_after' => Decimal::sum(ProductLot::withoutTenancy()
+                ->where('product_id', $lot->product_id)->where('establishment_id', $lot->establishment_id)
+                ->pluck('remaining_quantity')),
             'created_by' => $actor->id,
             ...$extra,
         ]);

@@ -24,7 +24,7 @@ beforeEach(function () {
 /** Como lo hará una venta: dentro de su transacción. */
 function consume(Product $product, string $quantity, $source = null)
 {
-    return DB::transaction(fn () => test()->inventory->consume($product, $quantity, $source ?? test()->actor, test()->actor));
+    return DB::transaction(fn () => test()->inventory->consume($product, mainOf($product), $quantity, $source ?? test()->actor, test()->actor));
 }
 
 function lotRemaining(string $lotNumber): string

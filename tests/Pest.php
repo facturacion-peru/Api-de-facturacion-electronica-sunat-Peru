@@ -51,3 +51,12 @@ function something()
 {
     // ..
 }
+
+/** Local principal de la empresa de un modelo (spec 017), para pruebas anteriores a los locales. */
+function mainOf(Illuminate\Database\Eloquent\Model $model): App\Models\Establishment
+{
+    return App\Models\Establishment::withoutTenancy()
+        ->where('company_id', $model instanceof App\Models\Company ? $model->id : $model->company_id)
+        ->where('is_main', true)
+        ->firstOrFail();
+}

@@ -28,7 +28,7 @@ it('HU-5.1 muestra el historial con tipo, lote, saldos, responsable y origen', f
     $product = Product::factory()->create(['company_id' => $this->company->id]);
     $lot = ProductLot::factory()->for($product)->quantity('10')->create(['lot_number' => 'L-1']);
     $inventory = app(InventoryService::class);
-    DB::transaction(fn () => $inventory->consume($product, '3', $this->company, $this->admin));
+    DB::transaction(fn () => $inventory->consume($product, mainOf($product), '3', $this->company, $this->admin));
     $inventory->adjust($lot, '-1', AdjustmentReason::Damage, 'Golpeado', $this->admin);
 
     $response = ($this->get)("/api/v1/products/{$product->id}/movements")->assertOk();
