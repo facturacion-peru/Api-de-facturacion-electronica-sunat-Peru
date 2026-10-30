@@ -78,6 +78,15 @@ class CustomerImport implements RowImport
             }
 
             $updates = $this->updatable($input);
+            // Spec 018 (RF-012): un cliente verificado no cambia por una importación.
+            if ($customer->isVerified()) {
+                $copy = clone $customer;
+                $copy->fill($updates);
+                if (AuditLogger::diff($copy) !== []) {
+                    $analysis->warning($row, 'nombre', 'Cliente verificado: no se cambia su nombre ni dirección.');
+                }
+                $updates = array_diff_key($updates, array_flip(['name', 'address']));
+            }
             $copy = clone $customer;
             $copy->fill($updates);
             $fields = [];

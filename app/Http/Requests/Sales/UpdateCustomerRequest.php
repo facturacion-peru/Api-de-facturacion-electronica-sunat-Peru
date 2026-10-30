@@ -5,6 +5,7 @@ namespace App\Http\Requests\Sales;
 use App\Enums\CompanyRole;
 use App\Validation\CustomerValidation;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 /** Solo el administrador edita clientes (A-34). */
 class UpdateCustomerRequest extends FormRequest
@@ -33,6 +34,21 @@ class UpdateCustomerRequest extends FormRequest
 
     public function after(): array
     {
-        return [CustomerValidation::after($this->all())];
+        return [
+            CustomerValidation::after($this->all()),
+            // Spec 018 (A-92): lo verificado solo cambia con «Actualizar datos».
+            function (Validator $validator) {
+                $customer = $this->route('customer');
+                if (! $customer?->isVerified()) {
+                    return;
+                }
+
+                foreach (['name', 'address'] as $field) {
+                    if ($this->has($field) && ($this->input($field) ?: null) !== ($customer->{$field} ?: null)) {
+                        $validator->errors()->add($field, 'Cliente verificado: sus datos vienen de SUNAT o RENIEC. Usa «Actualizar datos».');
+                    }
+                }
+            },
+        ];
     }
 }
