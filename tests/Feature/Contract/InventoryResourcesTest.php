@@ -26,7 +26,7 @@ function requestAs(CompanyRole $role, ?Company $company = null): Request
     return $request;
 }
 
-$productKeys = ['id', 'code', 'name', 'type', 'unit', 'sale_price', 'igv_affectation', 'min_stock', 'tracks_expiry', 'active', 'stock', 'available_stock'];
+$productKeys = ['id', 'code', 'name', 'type', 'unit', 'sale_price', 'igv_affectation', 'min_stock', 'tracks_expiry', 'active', 'image', 'stock', 'available_stock'];
 $lotKeys = ['id', 'lot_number', 'received_at', 'expires_at', 'expired', 'initial_quantity', 'remaining_quantity'];
 
 it('ProductResource para el administrador incluye el costo', function () use ($productKeys) {

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\CompanyRole;
+use App\Images\ImageStore;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -30,6 +31,7 @@ class ProductResource extends ApiResource
             'min_stock' => $this->min_stock,
             'tracks_expiry' => $this->tracks_expiry,
             'active' => $this->active,
+            'image' => $this->image(),
             'stock' => $tracksStock ? $this->stock() : null,
             'available_stock' => $tracksStock ? $this->availableStock() : null,
             'last_unit_cost' => $this->when(
@@ -38,5 +40,23 @@ class ProductResource extends ApiResource
             ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Foto en dos tamaños (spec 016). Las direcciones se arman sin consultar
+     * el disco: el GET nunca depende de S3 (RF-010).
+     *
+     * @return array{url: string, thumb_url: string}|null
+     */
+    private function image(): ?array
+    {
+        if ($this->image_key === null) {
+            return null;
+        }
+
+        $store = app(ImageStore::class);
+        [$large, $thumb] = ImageStore::productPaths($this->image_key);
+
+        return ['url' => $store->url($large), 'thumb_url' => $store->url($thumb)];
     }
 }

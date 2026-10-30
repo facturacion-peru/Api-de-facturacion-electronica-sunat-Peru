@@ -88,6 +88,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('/company', [CompanyController::class, 'update']);
             Route::post('/products', [ProductController::class, 'store']);
             Route::patch('/products/{product}', [ProductController::class, 'update']);
+            Route::post('/products/{product}/image', [ProductController::class, 'updateImage']);
+            Route::delete('/products/{product}/image', [ProductController::class, 'destroyImage']);
             Route::post('/products/{product}/entries', [StockController::class, 'storeEntry']);
             Route::post('/lots/{lot}/adjustments', [StockController::class, 'adjust']);
             Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
