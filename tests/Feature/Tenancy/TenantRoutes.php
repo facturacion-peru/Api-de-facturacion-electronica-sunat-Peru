@@ -52,6 +52,11 @@ return [
     'POST api/v1/sunat/certificate' => ['type' => 'write'],
     'POST api/v1/sunat/validate' => ['type' => 'write'],
     'GET api/v1/series' => ['type' => 'list'],
+    // Locales (spec 017).
+    'GET api/v1/establishments' => ['type' => 'list'],
+    'POST api/v1/establishments' => ['type' => 'write'],
+    'PATCH api/v1/establishments/{establishment}' => ['type' => 'resource', 'param' => 'establishment'],
+    'PUT api/v1/users/{user}/establishments' => ['type' => 'resource', 'param' => 'user'],
     'POST api/v1/series' => ['type' => 'write'],
     'PATCH api/v1/series/{series}' => ['type' => 'resource', 'param' => 'series'],
     'GET api/v1/customers' => ['type' => 'list'],

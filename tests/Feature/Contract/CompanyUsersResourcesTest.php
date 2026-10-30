@@ -21,7 +21,7 @@ it('CompanyUserResource expone exactamente los campos declarados', function () {
     $user = User::factory()->forCompany(Company::factory()->create())->create()->load('membership');
 
     expect(array_keys(CompanyUserResource::make($user)->resolve()))
-        ->toBe(['id', 'name', 'email', 'role', 'active', 'last_login_at']);
+        ->toBe(['id', 'name', 'email', 'role', 'active', 'last_login_at', 'establishment_ids']);
 });
 
 it('los listados usan el sobre { success, data, meta.total }', function () {

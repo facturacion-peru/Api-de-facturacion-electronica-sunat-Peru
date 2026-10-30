@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Company\UserController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DataTransfer\ExportController;
 use App\Http\Controllers\Api\DataTransfer\ImportController;
+use App\Http\Controllers\Api\Establishments\EstablishmentController;
 use App\Http\Controllers\Api\Inventory\AlertController;
 use App\Http\Controllers\Api\Inventory\CatalogController;
 use App\Http\Controllers\Api\Inventory\ProductController;
@@ -65,6 +66,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/sunat/status', [SunatController::class, 'status']);
         Route::get('/series', [SeriesController::class, 'index']);
+        Route::get('/establishments', [EstablishmentController::class, 'index']);
         Route::get('/tickets', [TicketController::class, 'index']);
         Route::post('/tickets', [TicketController::class, 'store']);
         Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
@@ -102,11 +104,14 @@ Route::prefix('v1')->group(function () {
             Route::post('/sunat/certificate', [SunatController::class, 'uploadCertificate']);
             Route::post('/sunat/validate', [SunatController::class, 'validate']);
             Route::post('/series', [SeriesController::class, 'store']);
+            Route::post('/establishments', [EstablishmentController::class, 'store']);
+            Route::patch('/establishments/{establishment}', [EstablishmentController::class, 'update']);
             Route::patch('/series/{series}', [SeriesController::class, 'update']);
             Route::post('/company/logo', [CompanyController::class, 'updateLogo']);
 
             Route::get('/users', [UserController::class, 'index']);
             Route::patch('/users/{user}', [UserController::class, 'update']);
+            Route::put('/users/{user}/establishments', [EstablishmentController::class, 'assign']);
 
             Route::get('/invitations', [InvitationController::class, 'index']);
             Route::post('/invitations', [InvitationController::class, 'store']);

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** Local de la empresa registrado en SUNAT (código de anexo). */
 class Establishment extends Model
@@ -45,6 +46,11 @@ class Establishment extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withPivot('company_id')->withTimestamps();
+    }
+
+    public function salesDocuments(): HasMany
+    {
+        return $this->hasMany(SalesDocument::class);
     }
 
     public function scopeActive(Builder $query): void
