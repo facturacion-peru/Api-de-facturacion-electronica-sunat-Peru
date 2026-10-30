@@ -14,7 +14,7 @@ it('InvitationResource expone exactamente los campos declarados, sin el token', 
     $invitation = Invitation::factory()->create()->load('inviter');
 
     expect(array_keys(InvitationResource::make($invitation)->resolve()))
-        ->toBe(['id', 'email', 'role', 'expires_at', 'expired', 'invited_by', 'created_at']);
+        ->toBe(['id', 'email', 'role', 'establishment_ids', 'expires_at', 'expired', 'invited_by', 'created_at']);
 });
 
 it('CompanyUserResource expone exactamente los campos declarados', function () {

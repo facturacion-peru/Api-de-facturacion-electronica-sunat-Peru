@@ -44,6 +44,9 @@
             "name": "dashboard"
         },
         {
+            "name": "establishments"
+        },
+        {
             "name": "exports"
         },
         {
@@ -719,6 +722,170 @@
                 ]
             }
         },
+        "/api/v1/establishments": {
+            "get": {
+                "tags": [
+                    "establishments"
+                ],
+                "summary": "Listar establishments",
+                "operationId": "establishmentIndex",
+                "parameters": [
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "establishments"
+                ],
+                "summary": "Crear establishments",
+                "operationId": "establishmentStore",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "maxLength": 200
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "address",
+                                    "ubigeo"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/establishments/{establishment}": {
+            "patch": {
+                "tags": [
+                    "establishments"
+                ],
+                "summary": "Actualizar establishments",
+                "operationId": "establishmentUpdate",
+                "parameters": [
+                    {
+                        "name": "establishment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "maxLength": 200
+                                    },
+                                    "ubigeo": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "maxLength": 6
+                                    },
+                                    "active": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/exports/customers": {
             "get": {
                 "tags": [
@@ -1151,6 +1318,12 @@
                                     },
                                     "role": {
                                         "type": "string"
+                                    },
+                                    "establishment_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "required": [
@@ -4120,6 +4293,66 @@
                                         "type": "boolean"
                                     }
                                 }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/users/{user}/establishments": {
+            "put": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "{user} se resuelve solo entre los miembros de la empresa (AppServiceProvider).",
+                "operationId": "establishmentAssign",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "establishment_ids": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "establishment_ids"
+                                ]
                             }
                         }
                     }

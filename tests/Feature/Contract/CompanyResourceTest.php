@@ -16,7 +16,8 @@ it('expone exactamente los campos declarados', function () {
 
     expect(array_keys($data))->toBe([
         'id', 'ruc', 'razon_social', 'nombre_comercial', 'person_type', 'tax_regime',
-        'email', 'phone', 'logo_url', 'active', 'expiry_warning_days', 'fiscal_address', 'created_at',
+        'email', 'phone', 'logo_url', 'active', 'expiry_warning_days', 'fiscal_address',
+        'active_establishments_count', 'establishments', 'created_at',
     ])->and(array_keys($data['fiscal_address']))->toBe(['address', 'ubigeo', 'district']);
 });
 

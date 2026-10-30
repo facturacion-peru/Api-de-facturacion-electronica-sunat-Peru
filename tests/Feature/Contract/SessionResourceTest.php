@@ -22,9 +22,9 @@ it('SessionResource con token expone la sesión completa', function () {
 
     $data = (new SessionResource($user, 'token-de-prueba'))->resolve();
 
-    expect(array_keys($data))->toBe(['token', 'expires_at', 'user', 'platform_admin', 'company', 'role'])
+    expect(array_keys($data))->toBe(['token', 'expires_at', 'user', 'platform_admin', 'company', 'role', 'establishments'])
         ->and(array_keys($data['user']->resolve()))->toBe(['id', 'name', 'email'])
-        ->and(array_keys($data['company']))->toBe(['id', 'ruc', 'razon_social', 'nombre_comercial']);
+        ->and(array_keys($data['company']))->toBe(['id', 'ruc', 'razon_social', 'nombre_comercial', 'active_establishments_count']);
 });
 
 it('SessionResource sin token omite token y vencimiento', function () {
@@ -32,6 +32,6 @@ it('SessionResource sin token omite token y vencimiento', function () {
 
     $json = (new SessionResource($user))->response()->getData(true);
 
-    expect(array_keys($json['data']))->toBe(['user', 'platform_admin', 'company', 'role'])
+    expect(array_keys($json['data']))->toBe(['user', 'platform_admin', 'company', 'role', 'establishments'])
         ->and($json['success'])->toBeTrue();
 });

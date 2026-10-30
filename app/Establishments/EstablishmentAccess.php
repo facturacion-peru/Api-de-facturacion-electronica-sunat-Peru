@@ -25,6 +25,12 @@ class EstablishmentAccess
         return $this->query($user)->active()->orderBy('code')->get();
     }
 
+    /** @return Collection<int, Establishment> Los permitidos, listos para EstablishmentResource. */
+    public function allowedForDisplay(User $user): Collection
+    {
+        return $this->query($user)->active()->with('district')->withExists('salesDocuments as code_locked')->orderBy('code')->get();
+    }
+
     /** @return list<int> Ids de los locales que puede leer, incluidos los inactivos. */
     public function readable(User $user): array
     {

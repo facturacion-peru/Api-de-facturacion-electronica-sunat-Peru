@@ -15,6 +15,7 @@ class InvitationResource extends ApiResource
             'id' => $this->id,
             'email' => $this->email,
             'role' => $this->role->value,
+            'establishment_ids' => $this->establishment_ids,
             'expires_at' => $this->expires_at->toIso8601String(),
             'expired' => $this->expires_at->isPast(),
             'invited_by' => $this->inviter ? ['id' => $this->inviter->id, 'name' => $this->inviter->name] : null,

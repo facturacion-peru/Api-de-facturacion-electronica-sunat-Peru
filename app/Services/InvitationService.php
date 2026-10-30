@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\Establishment;
 use App\Models\Invitation;
 use App\Models\User;
 use App\Notifications\InvitationNotification;
@@ -97,6 +98,10 @@ class InvitationService
                 'role' => $invitation->role,
             ]);
 
+            if ($invitation->role === CompanyRole::Seller) {
+                $this->assignEstablishments($invitation, $user);
+            }
+
             $invitation->forceFill(['accepted_at' => now()])->save();
 
             $this->audit->record('invitation.accepted', $invitation, [
@@ -108,7 +113,8 @@ class InvitationService
         });
     }
 
-    public function issue(Company $company, string $email, CompanyRole $role, User $inviter): IssuedInvitation
+    /** @param  list<int>  $establishmentIds  Locales del vendedor (spec 017); el administrador trabaja en todos. */
+    public function issue(Company $company, string $email, CompanyRole $role, User $inviter, array $establishmentIds = []): IssuedInvitation
     {
         $token = Str::random(64);
 
@@ -116,6 +122,7 @@ class InvitationService
             'company_id' => $company->id,
             'email' => User::normalizeEmail($email),
             'role' => $role,
+            'establishment_ids' => $role === CompanyRole::Seller && $establishmentIds !== [] ? $establishmentIds : null,
             'token_hash' => Invitation::hashToken($token),
             'expires_at' => now()->addHours(self::VALID_HOURS),
             'invited_by' => $inviter->id,
@@ -131,5 +138,21 @@ class InvitationService
             ->notify(new InvitationNotification($token, $company, $role, $invitation->expires_at)));
 
         return new IssuedInvitation($invitation, $token);
+    }
+
+    /**
+     * Locales del vendedor al aceptar (spec 017): los de la invitación que
+     * sigan activos; sin ninguno, el único activo de la empresa, si lo hay.
+     */
+    private function assignEstablishments(Invitation $invitation, User $user): void
+    {
+        $active = Establishment::withoutTenancy()->where('company_id', $invitation->company_id)->where('active', true)->pluck('id');
+        $ids = $active->intersect($invitation->establishment_ids ?? [])->values();
+
+        if ($ids->isEmpty() && $active->count() === 1) {
+            $ids = $active;
+        }
+
+        $user->establishments()->attach($ids->mapWithKeys(fn (int $id) => [$id => ['company_id' => $invitation->company_id]])->all());
     }
 }

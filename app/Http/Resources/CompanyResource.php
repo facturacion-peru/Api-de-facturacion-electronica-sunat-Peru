@@ -2,8 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Establishments\EstablishmentAccess;
 use App\Images\CompanyLogo;
 use App\Models\Company;
+use App\Models\Establishment;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 /**
@@ -35,6 +38,11 @@ class CompanyResource extends ApiResource
                 'ubigeo' => $main->ubigeo,
                 'district' => $main->district?->info_busqueda,
             ] : null,
+            'active_establishments_count' => Establishment::withoutTenancy()->where('company_id', $this->id)->where('active', true)->count(),
+            // Los permitidos a quien pregunta (spec 017).
+            'establishments' => $request->user()
+                ? app(TenantContext::class)->run($this->resource, fn () => EstablishmentResource::collection(app(EstablishmentAccess::class)->allowedForDisplay($request->user())))
+                : [],
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
