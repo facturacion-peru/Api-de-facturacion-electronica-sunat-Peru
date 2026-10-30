@@ -8,6 +8,7 @@ use App\Enums\DocumentType;
 use App\Enums\PaymentMethod;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SunatEnvironment;
+use App\Establishments\VisibleByEstablishment;
 use App\Sales\Exceptions\SalesDocumentImmutable;
 use App\Tenancy\BelongsToCompany;
 use Database\Factories\SalesDocumentFactory;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SalesDocument extends Model
 {
     /** @use HasFactory<SalesDocumentFactory> */
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, HasFactory, VisibleByEstablishment;
 
     /** Lo único que cambia después de emitir: el estado del envío a SUNAT. */
     private const MUTABLE = [
@@ -35,7 +36,7 @@ class SalesDocument extends Model
     ];
 
     protected $fillable = [
-        'company_id', 'series_id', 'reference_document_id', 'note_reason_code', 'note_reason', 'restock',
+        'company_id', 'establishment_id', 'series_id', 'reference_document_id', 'note_reason_code', 'note_reason', 'restock',
         'correction_status', 'discarded_at', 'discarded_by', 'discard_reason', 'document_type', 'series_code', 'number', 'environment', 'issued_at',
         'seller_id', 'payment_method', 'currency',
         'issuer_ruc', 'issuer_name', 'issuer_trade_name', 'issuer_address', 'issuer_ubigeo', 'issuer_department', 'issuer_province', 'issuer_district',
@@ -123,5 +124,10 @@ class SalesDocument extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function establishment(): BelongsTo
+    {
+        return $this->belongsTo(Establishment::class);
     }
 }

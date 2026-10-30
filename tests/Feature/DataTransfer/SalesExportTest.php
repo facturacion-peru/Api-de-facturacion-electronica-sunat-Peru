@@ -177,6 +177,6 @@ it('RF-010 deja la exportación en la auditoría', function () {
     $log = AuditLog::query()->where('action', 'export.sales')->sole();
     expect($log->changes)->toMatchArray([
         'format' => 'xlsx', 'rows' => 3,
-        'filters' => ['from' => '2026-10-01', 'to' => '2026-10-07', 'types' => ['ticket'], 'statuses' => []],
+        'filters' => ['from' => '2026-10-01', 'to' => '2026-10-07', 'types' => ['ticket'], 'statuses' => [], 'establishment_id' => null],
     ]);
 });

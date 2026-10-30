@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Enums\CompanyRole;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\IndexProductRequest;
 use App\Http\Requests\Inventory\ProductImageRequest;
@@ -25,12 +26,12 @@ class ProductController extends Controller
      * Por defecto solo activos. El administrador puede pedir status=inactive
      * o status=all; el vendedor siempre ve solo los activos (HU-1.3).
      */
-    public function index(IndexProductRequest $request): ApiCollection
+    public function index(IndexProductRequest $request, EstablishmentAccess $access): ApiCollection
     {
         $status = $request->user()->hasCompanyRole(CompanyRole::CompanyAdmin) ? $request->input('status', 'active') : 'active';
 
         $products = Product::query()
-            ->withStock()
+            ->withStock($access->filter($request->user(), $request->integer('establishment_id') ?: null))
             ->listFilter($status, $request->input('type'), $request->input('search'))
             ->orderBy('name')
             ->paginate(20)
@@ -46,9 +47,12 @@ class ProductController extends Controller
         return ProductResource::make($product)->response()->setStatusCode(201);
     }
 
-    public function show(Product $product): ProductResource
+    /** Stock de los locales que puede leer y el de cada uno (spec 017). */
+    public function show(Request $request, Product $product, EstablishmentAccess $access): ProductResource
     {
-        return ProductResource::make($product);
+        $product = Product::query()->withStock($access->filter($request->user(), null))->findOrFail($product->id);
+
+        return ProductResource::make($product)->withStockByEstablishment();
     }
 
     /** Desactivar con stock se permite, pero se avisa (caso límite de la spec). */

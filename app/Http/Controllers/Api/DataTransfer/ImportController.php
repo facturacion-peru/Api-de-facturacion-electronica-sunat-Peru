@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\DataTransfer;
 use App\DataTransfer\Imports\ImportApplier;
 use App\DataTransfer\Imports\ImportPreviewer;
 use App\DataTransfer\Imports\Templates;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DataTransfer\PreviewImportRequest;
 use App\Http\Resources\ImportPreviewResource;
+use App\Models\Establishment;
 use App\Models\ImportPreview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,9 +28,13 @@ class ImportController extends Controller
         }, $file->filename, ['Content-Type' => $file->mimeType]);
     }
 
-    public function preview(PreviewImportRequest $request, string $kind, ImportPreviewer $previewer): ImportPreviewResource
+    public function preview(PreviewImportRequest $request, string $kind, ImportPreviewer $previewer, EstablishmentAccess $access): ImportPreviewResource
     {
-        return new ImportPreviewResource($previewer->preview($kind, $request->mode(), $request->file('file'), $request->user()));
+        $establishment = $request->filled('establishment_id')
+            ? $access->resolve($request->user(), $request->integer('establishment_id'))
+            : Establishment::where('is_main', true)->firstOrFail();
+
+        return new ImportPreviewResource($previewer->preview($kind, $request->mode(), $request->file('file'), $request->user(), $establishment));
     }
 
     /** Solo la confirma quien la creó; para los demás no existe (404). */

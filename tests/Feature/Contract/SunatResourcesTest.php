@@ -39,6 +39,6 @@ it('SeriesResource expone exactamente los campos declarados', function () {
     app(TenantContext::class)->set($series->company);
 
     expect(array_keys(SeriesResource::make($series)->resolve()))->toBe([
-        'id', 'document_type', 'document_type_label', 'code', 'last_number', 'next_number', 'active', 'establishment_code',
+        'id', 'document_type', 'document_type_label', 'code', 'last_number', 'next_number', 'active', 'establishment_id', 'establishment_code',
     ]);
 });

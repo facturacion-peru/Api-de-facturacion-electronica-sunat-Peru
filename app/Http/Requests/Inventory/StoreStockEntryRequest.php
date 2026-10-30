@@ -18,7 +18,11 @@ class StoreStockEntryRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return StockEntryValidation::rules($this->product());
+        return [
+            ...StockEntryValidation::rules($this->product()),
+            // Lo valida EstablishmentAccess; sin él, el único permitido (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
+        ];
     }
 
     /** @return array<string, string> */

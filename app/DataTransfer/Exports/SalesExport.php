@@ -3,6 +3,7 @@
 namespace App\DataTransfer\Exports;
 
 use App\DataTransfer\CustomerColumns;
+use App\DataTransfer\EstablishmentLabel;
 use App\DataTransfer\ExportFile;
 use App\DataTransfer\Spreadsheet;
 use App\Enums\DocumentType;
@@ -35,6 +36,7 @@ class SalesExport
         'fecha' => Spreadsheet::TEXT,
         'tipo' => Spreadsheet::TEXT,
         'numero' => Spreadsheet::TEXT,
+        'local' => Spreadsheet::TEXT,
         'cliente_tipo_documento' => Spreadsheet::TEXT,
         'cliente_numero_documento' => Spreadsheet::TEXT,
         'cliente_nombre' => Spreadsheet::TEXT,
@@ -53,6 +55,7 @@ class SalesExport
 
     private const LINES = [
         'numero' => Spreadsheet::TEXT,
+        'local' => Spreadsheet::TEXT,
         'fecha' => Spreadsheet::TEXT,
         'tipo' => Spreadsheet::TEXT,
         'codigo' => Spreadsheet::TEXT,
@@ -100,6 +103,8 @@ class SalesExport
         $range = fn (Builder $q) => $q
             ->whereBetween('issued_at', [Carbon::parse($filters['from'])->startOfDay(), Carbon::parse($filters['to'])->endOfDay()])
             ->when($filters['statuses'] !== [], fn ($q) => $q->whereIn('status', $filters['statuses']))
+            ->when(isset($filters['establishments']), fn ($q) => $q->whereIn('establishment_id', $filters['establishments']))
+            ->with('establishment')
             ->when($withLines, fn ($q) => $q->with('lines'))
             ->orderBy('issued_at')->orderBy('id');
 
@@ -131,6 +136,7 @@ class SalesExport
             $ticket->issued_at->format('Y-m-d H:i:s'),
             'Ticket',
             $ticket->display_number,
+            EstablishmentLabel::of($ticket->establishment),
             null,
             $ticket->customer_document,
             $ticket->customer_name,
@@ -155,6 +161,7 @@ class SalesExport
             $document->issued_at->format('Y-m-d H:i:s'),
             $document->document_type->label(),
             $document->display_number,
+            EstablishmentLabel::of($document->establishment),
             $hasCustomerDocument ? CustomerColumns::DOCUMENT_TYPES[$document->customer_document_type] : null,
             $hasCustomerDocument ? $document->customer_document_number : null,
             $document->customer_name,
@@ -181,6 +188,7 @@ class SalesExport
         foreach ($sale->lines as $line) {
             yield [
                 $sale->display_number,
+                EstablishmentLabel::of($sale->establishment),
                 $sale->issued_at->format('Y-m-d H:i:s'),
                 $isTicket ? 'Ticket' : $sale->document_type->label(),
                 $line->product_code,

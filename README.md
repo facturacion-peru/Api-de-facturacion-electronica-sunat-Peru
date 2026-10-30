@@ -26,6 +26,7 @@ El desarrollo sigue **Spec-Driven Development**. Principios, specs y decisiones 
 | [014](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/014-exportar-importar/spec.md) | Exportar productos, clientes y ventas (XLSX o CSV) e importar productos y clientes con vista previa | Implementada |
 | [015](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/015-impresion-bluetooth/spec.md) | Bytes ESC/POS del ticket y de los comprobantes para la impresora térmica Bluetooth de la app | Implementada, falta verificar con impresora |
 | [016](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/016-imagen-producto/spec.md) | Foto opcional del producto y logo de la empresa en S3 | Implementada, falta verificar con el bucket |
+| [017](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/specs/017-varios-establecimientos/spec.md) | Varios establecimientos: stock, ventas, series y cifras por local, traslados y vendedores asignados | Implementada en la rama `017-varios-establecimientos` |
 
 El código del proyecto anterior (emisión con Greenter, PDF, notas, guías) está en [`legacy/`](legacy), fuera del autoload. La spec 005 reescribió con pruebas lo necesario para emitir facturas y boletas; el resto (notas, guías, resumen diario) sigue allí como referencia. Ver la [evaluación](https://github.com/facturacion-peru/sdd-docs/blob/main/docs/investigacion/001-evaluacion-api-existente.md).
 
@@ -124,9 +125,9 @@ Contrato completo en `public/openapi.json` (`php artisan openapi:generate`) y do
 |---|---|
 | Público | `POST auth/login`, `auth/forgot-password`, `auth/reset-password` · `GET invitations/{token}` · `POST invitations/{token}/accept` |
 | Sesión | `POST auth/logout` · `GET auth/me` |
-| Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET users` · `PATCH users/{user}` · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
+| Empresa | `GET company` · `PATCH company` · `POST company/logo` · `GET establishments` · `POST establishments` · `PATCH establishments/{id}` (administrador) · `GET users` · `PATCH users/{user}` · `PUT users/{user}/establishments` (administrador) · `GET/POST invitations` · `POST invitations/{id}/resend` · `DELETE invitations/{id}` · `GET audit-logs` · `GET ubigeos/*` |
 | Ventas | `GET/POST tickets` · `GET tickets/{id}` · `GET tickets/{id}/pdf` · `GET tickets/{id}/print?width=58\|80` · `POST tickets/{id}/void` (administrador) |
-| Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `POST/DELETE products/{id}/image` (administrador; multipart `image`) · `GET products/{id}/lots` · `POST products/{id}/entries` · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
+| Inventario | `GET catalogs/inventory` · `GET/POST products` · `GET/PATCH products/{id}` · `POST/DELETE products/{id}/image` (administrador; multipart `image`) · `GET products/{id}/lots` · `POST products/{id}/entries` · `POST products/{id}/transfers` (administrador) · `GET products/{id}/movements` · `POST lots/{id}/adjustments` · `POST movements/{id}/reverse` · `GET inventory/alerts` |
 | Comprobantes | `GET/POST sales-documents` · `GET sales-documents/{id}` · `POST sales-documents/{id}/retry` · `POST sales-documents/{id}/credit-notes` · `POST sales-documents/{id}/discard` (administrador) · `GET sales-documents/{id}/pdf?format=a4\|80mm`, `/xml`, `/cdr` · `GET sales-documents/{id}/print?width=58\|80&qr=native\|image` · `GET printing/test-page` · `GET/POST customers` · `PATCH customers/{id}` (administrador) |
 | Datos (administrador) | `GET exports/products?format=xlsx\|csv&lots=` (filtros del listado) · `GET exports/customers` · `GET exports/sales?from=&to=&types[]=&statuses[]=` · `GET imports/{products\|customers}/template` · `POST imports/{kind}/preview` (multipart `file`, `mode=create\|upsert`) · `POST imports/{preview}/confirm` |
 | SUNAT | `GET sunat/status` · `GET series` (todos) · `GET sunat/settings` · `PUT sunat/credentials` · `POST sunat/certificate` · `POST sunat/validate` · `POST series` · `PATCH series/{id}` (administrador) |
@@ -142,6 +143,15 @@ Las rutas de gestión de la empresa, las escrituras de inventario, el historial 
 - **Saldos:** los movimientos son inmutables, y el saldo de cada lote es una caché de la suma de sus movimientos. Los errores se corrigen con ajustes o reversiones.
 - **Ventas con ticket:** `App\Services\TicketService` numera sin huecos (secuencia por empresa bloqueada en la transacción), copia precio y datos del catálogo, calcula importes con `Decimal::mul`/`round` y descuenta stock con el ticket como origen. La misma `idempotency_key` devuelve el ticket ya creado. Anular revierte sus ventas; revertirlas a mano está bloqueado. El ticket **no es comprobante de pago**: lleva siempre `legal_notice`.
 - **Decimales exactos:** toda la aritmética usa `bcmath` (requisito de plataforma `ext-bcmath`). `App\Support\Decimal` redondea lo que devuelve la base, porque en SQLite `SUM()` usa coma flotante.
+
+## Varios establecimientos (spec 017)
+
+- **El local va en la petición:** `establishment_id` en el cuerpo de las escrituras (ticket, comprobante, entrada, traslado, vista previa de importación, serie) y en la consulta de las lecturas (inicio, listas, productos, lotes, movimientos, alertas, series, exportaciones). Si falta, una escritura usa el único local permitido (o responde 422 «Elige el local.»), y una lectura suma «Todos» los que el usuario puede leer.
+- **Quién trabaja dónde:** `App\Establishments\EstablishmentAccess`. El administrador de empresa, en todos; el vendedor, en los asignados (`establishment_user`). Para trabajar el local debe estar activo; para leer, también valen los inactivos. Los bindings `{ticket}` y `{salesDocument}` aplican `visibleTo`: una venta de un local no permitido responde 404.
+- **Stock por local:** el lote pertenece a un local; `InventoryService` recibe el local en cada operación y sigue bloqueando la fila del producto (también en `transfer()`, que ordena los traslados cruzados sin *deadlocks*). Un traslado sale FEFO del origen y entra al lote del mismo número en el destino; sus movimientos (`transfer_out`, `transfer_in`) no se revierten.
+- **Comprobantes:** el local es el de la serie (su `CodLocal` y su dirección van al XML); la nota de crédito usa una serie de notas del local del original. El correlativo de tickets sigue siendo de la empresa.
+- **Con un solo local** todo funciona como antes: la app 0.3.0 sigue vendiendo sin mandar `establishment_id`. La migración dejó lo existente en el principal y a los vendedores asignados a él.
+- **Pruebas:** `CrossEstablishmentAccessTest` recorre `TenantRoutes.php` como `CrossTenantAccessTest`; `EstablishmentMigrationTest` y `ConcurrentTransferTest` están en `tests/Integration/Establishments`. Para pruebas anteriores a los locales, `mainOf($modelo)` (en `tests/Pest.php`) da el principal.
 
 ## Exportar e importar (spec 014)
 

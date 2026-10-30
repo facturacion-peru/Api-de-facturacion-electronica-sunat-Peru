@@ -25,6 +25,7 @@ class SalesDocumentFactory extends Factory
         return [
             'series_id' => Series::factory(),
             'company_id' => fn (array $a) => Series::withoutTenancy()->whereKey($a['series_id'])->value('company_id'),
+            'establishment_id' => fn (array $a) => Series::withoutTenancy()->whereKey($a['series_id'])->value('establishment_id'),
             'document_type' => fn (array $a) => Series::withoutTenancy()->whereKey($a['series_id'])->value('document_type'),
             'series_code' => fn (array $a) => Series::withoutTenancy()->whereKey($a['series_id'])->value('code'),
             'number' => ++self::$number,

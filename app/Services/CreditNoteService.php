@@ -109,7 +109,7 @@ class CreditNoteService
     private function create(SalesDocument $original, array $data, User $actor): SalesDocument
     {
         $original = SalesDocument::whereKey($original->id)->lockForUpdate()->firstOrFail();
-        $original->load(['lines.product', 'series.establishment', 'company.mainEstablishment']);
+        $original->load(['lines.product', 'series.establishment', 'company.mainEstablishment', 'establishment']);
         $reason = CreditNoteReason::from($data['reason_code']);
 
         $this->ensureCorrectable($original);
@@ -126,7 +126,7 @@ class CreditNoteService
 
         $note = new SalesDocument([
             ...collect($original->getAttributes())->only([
-                'company_id', 'payment_method', 'currency', 'issuer_ruc', 'issuer_name', 'issuer_trade_name', 'issuer_address', 'issuer_ubigeo',
+                'company_id', 'establishment_id', 'payment_method', 'currency', 'issuer_ruc', 'issuer_name', 'issuer_trade_name', 'issuer_address', 'issuer_ubigeo',
                 'issuer_department', 'issuer_province', 'issuer_district', 'customer_id', 'customer_document_type', 'customer_document_number',
                 'customer_name', 'customer_address',
             ])->all(),
@@ -269,11 +269,21 @@ class CreditNoteService
                 throw ValidationException::withMessages(['series_id' => "La serie {$series->code} no corresponde a notas de {$of}."]);
             }
 
+            // La nota sale del local del original (spec 017).
+            if ($series->establishment_id !== $original->establishment_id) {
+                throw ValidationException::withMessages(['series_id' => "La serie {$series->code} es de otro local: la nota sale de {$original->establishment->name}."]);
+            }
+
             return $series;
         }
 
+        $local = $original->establishment;
+
         return Series::with('establishment')->where('document_type', DocumentType::CreditNote)->where('active', true)
+            ->where('establishment_id', $original->establishment_id)
             ->where('code', 'like', "{$prefix}%")->orderBy('code')->first()
-            ?? throw ValidationException::withMessages(['series_id' => "No hay una serie de notas de crédito de {$of} activa ({$prefix}…). Pide al administrador que cree una, p. ej. {$prefix}C01."]);
+            ?? throw ValidationException::withMessages(['series_id' => $local->is_main
+                ? "No hay una serie de notas de crédito de {$of} activa ({$prefix}…). Pide al administrador que cree una, p. ej. {$prefix}C01."
+                : "No hay una serie de notas de crédito de {$of} activa en {$local->name} ({$prefix}…). Pide al administrador que cree una, p. ej. {$prefix}C01."]);
     }
 }

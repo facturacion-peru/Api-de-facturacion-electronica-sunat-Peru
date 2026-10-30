@@ -44,7 +44,7 @@ it('las ventas simultáneas nunca venden más stock del que hay', function () {
 
             try {
                 DB::transaction(function () use ($product, $actor) {
-                    app(InventoryService::class)->consume($product->fresh(), '3', null, $actor);
+                    app(InventoryService::class)->consume($product->fresh(), mainOf($product), '3', null, $actor);
                     usleep(100_000); // mantiene el bloqueo para forzar la espera de los demás
                 });
                 $result = 'vendido';

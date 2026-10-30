@@ -2,7 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Establishments\EstablishmentAccess;
+use App\Models\Establishment;
 use App\Models\User;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 /**
@@ -37,8 +40,14 @@ class SessionResource extends ApiResource
                 'ruc' => $company->ruc,
                 'razon_social' => $company->razon_social,
                 'nombre_comercial' => $company->nombre_comercial,
+                'active_establishments_count' => Establishment::withoutTenancy()->where('company_id', $company->id)->where('active', true)->count(),
             ] : null,
             'role' => $membership?->role->value,
+            // Locales donde puede trabajar (spec 017): la app decide con esto y
+            // la cuenta de arriba si muestra el selector (RF-010).
+            'establishments' => $company
+                ? app(TenantContext::class)->run($company, fn () => EstablishmentResource::collection(app(EstablishmentAccess::class)->allowedForDisplay($this->resource)))
+                : [],
         ];
     }
 }

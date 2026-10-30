@@ -67,10 +67,13 @@ class Product extends Model
                 ->orWhereRaw('LOWER(name) LIKE ?', ["%{$search}%"])));
     }
 
-    public function scopeWithStock(Builder $query): void
+    /** @param  list<int>|null  $establishmentIds  Locales a sumar (spec 017); null, todos. */
+    public function scopeWithStock(Builder $query, ?array $establishmentIds = null): void
     {
-        $query->withSum('lots as stock_sum', 'remaining_quantity')
-            ->withSum(['lots as available_sum' => fn ($lots) => $lots
+        $in = fn ($lots) => $lots->when($establishmentIds !== null, fn ($q) => $q->whereIn('establishment_id', $establishmentIds));
+
+        $query->withSum(['lots as stock_sum' => $in], 'remaining_quantity')
+            ->withSum(['lots as available_sum' => fn ($lots) => $in($lots)
                 ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', today()))], 'remaining_quantity');
     }
 

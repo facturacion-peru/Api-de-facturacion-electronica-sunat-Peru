@@ -23,6 +23,7 @@ class TicketFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
+            'establishment_id' => fn (array $attributes) => EstablishmentFactory::mainIdFor($attributes['company_id']),
             'number' => ++self::$number,
             'status' => TicketStatus::Issued,
             'seller_id' => null,

@@ -19,6 +19,7 @@ class SeriesResource extends ApiResource
             'last_number' => $this->last_number,
             'next_number' => $this->nextNumberPreview(),
             'active' => $this->active,
+            'establishment_id' => $this->establishment_id,
             'establishment_code' => $this->establishment?->code,
         ];
     }

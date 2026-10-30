@@ -3,11 +3,13 @@
 namespace App\Http\Requests\Company;
 
 use App\Enums\CompanyRole;
+use App\Models\Establishment;
 use App\Models\Invitation;
 use App\Models\User;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreInvitationRequest extends FormRequest
 {
@@ -44,7 +46,31 @@ class StoreInvitationRequest extends FormRequest
                 },
             ],
             'role' => ['required', Rule::enum(CompanyRole::class)],
+            'establishment_ids' => ['sometimes', 'array'],
+            'establishment_ids.*' => ['integer', 'distinct'],
         ];
+    }
+
+    /**
+     * Locales del vendedor (spec 017, A-87): obligatorios si la empresa tiene
+     * varios activos; con uno solo, se asigna ese al aceptar.
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator) {
+            if ($validator->errors()->isNotEmpty() || $this->input('role') !== CompanyRole::Seller->value) {
+                return;
+            }
+
+            $ids = array_map('intval', $this->input('establishment_ids', []));
+            $activeCount = Establishment::active()->count();
+
+            if ($ids === [] && $activeCount > 1) {
+                $validator->errors()->add('establishment_ids', 'Elige al menos un local para el vendedor.');
+            } elseif ($ids !== [] && Establishment::active()->whereIn('id', $ids)->count() !== count($ids)) {
+                $validator->errors()->add('establishment_ids', 'Elige locales activos de tu empresa.');
+            }
+        }];
     }
 
     /** @return array<string, string> */

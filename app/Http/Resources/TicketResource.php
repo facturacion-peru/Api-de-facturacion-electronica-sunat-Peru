@@ -21,6 +21,8 @@ class TicketResource extends ApiResource
             'number' => $this->number,
             'display_number' => $this->display_number,
             'status' => $this->status->value,
+            // En el detalle (con líneas), también la dirección: va en lo impreso (spec 017).
+            'establishment' => $this->relationLoaded('lines') ? EstablishmentRef::withAddress($this->establishment) : EstablishmentRef::of($this->establishment),
             'legal_notice' => Ticket::LEGAL_NOTICE,
             'seller' => $this->seller ? ['id' => $this->seller->id, 'name' => $this->seller->name] : null,
             'customer_name' => $this->customer_name,

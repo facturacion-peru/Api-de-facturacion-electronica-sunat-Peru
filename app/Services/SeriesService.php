@@ -17,8 +17,8 @@ class SeriesService
 {
     public function __construct(private AuditLogger $audit) {}
 
-    /** Alta en el establecimiento principal (A-07), continuando la numeración anterior. */
-    public function create(Company $company, DocumentType $type, string $code, int $lastNumber, User $actor): Series
+    /** Alta en un local (por defecto el principal, spec 017), continuando la numeración anterior. */
+    public function create(Company $company, DocumentType $type, string $code, int $lastNumber, User $actor, ?Establishment $establishment = null): Series
     {
         if ($type === DocumentType::Invoice && ! $company->tax_regime->canIssueInvoices()) {
             throw ValidationException::withMessages(['document_type' => 'Las empresas del Nuevo RUS no emiten facturas.']);
@@ -31,7 +31,7 @@ class SeriesService
 
         $series = Series::create([
             'company_id' => $company->id,
-            'establishment_id' => Establishment::where('is_main', true)->value('id'),
+            'establishment_id' => $establishment?->id ?? Establishment::where('is_main', true)->value('id'),
             'document_type' => $type,
             'code' => $code,
             'last_number' => $lastNumber,
@@ -42,6 +42,7 @@ class SeriesService
             'code' => $series->code,
             'document_type' => $type->value,
             'last_number' => $lastNumber,
+            'establishment' => $series->establishment->code,
         ], actor: $actor);
 
         return $series;

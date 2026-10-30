@@ -19,6 +19,7 @@ class LotResource extends ApiResource
         return [
             'id' => $this->id,
             'lot_number' => $this->lot_number,
+            'establishment' => EstablishmentRef::of($this->establishment),
             'received_at' => $this->received_at->toDateString(),
             'expires_at' => $this->expires_at?->toDateString(),
             'expired' => $this->isExpired(),

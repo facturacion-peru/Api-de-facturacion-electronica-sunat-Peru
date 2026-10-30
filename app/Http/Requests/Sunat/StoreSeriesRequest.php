@@ -31,13 +31,19 @@ class StoreSeriesRequest extends FormRequest
             'code' => ['required', 'string', 'size:4',
                 Rule::unique('series', 'code')->where('company_id', app(TenantContext::class)->id())],
             'last_number' => ['sometimes', 'integer', 'min:0', 'max:99999999'],
+            // Local de la serie (spec 017); por defecto el principal. No cambia después.
+            'establishment_id' => ['sometimes', 'nullable', 'integer',
+                Rule::exists('establishments', 'id')->where('company_id', app(TenantContext::class)->id())->where('active', true)],
         ];
     }
 
     /** @return array<string, string> */
     public function messages(): array
     {
-        return ['code.unique' => "Ya existe la serie {$this->code} en tu empresa."];
+        return [
+            'code.unique' => "Ya existe la serie {$this->code} en tu empresa.",
+            'establishment_id.exists' => 'Elige un local activo de tu empresa.',
+        ];
     }
 
     /** El formato depende del tipo: F### para factura, B### para boleta (RF-021). */

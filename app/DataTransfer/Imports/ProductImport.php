@@ -6,6 +6,7 @@ use App\Audit\AuditLogger;
 use App\DataTransfer\ProductColumns;
 use App\Enums\ProductType;
 use App\Enums\UnitOfMeasure;
+use App\Models\Establishment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\InventoryService;
@@ -140,7 +141,14 @@ class ProductImport implements RowImport
         $result['created']++;
 
         if ($row['entry'] !== null) {
-            $this->inventory->registerEntry($product, array_filter($row['entry'], fn ($value) => $value !== null), $actor);
+            // El local elegido en la vista previa (spec 017; una vista previa anterior
+            // no lo trae: el principal). Si ya no está activo, nada se importa.
+            $establishment = isset($row['entry']['establishment_id'])
+                ? Establishment::active()->find($row['entry']['establishment_id'])
+                : Establishment::where('is_main', true)->first();
+            $establishment ?? throw new ImportConflict('El local del stock inicial ya no está activo. Vuelve a subir el archivo.');
+            $entry = collect($row['entry'])->except('establishment_id')->filter(fn ($value) => $value !== null)->all();
+            $this->inventory->registerEntry($product, $establishment, $entry, $actor);
             $result['entries']++;
         }
     }

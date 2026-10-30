@@ -33,6 +33,7 @@ class InvitationController extends Controller
             $request->validated('email'),
             CompanyRole::from($request->validated('role')),
             $request->user(),
+            array_map('intval', $request->validated('establishment_ids', [])),
         );
 
         return InvitationResource::make($issued->invitation->load('inviter'))->response()->setStatusCode(201);

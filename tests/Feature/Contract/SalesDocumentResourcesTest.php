@@ -30,7 +30,7 @@ it('el comprobante, sus líneas e intentos exponen exactamente los campos declar
     $data = $this->withToken($seller->createToken('t')->plainTextToken)->getJson("/api/v1/sales-documents/{$document->id}")->json('data');
 
     expect(array_keys($data))->toBe([
-        'id', 'document_type', 'document_type_label', 'series_code', 'number', 'display_number', 'environment', 'environment_notice',
+        'id', 'document_type', 'document_type_label', 'series_code', 'establishment', 'number', 'display_number', 'environment', 'environment_notice',
         'issued_at', 'seller', 'payment_method', 'currency', 'customer', 'op_gravadas', 'op_exoneradas', 'op_inafectas', 'igv',
         'discount_total', 'total', 'status', 'status_label', 'sunat_code', 'sunat_message', 'sunat_notes', 'hash', 'has_cdr',
         'attempts', 'next_attempt_at', 'can_retry',

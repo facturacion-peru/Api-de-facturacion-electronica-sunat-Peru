@@ -40,6 +40,7 @@ final class ProductColumns
     public const LOTS = [
         'codigo' => Spreadsheet::TEXT,
         'nombre' => Spreadsheet::TEXT,
+        'local' => Spreadsheet::TEXT,
         'lote' => Spreadsheet::TEXT,
         'ingreso' => Spreadsheet::TEXT,
         'vencimiento' => Spreadsheet::TEXT,

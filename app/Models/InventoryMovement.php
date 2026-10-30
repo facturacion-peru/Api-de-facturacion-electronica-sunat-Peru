@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
+use App\Establishments\VisibleByEstablishment;
 use App\Inventory\Exceptions\MovementImmutable;
 use App\Tenancy\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
@@ -17,12 +18,13 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class InventoryMovement extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, VisibleByEstablishment;
 
     public const UPDATED_AT = null;
 
     protected $fillable = [
         'company_id',
+        'establishment_id',
         'product_id',
         'lot_id',
         'type',
@@ -51,6 +53,10 @@ class InventoryMovement extends Model
 
     protected static function booted(): void
     {
+        // El local del movimiento es siempre el de su lote (spec 017).
+        static::creating(function (self $movement) {
+            $movement->establishment_id ??= ProductLot::withoutTenancy()->whereKey($movement->lot_id)->value('establishment_id');
+        });
         static::updating(fn () => throw new MovementImmutable);
         static::deleting(fn () => throw new MovementImmutable);
     }
@@ -83,5 +89,10 @@ class InventoryMovement extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function establishment(): BelongsTo
+    {
+        return $this->belongsTo(Establishment::class);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Sales;
 use App\Enums\CompanyRole;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Printing\PrintRequest;
 use App\Http\Requests\Sales\IndexTicketRequest;
@@ -34,17 +35,18 @@ class TicketController extends Controller
     {
         [$ticket, $created] = $this->tickets->issue($request->validated(), $request->user());
 
-        return TicketResource::make($ticket->load(['lines', 'seller']))->response()->setStatusCode($created ? 201 : 200);
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']))->response()->setStatusCode($created ? 201 : 200);
     }
 
     /**
      * Ventas filtradas, de la más reciente a la más antigua, con totales por
      * medio de pago sin anulados (HU-4.1). El vendedor solo ve las suyas (HU-4.2).
      */
-    public function index(IndexTicketRequest $request): ApiCollection
+    public function index(IndexTicketRequest $request, EstablishmentAccess $access): ApiCollection
     {
         $filters = $request->validated();
         $query = $this->scoped($request->user())
+            ->whereIn('establishment_id', $access->filter($request->user(), $request->integer('establishment_id') ?: null))
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('issued_at', '>=', Carbon::parse($from)->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('issued_at', '<=', Carbon::parse($to)->endOfDay()))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
@@ -54,7 +56,7 @@ class TicketController extends Controller
                 fn ($q) => $q->where('seller_id', $filters['seller_id']),
             );
 
-        $page = (clone $query)->with('seller')->orderByDesc('issued_at')->orderByDesc('id')->paginate(25)->withQueryString();
+        $page = (clone $query)->with(['seller', 'establishment'])->orderByDesc('issued_at')->orderByDesc('id')->paginate(25)->withQueryString();
 
         return TicketResource::collection($page)->additional(['totals' => $this->totals($query)]);
     }
@@ -64,7 +66,7 @@ class TicketController extends Controller
         // El vendedor no ve tickets ajenos: 404, como un recurso inexistente.
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return TicketResource::make($ticket->load(['lines', 'seller']));
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']));
     }
 
     /** PDF de 80 mm para imprimir o compartir desde la app (spec 013, A-63). */
@@ -72,7 +74,7 @@ class TicketController extends Controller
     {
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return response($pdf->render($ticket->load(['lines', 'seller', 'company'])), 200, [
+        return response($pdf->render($ticket->load(['lines', 'seller', 'company', 'establishment'])), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$ticket->display_number}-80mm.pdf\"",
         ]);
@@ -83,7 +85,7 @@ class TicketController extends Controller
     {
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return response($print->render($ticket->load(['lines', 'seller', 'company']), $request->options()), 200, [
+        return response($print->render($ticket->load(['lines', 'seller', 'company', 'establishment']), $request->options()), 200, [
             'Content-Type' => 'application/octet-stream',
             'Cache-Control' => 'no-store',
         ]);
@@ -93,7 +95,7 @@ class TicketController extends Controller
     {
         $ticket = $this->tickets->void($ticket, $request->validated('reason'), $request->user());
 
-        return TicketResource::make($ticket->load(['lines', 'seller']));
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']));
     }
 
     /** @return Builder<Ticket> */

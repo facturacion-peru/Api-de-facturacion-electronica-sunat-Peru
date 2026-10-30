@@ -25,6 +25,10 @@
     <div class="center">
         <div class="bold">{{ $companyName }}</div>
         <div>RUC {{ $ticket->company->ruc }}</div>
+        @if ($branch)
+            <div>{{ $branch->name }}</div>
+            <div>{{ $branch->address }}</div>
+        @endif
         <div class="bold" style="margin-top: 4pt;">TICKET {{ $ticket->display_number }}</div>
         <div>{{ $ticket->issued_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</div>
     </div>

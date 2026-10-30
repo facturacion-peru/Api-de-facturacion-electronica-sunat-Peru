@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CompanyRole;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,10 @@ class CompanyUserResource extends ApiResource
             'role' => $this->membership->role->value,
             'active' => $this->membership->active,
             'last_login_at' => $this->last_login_at?->toIso8601String(),
+            // Vendedor: sus locales (A-87). Administrador: null, trabaja en todos.
+            'establishment_ids' => $this->membership->role === CompanyRole::Seller
+                ? $this->establishments()->withoutGlobalScopes()->orderBy('code')->pluck('establishments.id')->all()
+                : null,
         ];
     }
 }

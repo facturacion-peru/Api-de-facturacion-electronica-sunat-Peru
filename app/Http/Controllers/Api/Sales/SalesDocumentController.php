@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Sales;
 use App\Audit\AuditLogger;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\SubmissionTrigger;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Printing\PrintRequest;
 use App\Http\Requests\Sales\DiscardSalesDocumentRequest;
@@ -30,7 +31,7 @@ use Illuminate\Validation\ValidationException;
 class SalesDocumentController extends Controller
 {
     /** Relaciones del detalle: líneas, intentos y, desde la 007, notas y documento modificado. */
-    private const DETAIL = ['lines', 'seller', 'submissions', 'creditNotes', 'reference'];
+    private const DETAIL = ['lines', 'seller', 'submissions', 'creditNotes', 'reference', 'establishment'];
 
     public function __construct(private SalesDocumentService $documents) {}
 
@@ -38,13 +39,15 @@ class SalesDocumentController extends Controller
      * Todos los comprobantes de la empresa (A-32), del más reciente al más
      * antiguo, con el número de pendientes y rechazados para avisar (HU-6.1).
      */
-    public function index(IndexSalesDocumentRequest $request): ApiCollection
+    public function index(IndexSalesDocumentRequest $request, EstablishmentAccess $access): ApiCollection
     {
         $filters = $request->validated();
+        $establishments = $access->filter($request->user(), $request->integer('establishment_id') ?: null);
         $customer = mb_strtolower(trim((string) ($filters['customer'] ?? '')));
 
         $page = SalesDocument::query()
-            ->with('seller')
+            ->with(['seller', 'establishment'])
+            ->whereIn('establishment_id', $establishments)
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('issued_at', '>=', Carbon::parse($from)->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('issued_at', '<=', Carbon::parse($to)->endOfDay()))
             ->when($filters['document_type'] ?? null, fn ($q, $type) => $q->where('document_type', $type))
@@ -56,6 +59,7 @@ class SalesDocumentController extends Controller
             ->paginate(25)->withQueryString();
 
         $counts = SalesDocument::query()
+            ->whereIn('establishment_id', $establishments)
             ->whereIn('status', [SalesDocumentStatus::Pending, SalesDocumentStatus::Sent, SalesDocumentStatus::Rejected])
             ->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
 
@@ -116,7 +120,7 @@ class SalesDocumentController extends Controller
     {
         $format = $request->validated('format', 'a4');
 
-        return response($pdf->render($salesDocument->load(['lines', 'company', 'reference']), $format), 200, [
+        return response($pdf->render($salesDocument->load(['lines', 'company', 'reference', 'establishment']), $format), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$salesDocument->display_number}-{$format}.pdf\"",
         ]);
@@ -125,7 +129,7 @@ class SalesDocumentController extends Controller
     /** Bytes ESC/POS para la impresora térmica de la app (spec 015), con el mismo acceso que el PDF. */
     public function print(PrintRequest $request, SalesDocument $salesDocument, DocumentPrint $print): Response
     {
-        return response($print->render($salesDocument->load(['lines', 'company', 'reference']), $request->options()), 200, [
+        return response($print->render($salesDocument->load(['lines', 'company', 'reference', 'establishment']), $request->options()), 200, [
             'Content-Type' => 'application/octet-stream',
             'Cache-Control' => 'no-store',
         ]);

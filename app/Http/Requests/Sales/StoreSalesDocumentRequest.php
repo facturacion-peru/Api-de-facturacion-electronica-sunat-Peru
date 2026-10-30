@@ -34,6 +34,8 @@ class StoreSalesDocumentRequest extends FormRequest
             // Las notas de crédito se emiten desde su comprobante (spec 007), no aquí.
             'document_type' => ['required', Rule::in([DocumentType::Invoice->value, DocumentType::Receipt->value])],
             'series_id' => ['sometimes', 'nullable', 'integer', Rule::exists('series', 'id')->where('company_id', $company)],
+            // Con serie, debe ser su local; sin serie, el local donde se elige (spec 017).
+            'establishment_id' => ['sometimes', 'nullable', 'integer'],
             'customer_id' => ['sometimes', 'nullable', 'integer', Rule::exists('customers', 'id')->where('company_id', $company)],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'lines' => ['required', 'array', 'min:1', 'max:100'],

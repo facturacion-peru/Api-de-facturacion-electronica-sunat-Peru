@@ -24,6 +24,8 @@ class IndexTicketRequest extends FormRequest
             'status' => ['sometimes', Rule::enum(TicketStatus::class)],
             'payment_method' => ['sometimes', Rule::enum(PaymentMethod::class)],
             'seller_id' => ['sometimes', 'integer'],
+            // Sin local: los que el usuario puede leer (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ];
     }

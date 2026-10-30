@@ -21,6 +21,8 @@ class IndexProductRequest extends FormRequest
             'type' => ['sometimes', 'in:good,service'],
             'status' => ['sometimes', 'in:active,inactive,all'],
             'page' => ['sometimes', 'integer', 'min:1'],
+            // Stock de ese local; sin él, la suma de los que puede leer (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
         ];
     }
 }

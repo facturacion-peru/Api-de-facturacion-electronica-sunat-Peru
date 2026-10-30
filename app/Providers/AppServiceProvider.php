@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\SalesDocument;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Sunat\Sending\GreenterSender;
 use App\Sunat\Sending\SunatSender;
@@ -51,6 +52,13 @@ class AppServiceProvider extends ServiceProvider
             ->whereHas('membership', fn ($query) => $query->where('company_id', app(TenantContext::class)->id()))
             ->with('membership')
             ->firstOrFail());
+
+        // Ventas (spec 017, CE-002): las de un local que el usuario no puede leer
+        // no existen para él (404), como las de otra empresa.
+        Route::bind('ticket', fn (string $value) => Ticket::query()
+            ->when(request()->user(), fn ($q, $user) => $q->visibleTo($user))->findOrFail($value));
+        Route::bind('salesDocument', fn (string $value) => SalesDocument::query()
+            ->when(request()->user(), fn ($q, $user) => $q->visibleTo($user))->findOrFail($value));
 
         // Soporte de la plataforma (spec 006): sin contexto de empresa, el
         // comprobante se busca entre todas; la ruta ya exige platform.admin.

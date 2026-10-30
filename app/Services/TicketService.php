@@ -7,6 +7,7 @@ use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
 use App\Enums\PaymentMethod;
 use App\Enums\TicketStatus;
+use App\Establishments\EstablishmentAccess;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Ticket;
@@ -24,6 +25,7 @@ class TicketService
     public function __construct(
         private AuditLogger $audit,
         private InventoryService $inventory,
+        private EstablishmentAccess $establishments,
     ) {}
 
     /**
@@ -32,7 +34,9 @@ class TicketService
      * stock. Si algo falla (p. ej. InsufficientStock) no queda nada, ni el
      * número. La misma clave de idempotencia devuelve el ticket existente.
      *
-     * @param  array{idempotency_key: string, payment_method: string, customer_name?: ?string, customer_document?: ?string, lines: list<array{product_id: int, quantity: string, discount?: ?string}>}  $data
+     * El local es el pedido o, si no viene, el único permitido (spec 017).
+     *
+     * @param  array{idempotency_key: string, establishment_id?: ?int, payment_method: string, customer_name?: ?string, customer_document?: ?string, lines: list<array{product_id: int, quantity: string, discount?: ?string}>}  $data
      * @return array{Ticket, bool} el ticket y si se creó ahora
      */
     public function issue(array $data, User $actor): array
@@ -96,6 +100,7 @@ class TicketService
     private function create(array $data, User $actor): Ticket
     {
         $companyId = $actor->membership->company_id;
+        $establishment = $this->establishments->resolve($actor, isset($data['establishment_id']) ? (int) $data['establishment_id'] : null);
         $products = Product::whereIn('id', collect($data['lines'])->pluck('product_id'))->get()->keyBy('id');
 
         $lines = [];
@@ -118,6 +123,7 @@ class TicketService
 
         $ticket = Ticket::create([
             'company_id' => $companyId,
+            'establishment_id' => $establishment->id,
             'number' => $this->nextNumber($companyId),
             'status' => TicketStatus::Issued,
             'seller_id' => $actor->id,
@@ -150,7 +156,7 @@ class TicketService
                 'amount' => $line['amount'],
             ]);
 
-            $this->inventory->consume($product, $line['quantity'], $ticket, $actor);
+            $this->inventory->consume($product, $establishment, $line['quantity'], $ticket, $actor);
         }
 
         $this->audit->record('ticket.issued', $ticket, [

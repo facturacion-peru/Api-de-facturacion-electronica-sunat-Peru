@@ -39,6 +39,16 @@ class EstablishmentFactory extends Factory
         ]);
     }
 
+    /**
+     * Id del principal de la empresa, creándolo si la prueba no lo hizo: las
+     * factories de lotes, tickets y comprobantes lo usan por defecto (spec 017).
+     */
+    public static function mainIdFor(int $companyId): int
+    {
+        return Establishment::withoutTenancy()->where('company_id', $companyId)->where('is_main', true)->value('id')
+            ?? Establishment::factory()->main()->create(['company_id' => $companyId])->id;
+    }
+
     public static function ensureLimaUbigeo(): void
     {
         DB::table('ubi_regiones')->insertOrIgnore(['id' => '150000', 'nombre' => 'Lima']);

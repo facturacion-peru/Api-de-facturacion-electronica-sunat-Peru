@@ -121,6 +121,12 @@ class DevelopmentSeeder extends Seeder
             ['company_id' => $company->id, 'role' => $role, 'active' => $active],
         );
 
+        // El vendedor trabaja en el principal (spec 017, A-87).
+        if ($role === CompanyRole::Seller) {
+            $main = Establishment::withoutTenancy()->where('company_id', $company->id)->where('is_main', true)->value('id');
+            $user->establishments()->syncWithoutDetaching([$main => ['company_id' => $company->id]]);
+        }
+
         return $user;
     }
 
@@ -185,6 +191,8 @@ class DevelopmentSeeder extends Seeder
     private function products(Company $company, User $admin, array $rows): void
     {
         app(TenantContext::class)->run($company, function () use ($company, $admin, $rows) {
+            $main = Establishment::where('is_main', true)->firstOrFail();
+
             foreach ($rows as [$code, $name, $type, $unit, $price, $igv, $min, $tracksExpiry, $entries]) {
                 if (Product::where('code', $code)->exists()) {
                     continue;
@@ -196,7 +204,7 @@ class DevelopmentSeeder extends Seeder
                 ]);
 
                 foreach ($entries as $i => [$quantity, $cost, $expiresInDays]) {
-                    app(InventoryService::class)->registerEntry($product, [
+                    app(InventoryService::class)->registerEntry($product, $main, [
                         'quantity' => $quantity,
                         'received_at' => today()->subDays(10 - $i)->toDateString(),
                         'unit_cost' => (string) $cost,

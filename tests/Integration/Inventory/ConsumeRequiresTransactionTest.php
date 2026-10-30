@@ -14,5 +14,5 @@ it('rechaza descontar stock fuera de una transacción', function () {
     $product = Product::factory()->create();
     ProductLot::factory()->for($product)->quantity('5')->create();
 
-    app(InventoryService::class)->consume($product, '1', null, User::factory()->create());
+    app(InventoryService::class)->consume($product, mainOf($product), '1', null, User::factory()->create());
 })->throws(LogicException::class, 'transacción');

@@ -80,7 +80,7 @@ it('HU-4.2 revertir crea un movimiento inverso enlazado y conserva el original',
 });
 
 it('revierte una venta devolviendo el stock a su lote', function () {
-    $sale = DB::transaction(fn () => app(InventoryService::class)->consume($this->product, '3', null, $this->admin))->first();
+    $sale = DB::transaction(fn () => app(InventoryService::class)->consume($this->product, mainOf($this->product), '3', null, $this->admin))->first();
 
     ($this->post)("/api/v1/movements/{$sale->id}/reverse", ['reason' => 'error'])->assertCreated();
 
@@ -105,7 +105,7 @@ it('no revierte una reversión', function () {
 });
 
 it('no revierte una entrada cuyo lote ya se consumió', function () {
-    DB::transaction(fn () => app(InventoryService::class)->consume($this->product, '7', null, $this->admin));
+    DB::transaction(fn () => app(InventoryService::class)->consume($this->product, mainOf($this->product), '7', null, $this->admin));
 
     ($this->post)("/api/v1/movements/{$this->entry->id}/reverse", ['reason' => 'error'])
         ->assertUnprocessable()

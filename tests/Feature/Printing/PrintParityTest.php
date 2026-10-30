@@ -190,3 +190,50 @@ describe('comprobantes', function () {
         expectWithinWidth($bytes, $width);
     })->with([58, 80]);
 });
+
+describe('local que no es el principal (spec 017, T019)', function () {
+    beforeEach(function () {
+        $this->branch = App\Models\Establishment::factory()->create(['company_id' => $this->company->id, 'code' => '0001', 'name' => 'Sucursal Mercado Central', 'address' => 'JR. HUALLAGA 456, CERCADO DE LIMA']);
+        $this->seller->establishments()->sync([$this->branch->id => ['company_id' => $this->company->id]]);
+        ProductLot::factory()->for($this->rice)->quantity('10')->create(['establishment_id' => $this->branch->id]);
+    });
+
+    it('el ticket lleva el nombre y la dirección del local, en el PDF y en lo impreso', function (int $width) {
+        $id = $this->withToken($this->seller->createToken('t')->plainTextToken)->postJson('/api/v1/tickets', [
+            'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'cash',
+            'lines' => [['product_id' => $this->rice->id, 'quantity' => '1']],
+        ])->assertCreated()->json('data.id');
+        $ticket = Ticket::with(['lines', 'seller', 'company', 'establishment'])->findOrFail($id);
+
+        $html = app(TicketPdf::class)->html($ticket);
+        $bytes = app(TicketPrint::class)->render($ticket, new PrintOptions($width));
+
+        expect($html)->toContain('Sucursal Mercado Central')->toContain('JR. HUALLAGA 456, CERCADO DE LIMA')
+            ->and(missingFromPrint($html, $bytes))->toBe([]);
+        expectWithinWidth($bytes, $width);
+    })->with([58, 80]);
+
+    it('la boleta del local lleva su nombre, en el PDF y en lo impreso', function (int $width) {
+        $series = App\Models\Series::factory()->create(['company_id' => $this->company->id, 'establishment_id' => $this->branch->id, 'code' => 'B002']);
+        [$document] = app(SalesDocumentService::class)->issue([
+            'idempotency_key' => (string) Str::uuid(), 'document_type' => '03', 'payment_method' => 'cash', 'series_id' => $series->id,
+            'lines' => [['product_id' => $this->rice->id, 'quantity' => '1']],
+        ], $this->seller);
+
+        [$html, $bytes] = printedDocument($document, $width);
+
+        expect($html)->toContain('Sucursal Mercado Central')->toContain('JR. HUALLAGA 456, CERCADO DE LIMA')
+            ->and(missingFromPrint($html, $bytes))->toBe([]);
+        expectWithinWidth($bytes, $width);
+    })->with([58, 80]);
+
+    it('el principal no se nombra: el ticket y la boleta se ven como antes', function () {
+        $this->seller->establishments()->sync([App\Models\Establishment::where('is_main', true)->value('id') => ['company_id' => $this->company->id]]);
+        $id = $this->withToken($this->seller->createToken('t')->plainTextToken)->postJson('/api/v1/tickets', [
+            'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'cash',
+            'lines' => [['product_id' => $this->rice->id, 'quantity' => '1']],
+        ])->assertCreated()->json('data.id');
+
+        expect(app(TicketPdf::class)->html(Ticket::with(['lines', 'seller', 'company', 'establishment'])->findOrFail($id)))->not->toContain('Domicilio fiscal');
+    });
+});

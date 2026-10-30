@@ -54,3 +54,12 @@ it('documenta las subidas de archivos como multipart, con el tamaño en kilobyte
         // Lo que no sube archivos sigue en JSON.
         ->and($spec['paths']['/api/v1/products']['post']['requestBody']['content'])->toHaveKey('application/json');
 });
+
+it('documenta los parámetros de un controlador invocable (spec 017)', function () {
+    $target = tempnam(sys_get_temp_dir(), 'openapi-');
+    $this->artisan('openapi:generate', ['--output' => $target])->assertSuccessful();
+    $spec = json_decode(file_get_contents($target), true);
+    unlink($target);
+
+    expect(collect($spec['paths']['/api/v1/dashboard']['get']['parameters'] ?? [])->pluck('name')->all())->toContain('establishment_id');
+});

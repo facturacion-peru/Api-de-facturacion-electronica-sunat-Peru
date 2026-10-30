@@ -24,6 +24,8 @@ class IndexSalesDocumentRequest extends FormRequest
             'document_type' => ['sometimes', Rule::enum(DocumentType::class)],
             'status' => ['sometimes', Rule::enum(SalesDocumentStatus::class)],
             'customer' => ['sometimes', 'nullable', 'string', 'max:100'],
+            // Sin local: los que el usuario puede leer (spec 017).
+            'establishment_id' => ['sometimes', 'integer'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ];
     }

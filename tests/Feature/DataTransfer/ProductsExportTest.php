@@ -74,8 +74,8 @@ it('HU-1.2 con lotes agrega la hoja de lotes con saldo', function () {
 
     expect(array_keys($sheets))->toBe(['productos', 'lotes'])
         ->and($sheets['lotes'])->toBe([
-            ['codigo' => '0012', 'nombre' => 'Arroz «Costeño» 1 kg', 'lote' => 'L-1', 'ingreso' => '2026-10-01', 'vencimiento' => '2027-01-31', 'cantidad_restante' => '10', 'costo_unitario' => '3.2'],
-            ['codigo' => '0012', 'nombre' => 'Arroz «Costeño» 1 kg', 'lote' => 'L-2', 'ingreso' => '2026-10-02', 'vencimiento' => '2027-03-31', 'cantidad_restante' => '2.5', 'costo_unitario' => '3.5'],
+            ['codigo' => '0012', 'nombre' => 'Arroz «Costeño» 1 kg', 'local' => '0000 Domicilio fiscal', 'lote' => 'L-1', 'ingreso' => '2026-10-01', 'vencimiento' => '2027-01-31', 'cantidad_restante' => '10', 'costo_unitario' => '3.2'],
+            ['codigo' => '0012', 'nombre' => 'Arroz «Costeño» 1 kg', 'local' => '0000 Domicilio fiscal', 'lote' => 'L-2', 'ingreso' => '2026-10-02', 'vencimiento' => '2027-03-31', 'cantidad_restante' => '2.5', 'costo_unitario' => '3.5'],
         ]);
 });
 
@@ -121,7 +121,7 @@ it('RF-010 deja la exportación en la auditoría con formato, filtros y filas', 
     $log = AuditLog::query()->where('action', 'export.products')->sole();
     expect($log->actor_id)->toBe($this->admin->id)
         ->and($log->company_id)->toBe($this->company->id)
-        ->and($log->changes)->toMatchArray(['format' => 'csv', 'rows' => 1, 'filters' => ['status' => 'active', 'type' => null, 'search' => 'arroz', 'lots' => false]]);
+        ->and($log->changes)->toMatchArray(['format' => 'csv', 'rows' => 1, 'filters' => ['status' => 'active', 'type' => null, 'search' => 'arroz', 'lots' => false, 'establishment_id' => null]]);
 });
 
 it('valida el formato', function () {

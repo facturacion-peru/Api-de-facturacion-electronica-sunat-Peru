@@ -4,6 +4,7 @@ use App\Audit\AuditLogger;
 use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\Establishment;
 use App\Models\Invitation;
 use App\Models\Product;
 use App\Models\ProductLot;
@@ -57,12 +58,13 @@ beforeEach(function () {
         'rows' => [['row' => 2, 'action' => 'create', 'data' => ['code' => 'B-IMPORTADO'], 'entry' => null]],
         'errors' => [], 'warnings' => [], 'changes' => [], 'expires_at' => now()->addMinutes(30),
     ]));
+    $this->establishmentB = Establishment::factory()->create(['company_id' => $this->b->id, 'code' => '0007', 'name' => 'Local secreto de B', 'address' => 'Calle secreta de B 1']);
     $this->sunatB = SunatSetting::create(['company_id' => $this->b->id, 'environment' => 'beta', 'status' => 'pending', 'sol_user' => 'USUARIOB', 'sol_password' => 'ClaveSolDeB']);
 
     $this->token = $this->adminA->createToken('t')->plainTextToken;
 
     /** Rastros de B que nunca deben aparecer en una respuesta a A. */
-    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB', 'BZ99', 'Comprador secreto de B', '87654321', 'bbbbbbbb-0000-4000-8000-00000000000b'];
+    $this->bMarkers = [$this->b->ruc, 'Empresa B S.A.C.', 'Marca B', 'empresa-b.pe', 'b.accion_secreta', 'B-SECRETO', 'Producto secreto de B', 'LOTE-DE-B', 'Cliente secreto de B', 'USUARIOB', 'ClaveSolDeB', 'BZ99', 'Comprador secreto de B', '87654321', 'bbbbbbbb-0000-4000-8000-00000000000b', 'Local secreto de B', 'Calle secreta de B 1'];
 });
 
 function callAsA(string $method, string $uri, array $data = [])
@@ -97,6 +99,7 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         'customer' => $this->customerB->id,
         'salesDocument' => $this->documentB->id,
         'preview' => $this->previewB->id,
+        'establishment' => $this->establishmentB->id,
     };
     $payload = $method === 'PATCH'
         ? ['active' => false, 'role' => 'seller', 'name' => 'Hackeado']
@@ -124,7 +127,8 @@ it('HU-4.1 un recurso de B responde igual que uno inexistente', function (string
         ->and(Product::withoutTenancy()->where('code', 'B-IMPORTADO')->exists())->toBeFalse();
 
     expect($this->sellerB->membership()->first()->active)->toBeTrue()
-        ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull();
+        ->and(Invitation::withoutTenancy()->find($this->invitationB->id))->not->toBeNull()
+        ->and($this->establishmentB->fresh()->only(['name', 'active']))->toBe(['name' => 'Local secreto de B', 'active' => true]);
 })->with(tenantRoutes('resource'));
 
 it('HU-4.2 un listado solo trae datos de A aunque se pidan los de B', function (string $route, array $case) {
@@ -172,6 +176,7 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
             'series_id' => $this->seriesB->id, 'customer_id' => $this->customerB->id, 'payment_method' => 'cash',
             'lines' => [['product_id' => $this->productB->id, 'quantity' => '1']],
         ]),
+        'POST api/v1/establishments' => callAsA('POST', '/api/v1/establishments', ['company_id' => $this->b->id, 'code' => '0008', 'name' => 'Local de A', 'address' => 'Av. A 1', 'ubigeo' => '150101']),
         'POST api/v1/series' => callAsA('POST', '/api/v1/series', ['company_id' => $this->b->id, 'document_type' => '03', 'code' => 'B777']),
         'POST api/v1/products' => callAsA('POST', '/api/v1/products', [
             'company_id' => $this->b->id, 'code' => 'A-NUEVO', 'name' => 'Nuevo', 'type' => 'good', 'unit' => 'NIU', 'sale_price' => '1', 'igv_affectation' => '10',
@@ -192,7 +197,8 @@ it('HU-4.3 crear o modificar apuntando a B no afecta a B', function (string $rou
         ->and(Customer::withoutTenancy()->where('company_id', $this->b->id)->pluck('name')->all())->toBe(['Comprador secreto de B'])
         ->and(SalesDocument::withoutTenancy()->pluck('id')->all())->toBe([$this->documentB->id])
         ->and(App\Models\ImportPreview::withoutTenancy()->where('company_id', $this->b->id)->pluck('id')->all())->toBe([$this->previewB->id])
-        ->and($this->seriesB->fresh()->last_number)->toBe(42);
+        ->and($this->seriesB->fresh()->last_number)->toBe(42)
+        ->and(Establishment::withoutTenancy()->where('company_id', $this->b->id)->orderBy('code')->pluck('code')->all())->toBe(['0000', '0007']);
     expectNoTraceOfB($response);
 })->with(array_keys(tenantRoutes('write')));
 
