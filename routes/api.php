@@ -93,6 +93,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/products/{product}/image', [ProductController::class, 'updateImage']);
             Route::delete('/products/{product}/image', [ProductController::class, 'destroyImage']);
             Route::post('/products/{product}/entries', [StockController::class, 'storeEntry']);
+            Route::post('/products/{product}/transfers', [StockController::class, 'storeTransfer']);
             Route::post('/lots/{lot}/adjustments', [StockController::class, 'adjust']);
             Route::post('/movements/{movement}/reverse', [StockController::class, 'reverse']);
             Route::get('/products/{product}/movements', [StockController::class, 'movements']);

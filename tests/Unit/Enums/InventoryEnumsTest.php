@@ -46,5 +46,5 @@ it('solo los bienes controlan stock', function () {
 
 it('define los tipos de movimiento de RF-012', function () {
     expect(array_column(MovementType::cases(), 'value'))
-        ->toEqualCanonicalizing(['entry', 'sale', 'adjustment', 'return', 'reversal']);
+        ->toEqualCanonicalizing(['entry', 'sale', 'adjustment', 'return', 'reversal', 'transfer_out', 'transfer_in']);
 });

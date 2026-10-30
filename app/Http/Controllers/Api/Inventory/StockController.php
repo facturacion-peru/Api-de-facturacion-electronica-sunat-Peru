@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Enums\AdjustmentReason;
+use App\Establishments\EstablishmentAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\AdjustStockRequest;
 use App\Http\Requests\Inventory\ReverseMovementRequest;
 use App\Http\Requests\Inventory\StoreStockEntryRequest;
+use App\Http\Requests\Inventory\StoreTransferRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\LotResource;
 use App\Http\Resources\MovementResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Establishment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
@@ -84,5 +87,20 @@ class StockController extends Controller
         );
 
         return MovementResource::make($reversal->load(['lot', 'creator']))->response()->setStatusCode(201);
+    }
+
+    /**
+     * Traslado entre locales (spec 017, HU-3). Se puede sacar stock de un
+     * local inactivo, pero solo se traslada a uno activo.
+     */
+    public function storeTransfer(StoreTransferRequest $request, Product $product, EstablishmentAccess $access): JsonResponse
+    {
+        $user = $request->user();
+        [$fromId] = $access->filter($user, (int) $request->validated('from_establishment_id'), 'from_establishment_id');
+        $to = $access->resolve($user, (int) $request->validated('to_establishment_id'), 'to_establishment_id');
+
+        $this->inventory->transfer($product, Establishment::findOrFail($fromId), $to, (string) $request->validated('quantity'), $request->validated('note'), $user);
+
+        return ProductResource::make($product->fresh())->withStockByEstablishment()->response()->setStatusCode(201);
     }
 }

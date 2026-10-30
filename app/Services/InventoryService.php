@@ -11,6 +11,7 @@ use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductLot;
 use App\Models\SalesDocument;
+use App\Models\StockTransfer;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\Decimal;
@@ -201,6 +202,12 @@ class InventoryService
                 ]);
             }
 
+            // Un traslado se corrige con otro traslado (spec 017): revertir una
+            // sola mitad descuadraría los dos locales.
+            if ($movement->type->isTransfer()) {
+                throw ValidationException::withMessages(['movement' => 'Este movimiento es de un traslado: corrígelo con otro traslado.']);
+            }
+
             if ($movement->type === MovementType::Reversal) {
                 throw ValidationException::withMessages(['movement' => 'No se puede revertir una reversión.']);
             }
@@ -305,6 +312,71 @@ class InventoryService
         return $movements;
     }
 
+    /**
+     * Traslado entre locales (spec 017, HU-3): sale FEFO de los lotes no
+     * vencidos del origen, como una venta, y entra en el destino en el lote
+     * del mismo número, con las mismas fechas y costo. Todo o nada; el bloqueo
+     * del producto ordena los traslados cruzados sin deadlocks (CE-004).
+     *
+     * @throws InsufficientStock
+     */
+    public function transfer(Product $product, Establishment $from, Establishment $to, string $quantity, ?string $note, User $actor): StockTransfer
+    {
+        if (! $product->type->tracksStock()) {
+            throw ValidationException::withMessages(['product' => 'Los servicios no tienen stock.']);
+        }
+
+        if ($from->id === $to->id) {
+            throw ValidationException::withMessages(['to_establishment_id' => 'El destino debe ser otro local.']);
+        }
+
+        return DB::transaction(function () use ($product, $from, $to, $quantity, $note, $actor) {
+            $this->lock($product);
+            $pending = $this->normalize($quantity);
+            $lots = $this->sellableLots($product, $from);
+            $available = Decimal::sum($lots->pluck('remaining_quantity'));
+
+            if (bccomp($available, $pending, self::SCALE) < 0) {
+                throw new InsufficientStock($product, $pending, $available);
+            }
+
+            $transfer = StockTransfer::create([
+                'company_id' => $product->company_id,
+                'product_id' => $product->id,
+                'from_establishment_id' => $from->id,
+                'to_establishment_id' => $to->id,
+                'quantity' => $pending,
+                'note' => $note,
+                'created_by' => $actor->id,
+            ]);
+            $source = ['source_type' => $transfer->getMorphClass(), 'source_id' => $transfer->id];
+
+            foreach ($lots as $lot) {
+                if (bccomp($pending, '0', self::SCALE) === 0) {
+                    break;
+                }
+
+                $take = bccomp($lot->remaining_quantity, $pending, self::SCALE) < 0 ? $lot->remaining_quantity : $pending;
+                $lot->remaining_quantity = bcsub($lot->remaining_quantity, $take, self::SCALE);
+                $lot->save();
+                $pending = bcsub($pending, $take, self::SCALE);
+                $this->recordMovement($lot, MovementType::TransferOut, '-'.$take, $actor, $source);
+
+                $arrival = $this->arrivalLot($lot, $to, $take, $actor);
+                $this->recordMovement($arrival, MovementType::TransferIn, $take, $actor, $source);
+            }
+
+            $this->audit->record('inventory.transfer', $transfer, [
+                'product' => $product->code,
+                'from' => $from->code,
+                'to' => $to->code,
+                'quantity' => $transfer->quantity,
+            ], actor: $actor);
+
+            return $transfer;
+        });
+    }
+
     /** Stock físico del producto en un local, o en todos (suma de saldos de sus lotes). */
     public function balance(Product $product, ?Establishment $establishment = null): string
     {
@@ -332,6 +404,35 @@ class InventoryService
             ->orderBy('id')
             ->lockForUpdate()
             ->get();
+    }
+
+    /** Lote del destino con el mismo número (lo crea si no existe) y la cantidad ya sumada. */
+    private function arrivalLot(ProductLot $origin, Establishment $to, string $quantity, User $actor): ProductLot
+    {
+        $lot = ProductLot::withoutTenancy()
+            ->where('product_id', $origin->product_id)->where('establishment_id', $to->id)->where('lot_number', $origin->lot_number)
+            ->lockForUpdate()->first();
+
+        if ($lot === null) {
+            return ProductLot::create([
+                'company_id' => $origin->company_id,
+                'establishment_id' => $to->id,
+                'product_id' => $origin->product_id,
+                'lot_number' => $origin->lot_number,
+                'received_at' => $origin->received_at,
+                'expires_at' => $origin->expires_at,
+                'initial_quantity' => $quantity,
+                'remaining_quantity' => $quantity,
+                'unit_cost' => $origin->unit_cost,
+                'reference' => $origin->reference,
+                'created_by' => $actor->id,
+            ]);
+        }
+
+        $lot->remaining_quantity = bcadd($lot->remaining_quantity, $quantity, self::SCALE);
+        $lot->save();
+
+        return $lot;
     }
 
     /** Bloquea el producto del lote y devuelve el lote releído y bloqueado. */

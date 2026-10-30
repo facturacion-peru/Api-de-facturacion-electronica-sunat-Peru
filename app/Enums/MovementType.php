@@ -10,6 +10,9 @@ enum MovementType: string
     case Adjustment = 'adjustment';
     case Return = 'return';
     case Reversal = 'reversal';
+    // Traslado entre locales (spec 017): salida del origen y entrada al destino.
+    case TransferOut = 'transfer_out';
+    case TransferIn = 'transfer_in';
 
     public function label(): string
     {
@@ -19,6 +22,13 @@ enum MovementType: string
             self::Adjustment => 'Ajuste',
             self::Return => 'Devolución',
             self::Reversal => 'Reversión',
+            self::TransferOut => 'Traslado (salida)',
+            self::TransferIn => 'Traslado (entrada)',
         };
+    }
+
+    public function isTransfer(): bool
+    {
+        return $this === self::TransferOut || $this === self::TransferIn;
     }
 }

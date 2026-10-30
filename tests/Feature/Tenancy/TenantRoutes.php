@@ -36,6 +36,7 @@ return [
     'DELETE api/v1/products/{product}/image' => ['type' => 'resource', 'param' => 'product'],
     'GET api/v1/products/{product}/lots' => ['type' => 'resource', 'param' => 'product'],
     'POST api/v1/products/{product}/entries' => ['type' => 'resource', 'param' => 'product'],
+    'POST api/v1/products/{product}/transfers' => ['type' => 'resource', 'param' => 'product'],
     'POST api/v1/lots/{lot}/adjustments' => ['type' => 'resource', 'param' => 'lot'],
     'POST api/v1/movements/{movement}/reverse' => ['type' => 'resource', 'param' => 'movement'],
     'GET api/v1/products/{product}/movements' => ['type' => 'resource', 'param' => 'product'],
