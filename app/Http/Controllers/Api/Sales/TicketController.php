@@ -34,7 +34,7 @@ class TicketController extends Controller
     {
         [$ticket, $created] = $this->tickets->issue($request->validated(), $request->user());
 
-        return TicketResource::make($ticket->load(['lines', 'seller']))->response()->setStatusCode($created ? 201 : 200);
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']))->response()->setStatusCode($created ? 201 : 200);
     }
 
     /**
@@ -54,7 +54,7 @@ class TicketController extends Controller
                 fn ($q) => $q->where('seller_id', $filters['seller_id']),
             );
 
-        $page = (clone $query)->with('seller')->orderByDesc('issued_at')->orderByDesc('id')->paginate(25)->withQueryString();
+        $page = (clone $query)->with(['seller', 'establishment'])->orderByDesc('issued_at')->orderByDesc('id')->paginate(25)->withQueryString();
 
         return TicketResource::collection($page)->additional(['totals' => $this->totals($query)]);
     }
@@ -64,7 +64,7 @@ class TicketController extends Controller
         // El vendedor no ve tickets ajenos: 404, como un recurso inexistente.
         abort_unless($this->scoped($request->user())->whereKey($ticket->id)->exists(), 404);
 
-        return TicketResource::make($ticket->load(['lines', 'seller']));
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']));
     }
 
     /** PDF de 80 mm para imprimir o compartir desde la app (spec 013, A-63). */
@@ -93,7 +93,7 @@ class TicketController extends Controller
     {
         $ticket = $this->tickets->void($ticket, $request->validated('reason'), $request->user());
 
-        return TicketResource::make($ticket->load(['lines', 'seller']));
+        return TicketResource::make($ticket->load(['lines', 'seller', 'establishment']));
     }
 
     /** @return Builder<Ticket> */

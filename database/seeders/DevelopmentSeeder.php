@@ -121,6 +121,12 @@ class DevelopmentSeeder extends Seeder
             ['company_id' => $company->id, 'role' => $role, 'active' => $active],
         );
 
+        // El vendedor trabaja en el principal (spec 017, A-87).
+        if ($role === CompanyRole::Seller) {
+            $main = Establishment::withoutTenancy()->where('company_id', $company->id)->where('is_main', true)->value('id');
+            $user->establishments()->syncWithoutDetaching([$main => ['company_id' => $company->id]]);
+        }
+
         return $user;
     }
 

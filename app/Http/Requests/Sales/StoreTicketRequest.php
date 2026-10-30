@@ -25,6 +25,8 @@ class StoreTicketRequest extends FormRequest
     {
         return [
             'idempotency_key' => ['required', 'uuid'],
+            // Lo valida EstablishmentAccess; sin él, el único permitido (spec 017).
+            'establishment_id' => ['sometimes', 'nullable', 'integer'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'customer_name' => ['nullable', 'string', 'max:120'],
             'customer_document' => ['nullable', 'string', 'max:20'],
