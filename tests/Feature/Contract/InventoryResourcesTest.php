@@ -27,7 +27,7 @@ function requestAs(CompanyRole $role, ?Company $company = null): Request
 }
 
 $productKeys = ['id', 'code', 'name', 'type', 'unit', 'sale_price', 'igv_affectation', 'min_stock', 'tracks_expiry', 'active', 'image', 'stock', 'available_stock'];
-$lotKeys = ['id', 'lot_number', 'received_at', 'expires_at', 'expired', 'initial_quantity', 'remaining_quantity'];
+$lotKeys = ['id', 'lot_number', 'establishment', 'received_at', 'expires_at', 'expired', 'initial_quantity', 'remaining_quantity'];
 
 it('ProductResource para el administrador incluye el costo', function () use ($productKeys) {
     $product = Product::factory()->create();
@@ -58,11 +58,13 @@ it('ProductResource lleva la foto como {url, thumb_url} o null (spec 016)', func
 });
 
 it('LotResource incluye el costo solo para el administrador', function () use ($lotKeys) {
-    $lot = ProductLot::factory()->create()->load('creator');
+    $lot = ProductLot::factory()->create();
+    app(TenantContext::class)->set($lot->company);
+    $lot->load(['creator', 'establishment']);
 
-    expect(array_keys(LotResource::make($lot)->resolve(requestAs(CompanyRole::CompanyAdmin))))
+    expect(array_keys(LotResource::make($lot)->resolve(requestAs(CompanyRole::CompanyAdmin, $lot->company))))
         ->toBe([...$lotKeys, 'unit_cost', 'reference', 'created_by', 'created_at'])
-        ->and(array_keys(LotResource::make($lot)->resolve(requestAs(CompanyRole::Seller))))
+        ->and(array_keys(LotResource::make($lot)->resolve(requestAs(CompanyRole::Seller, $lot->company))))
         ->toBe([...$lotKeys, 'reference', 'created_by', 'created_at']);
 });
 
@@ -72,7 +74,16 @@ it('MovementResource expone exactamente los campos declarados', function () {
     $movement = InventoryMovement::where('lot_id', $lot->id)->sole()->load(['lot', 'creator']);
 
     expect(array_keys(MovementResource::make($movement)->resolve()))->toBe([
-        'id', 'type', 'quantity', 'lot', 'lot_balance_after', 'product_balance_after', 'reason', 'note',
-        'source', 'reverses_id', 'reversed', 'created_by', 'created_at',
-    ]);
+        'id', 'type', 'establishment', 'quantity', 'lot', 'lot_balance_after', 'product_balance_after', 'reason', 'note',
+        'source', 'transfer', 'reverses_id', 'reversed', 'created_by', 'created_at',
+    ])->and(array_keys(MovementResource::make($movement)->resolve()['establishment']))->toBe(['id', 'code', 'name']);
+});
+
+it('ProductResource de la ficha agrega el stock por local (spec 017)', function () use ($productKeys) {
+    $product = Product::factory()->create(['company_id' => Company::factory()->withMainEstablishment()]);
+    app(TenantContext::class)->set($product->company);
+    $data = ProductResource::make($product)->withStockByEstablishment()->resolve(requestAs(CompanyRole::CompanyAdmin, $product->company));
+
+    expect(array_keys($data))->toBe([...$productKeys, 'stock_by_establishment', 'last_unit_cost', 'created_at'])
+        ->and(array_keys($data['stock_by_establishment'][0]))->toBe(['establishment_id', 'stock', 'available_stock']);
 });

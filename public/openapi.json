@@ -1242,6 +1242,16 @@
                 ],
                 "summary": "Listar inventory",
                 "operationId": "alertIndex",
+                "parameters": [
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Operación exitosa"
@@ -2332,6 +2342,14 @@
                             "type": "integer",
                             "minimum": 1
                         }
+                    },
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
@@ -2432,7 +2450,7 @@
                 "tags": [
                     "products"
                 ],
-                "summary": "Obtener products",
+                "summary": "Stock de los locales que puede leer y el de cada uno (spec 017).",
                 "operationId": "productShow",
                 "parameters": [
                     {
@@ -2606,6 +2624,9 @@
                                         "type": "string",
                                         "nullable": true,
                                         "maxLength": 255
+                                    },
+                                    "establishment_id": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
@@ -2728,6 +2749,22 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "include_empty",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
@@ -2763,6 +2800,23 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "establishment_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {
@@ -2774,6 +2828,76 @@
                     },
                     "500": {
                         "description": "Error interno"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/products/{product}/transfers": {
+            "post": {
+                "tags": [
+                    "products"
+                ],
+                "summary": "Traslado entre locales (spec 017, HU-3). Se puede sacar stock de un",
+                "operationId": "stockStoreTransfer",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno"
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "from_establishment_id": {
+                                        "type": "integer"
+                                    },
+                                    "to_establishment_id": {
+                                        "type": "integer"
+                                    },
+                                    "quantity": {
+                                        "type": "string",
+                                        "format": "decimal"
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "from_establishment_id",
+                                    "to_establishment_id",
+                                    "quantity"
+                                ]
+                            }
+                        }
                     }
                 },
                 "security": [

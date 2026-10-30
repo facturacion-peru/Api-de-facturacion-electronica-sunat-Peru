@@ -5,9 +5,11 @@ namespace Database\Factories;
 use App\Enums\CompanyRole;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\Establishment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -56,6 +58,18 @@ class UserFactory extends Factory
                 'role' => $role,
                 'active' => $active,
             ]);
+
+            // Como al aceptar una invitación (spec 017): con un solo local
+            // activo, el vendedor queda en ese. La prueba de la migración crea
+            // vendedores con el esquema anterior, sin locales.
+            if (! Schema::hasTable('establishment_user')) {
+                return;
+            }
+
+            $locals = Establishment::withoutTenancy()->where('company_id', $company->id)->where('active', true)->pluck('id');
+            if ($role === CompanyRole::Seller && $locals->count() === 1) {
+                $user->establishments()->attach($locals->first(), ['company_id' => $company->id]);
+            }
         });
     }
 

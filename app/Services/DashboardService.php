@@ -6,6 +6,7 @@ use App\Enums\CompanyRole;
 use App\Enums\DocumentType;
 use App\Enums\SalesDocumentStatus;
 use App\Enums\TicketStatus;
+use App\Establishments\EstablishmentAccess;
 use App\Models\SalesDocument;
 use App\Models\Ticket;
 use App\Models\User;
@@ -50,7 +51,8 @@ class DashboardService
             'attention' => [
                 'pending_documents' => SalesDocument::query()->whereIn('status', [SalesDocumentStatus::Pending, SalesDocumentStatus::Sent])->count(),
                 'rejected_documents' => SalesDocument::query()->where('status', SalesDocumentStatus::Rejected)->count(),
-                'inventory_alerts' => $own ? null : $this->alerts->count(),
+                // Provisional hasta T021: todos los locales que puede leer.
+                'inventory_alerts' => $own ? null : $this->alerts->count(app(EstablishmentAccess::class)->filter($user, null)),
             ],
             'recent_sales' => $this->recent($user, $own),
         ];

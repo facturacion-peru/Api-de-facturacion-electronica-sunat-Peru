@@ -2,6 +2,7 @@
 
 use App\Enums\CompanyRole;
 use App\Models\Company;
+use App\Models\CompanyMembership;
 use App\Models\Establishment;
 use App\Models\Product;
 use App\Models\SalesDocument;
@@ -44,10 +45,11 @@ function seedLegacyCompany(): array
 {
     $company = Company::factory()->withMainEstablishment()->create();
     $admin = User::factory()->forCompany($company, CompanyRole::CompanyAdmin)->create();
-    $sellers = [
-        User::factory()->forCompany($company)->create(),
-        User::factory()->forCompany($company, active: false)->create(),
-    ];
+    // Pertenencias sin la factory de usuario: esa ya asigna locales (esquema nuevo).
+    $sellers = [User::factory()->create(), User::factory()->create()];
+    foreach ($sellers as $i => $seller) {
+        CompanyMembership::factory()->create(['company_id' => $company->id, 'user_id' => $seller->id, 'role' => CompanyRole::Seller, 'active' => $i === 0]);
+    }
     $products = Product::factory()->count(2)->create(['company_id' => $company->id]);
     $receipts = Series::factory()->create(['company_id' => $company->id, 'code' => 'B'.random_int(100, 999)]);
     $notes = Series::factory()->create(['company_id' => $company->id, 'document_type' => '07', 'code' => 'BC'.random_int(10, 99)]);

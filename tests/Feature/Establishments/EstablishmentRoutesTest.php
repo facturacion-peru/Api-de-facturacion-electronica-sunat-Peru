@@ -19,7 +19,6 @@ beforeEach(function () {
     $this->main = Establishment::withoutTenancy()->where('company_id', $this->company->id)->where('is_main', true)->first();
     $this->admin = User::factory()->forCompany($this->company, CompanyRole::CompanyAdmin)->create();
     $this->seller = User::factory()->forCompany($this->company)->create();
-    $this->seller->establishments()->attach($this->main->id, ['company_id' => $this->company->id]);
     $this->call = function (string $method, string $uri, array $data = [], ?User $as = null) {
         app('auth')->forgetGuards();
 

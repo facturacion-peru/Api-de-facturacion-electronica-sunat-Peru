@@ -47,7 +47,7 @@ class ProductLotFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (ProductLot $lot) {
-            $productBalance = Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $lot->product_id)->pluck('remaining_quantity'));
+            $productBalance = Decimal::sum(ProductLot::withoutTenancy()->where('product_id', $lot->product_id)->where('establishment_id', $lot->establishment_id)->pluck('remaining_quantity'));
 
             InventoryMovement::create([
                 'company_id' => $lot->company_id,
