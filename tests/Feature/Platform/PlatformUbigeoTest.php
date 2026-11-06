@@ -16,3 +16,12 @@ it('el administrador de la plataforma busca ubigeos', function () {
     expect(collect($data)->pluck('id'))->toContain(EstablishmentFactory::LIMA)
         ->and($data[0])->toHaveKeys(['id', 'nombre', 'provincia', 'region', 'ubigeo_completo']);
 });
+
+it('la búsqueda de distritos no distingue mayúsculas', function () {
+    EstablishmentFactory::ensureLimaUbigeo();
+    $root = User::factory()->platformAdmin()->create();
+
+    $data = $this->withToken($root->createToken('t')->plainTextToken)->getJson('/api/v1/platform/ubigeos/search?q=lIMA')->assertOk()->json('data');
+
+    expect(collect($data)->pluck('id'))->toContain(EstablishmentFactory::LIMA);
+});

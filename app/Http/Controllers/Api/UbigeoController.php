@@ -82,8 +82,8 @@ class UbigeoController extends Controller
 
         $distritos = UbiDistrito::with(['provincia', 'region'])
             ->where(function ($query) use ($search) {
-                $query->where('nombre', 'like', "%{$search}%")
-                    ->orWhere('info_busqueda', 'like', "%{$search}%");
+                $query->whereLike('nombre', "%{$search}%")
+                    ->orWhereLike('info_busqueda', "%{$search}%");
             })
             ->limit(20)
             ->orderBy('nombre')
