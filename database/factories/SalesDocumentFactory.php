@@ -18,7 +18,9 @@ use Illuminate\Support\Str;
  */
 class SalesDocumentFactory extends Factory
 {
-    private static int $number = 0;
+    // Lejos de los correlativos que emiten las pruebas (series desde 1 o 151):
+    // un número de la factory no debe chocar con uno emitido en la misma serie.
+    private static int $number = 900000;
 
     public function definition(): array
     {

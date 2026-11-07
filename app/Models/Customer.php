@@ -22,6 +22,7 @@ class Customer extends Model
         'document_number',
         'name',
         'address',
+        'verified_at',
         'created_by',
     ];
 
@@ -29,6 +30,7 @@ class Customer extends Model
     {
         return [
             'document_type' => CustomerDocumentType::class,
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -45,5 +47,11 @@ class Customer extends Model
         $query->when($search !== '', fn ($q) => $q->where(fn ($inner) => $inner
             ->where('document_number', 'like', "{$search}%")
             ->orWhereRaw('LOWER(name) LIKE ?', ["%{$search}%"])));
+    }
+
+    /** Traído del servicio de consulta (spec 018, A-92): su nombre y dirección no se editan a mano. */
+    public function isVerified(): bool
+    {
+        return $this->verified_at !== null;
     }
 }

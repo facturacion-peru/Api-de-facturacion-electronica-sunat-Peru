@@ -53,4 +53,12 @@ return [
         'rate_limit_pause' => (int) env('SUNAT_RATE_LIMIT_PAUSE', 5),
     ],
 
+    // Consulta de DNI y RUC (spec 018, A-96): token de la plataforma, nunca en
+    // el repositorio ni en las respuestas. Sin token, solo se usa lo guardado.
+    'apisperu' => [
+        'token' => env('APISPERU_TOKEN'),
+        'base_url' => env('APISPERU_BASE_URL', 'https://dniruc.apisperu.com/api/v1'),
+        'timeout' => (int) env('APISPERU_TIMEOUT', 6),
+    ],
+
 ];
