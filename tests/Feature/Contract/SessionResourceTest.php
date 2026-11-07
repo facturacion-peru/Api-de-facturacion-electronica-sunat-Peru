@@ -5,6 +5,7 @@ use App\Http\Resources\SessionResource;
 use App\Http\Resources\UserResource;
 use App\Models\Company;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 /*
  * T047 · Contrato de SessionResource y UserResource (principio III).
@@ -24,7 +25,7 @@ it('SessionResource con token expone la sesión completa', function () {
 
     expect(array_keys($data))->toBe(['token', 'expires_at', 'user', 'platform_admin', 'company', 'role', 'establishments'])
         ->and(array_keys($data['user']->resolve()))->toBe(['id', 'name', 'email'])
-        ->and(array_keys($data['company']))->toBe(['id', 'ruc', 'razon_social', 'nombre_comercial', 'active_establishments_count']);
+        ->and(array_keys($data['company']))->toBe(['id', 'ruc', 'razon_social', 'nombre_comercial', 'logo_url', 'active_establishments_count']);
 });
 
 it('SessionResource sin token omite token y vencimiento', function () {
@@ -34,4 +35,18 @@ it('SessionResource sin token omite token y vencimiento', function () {
 
     expect(array_keys($json['data']))->toBe(['user', 'platform_admin', 'company', 'role', 'establishments'])
         ->and($json['success'])->toBeTrue();
+});
+
+it('la sesión trae el logo de la empresa también al vendedor, o null si no tiene', function () {
+    $images = Storage::fake('images');
+    $company = Company::factory()->withMainEstablishment()->create();
+    $seller = User::factory()->forCompany($company)->create();
+    $token = $seller->createToken('t')->plainTextToken;
+
+    $this->withToken($token)->getJson('/api/v1/auth/me')->assertOk()->assertJsonPath('data.company.logo_url', null);
+
+    $company->forceFill(['logo_path' => 'logo-de-prueba.png'])->save();
+    app('auth')->forgetGuards();
+
+    $this->withToken($token)->getJson('/api/v1/auth/me')->assertOk()->assertJsonPath('data.company.logo_url', $images->url('logo-de-prueba.png'));
 });

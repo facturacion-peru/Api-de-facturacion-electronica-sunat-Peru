@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Establishments\EstablishmentAccess;
+use App\Images\CompanyLogo;
 use App\Models\Establishment;
 use App\Models\User;
 use App\Tenancy\TenantContext;
@@ -40,6 +41,8 @@ class SessionResource extends ApiResource
                 'ruc' => $company->ruc,
                 'razon_social' => $company->razon_social,
                 'nombre_comercial' => $company->nombre_comercial,
+                // El logo de la empresa en la barra de la app, para todos los roles.
+                'logo_url' => app(CompanyLogo::class)->url($company->logo_path),
                 'active_establishments_count' => Establishment::withoutTenancy()->where('company_id', $company->id)->where('active', true)->count(),
             ] : null,
             'role' => $membership?->role->value,
