@@ -3,12 +3,12 @@
 # Idempotente: se puede volver a ejecutar sin daño.
 #
 # Uso (como root, desde una copia de la carpeta deploy/):
-#   DOMAIN=midominio.pe ADMIN_EMAIL=yo@midominio.pe ./provision.sh
+#   DOMAIN=comprobantedigital.app ADMIN_EMAIL=yo@comprobantedigital.app ./provision.sh
 #
 # Requiere que el usuario root ya tenga tu llave SSH en authorized_keys.
 set -euo pipefail
 
-: "${DOMAIN:?Define DOMAIN (p. ej. midominio.pe)}"
+: "${DOMAIN:?Define DOMAIN (p. ej. comprobantedigital.app)}"
 : "${ADMIN_EMAIL:?Define ADMIN_EMAIL (avisos de vencimiento de los certificados HTTPS)}"
 PHP_VERSION="${PHP_VERSION:-8.5}"
 DEPLOY_USER="${DEPLOY_USER:-deploy}"

@@ -39,7 +39,7 @@ Todo lo registrado después de la copia se pierde, incluidos los comprobantes em
 
 ## Después de restaurar
 
-- [ ] `https://api.<dominio>/up` responde 200 y se puede iniciar sesión.
+- [ ] `https://api.comprobantedigital.app/up` responde 200 y se puede iniciar sesión.
 - [ ] En una empresa, **Configuración SUNAT** aparece como validada. Si da error de descifrado, la `APP_KEY` no es la de la copia.
 - [ ] `php artisan ops:check` no avisa nada raro y `sunat:send-pending` vuelve a latir en el monitor.
 - [ ] **Comprobantes emitidos después de la copia:** SUNAT los tiene y nuestra base no. La numeración seguiría desde el último correlativo restaurado y chocaría con números ya aceptados. Antes de reabrir la emisión, consulta los últimos correlativos aceptados de cada serie en SUNAT y avisa a las empresas afectadas. Es un paso manual.

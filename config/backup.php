@@ -240,7 +240,7 @@ return [
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'no-reply@example.com'),
-                'name' => env('MAIL_FROM_NAME', 'Facturación SUNAT'),
+                'name' => env('MAIL_FROM_NAME', 'Comprobante Digital'),
             ],
         ],
 

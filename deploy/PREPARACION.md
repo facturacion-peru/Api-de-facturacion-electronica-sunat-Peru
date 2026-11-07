@@ -32,10 +32,10 @@ Lo que hace **el responsable del SaaS** antes de desplegar: cuentas, pagos, acce
 | Servicio | Para qué | Qué anotar (en el gestor de contraseñas) |
 |---|---|---|
 | Almacenamiento compatible con S3 (Backblaze B2, Cloudflare R2 o AWS S3) | Copias de seguridad (A-45) | Nombre del *bucket*, región, *endpoint*, clave de acceso y clave secreta (con permiso solo sobre ese *bucket*) |
-| Correo transaccional (Amazon SES, Resend o Brevo) | Invitaciones y recuperación de contraseña (A-47) | Host SMTP, puerto, usuario y contraseña SMTP; correo remitente (`no-reply@<dominio>`) |
+| Correo transaccional (Amazon SES, Resend o Brevo) | Invitaciones y recuperación de contraseña (A-47) | Host SMTP, puerto, usuario y contraseña SMTP; correo remitente (`no-reply@comprobantedigital.app`) |
 | DNS del correo | Que no caiga en spam | Registros **SPF**, **DKIM** (los que indique el proveedor) y **DMARC** (`v=DMARC1; p=quarantine; rua=mailto:<tu correo>`) |
 | Monitor de latidos (p. ej. Healthchecks.io) | *Scheduler* y copias (A-48) | Dos URLs de *ping*: `OPS_HEARTBEAT_URL` y `OPS_BACKUP_PING_URL` |
-| Monitor de disponibilidad (p. ej. UptimeRobot) | Web y API (A-48) | Monitores sobre `https://app.<dominio>` y `https://api.<dominio>/up`, con aviso a tu correo |
+| Monitor de disponibilidad (p. ej. UptimeRobot) | Web y API (A-48) | Monitores sobre `https://app.comprobantedigital.app` y `https://api.comprobantedigital.app/up`, con aviso a tu correo |
 
 ## 4. Secretos que se generan y dónde van
 
@@ -65,9 +65,9 @@ En el repositorio de la API y en el del frontend, crea los ambientes `staging` y
 
 | Variable | Repositorio | staging | production |
 |---|---|---|---|
-| `HEALTH_URL` | API | `https://staging-api.<dominio>/up` | `https://api.<dominio>/up` |
-| `HEALTH_URL` | frontend | `https://staging-app.<dominio>/` | `https://app.<dominio>/` |
-| `VITE_API_BASE_URL` | frontend | `https://staging-api.<dominio>` | `https://api.<dominio>` |
+| `HEALTH_URL` | API | `https://staging-api.comprobantedigital.app/up` | `https://api.comprobantedigital.app/up` |
+| `HEALTH_URL` | frontend | `https://staging-app.comprobantedigital.app/` | `https://app.comprobantedigital.app/` |
+| `VITE_API_BASE_URL` | frontend | `https://staging-api.comprobantedigital.app` | `https://api.comprobantedigital.app` |
 | `VITE_PILOT_MODE` | frontend | `true` | `true` durante el piloto (A-43) |
 
 Orden: en cada cambio de `main`, la API pasa a staging y luego espera aprobación para producción. La web hace lo mismo, usando el `release.sh` de la API ya publicada. Si `HEALTH_URL` no responde después de publicar, la versión anterior vuelve sola.
